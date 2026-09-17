@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Énergie - Synchronisation Google Sheets</title>
+
+  <!-- Tailwind CSS & Google Fonts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- PapaParse (Parseur CSV) & Chart.js (Graphiques interactifs) via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen p-4 sm:p-8">
+
+  <div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- En-tête -->
+    <header class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 bg-emerald-100 text-emerald-800 rounded-xl text-lg font-bold">📊</div>
+          <div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Tableau de Bord Énergétique
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Connecté en temps réel à Google Sheets • Écoquartier Smart Microgrid
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statut & Actions -->
+      <div class="flex items-center gap-3 self-start md:self-center">
+        <div id="status-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span id="status-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="status-text">Synchronisé</span>
+        </div>
+
+        <button 
+          id="btn-refresh" 
+          onclick="fetchSheetData()" 
+          class="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition active:scale-95 flex items-center gap-1.5"
+        >
+          <svg id="refresh-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          <span>Actualiser</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Message d'erreur (si indisponible) -->
+    <div id="error-box" class="hidden p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="text-base">⚠️</span>
+        <span id="error-message">Une erreur est survenue lors de la récupération des données.</span>
+      </div>
+      <button onclick="fetchSheetData()" class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs">
+        Réessayer
+      </button>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      
+      <!-- KPI 1 : Consommation Électrique Totale -->
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Consommation Électrique Totale</span>
+          <span class="p-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold">⚡ kWh/j</span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="kpi-total" class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">0</span>
+          <span class="text-sm font-bold text-emerald-600">kWh/j</span>
+        </div>
+        <p class="text-xs text-slate-400 mt-1">Somme dynamique de l'ensemble des bâtiments</p>
+      </div>
+
+      <!-- KPI 2 : Nombre de bâtiments -->
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Bâtiments Détectés</span>
+          <span class="p-1.5 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold">🏢 Sites</span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="kpi-count" class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">0</span>
+          <span class="text-sm font-semibold text-slate-500">sites</span>
+        </div>
+        <p class="text-xs text-slate-400 mt-1">Lignes actives dans le Google Sheet</p>
+      </div>
+
+      <!-- KPI 3 : Prochain rafraîchissement -->
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Synchronisation Auto</span>
+          <span class="p-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold">⏱ 5 min</span>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span id="kpi-timer" class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">05:00</span>
+          <span class="text-xs font-semibold text-slate-400">restantes</span>
+        </div>
+        <p id="kpi-last-sync" class="text-xs text-slate-400 mt-1">Dernière mise à jour : --:--:--</p>
+      </div>
+
+    </div>
+
+    <!-- Graphique interactif -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+        <div>
+          <h2 class="text-base font-bold text-slate-800">Consommation par Type de Bâtiment (kWh/j)</h2>
+          <p class="text-xs text-slate-400">Graphique interactif mis à jour dès modification de la feuille</p>
+        </div>
+        <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+          Source : Google Sheets Public CSV
+        </span>
+      </div>
+      <div class="relative h-64 sm:h-80 w-full">
+        <canvas id="consumptionChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Tableau détaillé -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h2 class="text-sm sm:text-base font-bold text-slate-800">Détail des Consommations par Bâtiment</h2>
+        <span id="table-badge" class="text-xs text-slate-400 font-medium">Chargement en cours...</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+              <th class="py-3.5 px-6">ID Bâtiment</th>
+              <th class="py-3.5 px-6">Type de bâtiment</th>
+              <th class="py-3.5 px-6 text-right">Consommation Elec (kWh/j)</th>
+              <th class="py-3.5 px-6 text-right">Part relative (%)</th>
+              <th class="py-3.5 px-6 min-w-[140px]">Répartition</th>
+            </tr>
+          </thead>
+          <tbody id="table-body" class="divide-y divide-slate-100 text-xs sm:text-sm">
+            <tr>
+              <td colspan="5" class="py-8 text-center text-slate-400">
+                <div class="inline-flex items-center gap-2">
+                  <svg class="animate-spin h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Téléchargement des données Google Sheets...</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot id="table-foot" class="hidden bg-slate-50 font-bold border-t border-slate-200 text-xs sm:text-sm">
+            <tr>
+              <td class="py-3.5 px-6 text-slate-900" colspan="2">TOTAL GÉNÉRAL</td>
+              <td id="foot-total" class="py-3.5 px-6 text-right font-black text-emerald-700">0 kWh/j</td>
+              <td class="py-3.5 px-6 text-right text-slate-600">100%</td>
+              <td class="py-3.5 px-6"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // URL publique d'export CSV de votre Google Sheets
+    const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzA9anmbi31SQYS9-Qzo1oFGEagoJ6GcDljSYd7kJe8OCLzyujYZnTmpYlM92ljA/pub?output=csv";
+
+    // Variables globales
+    let chartInstance = null;
+    let countdownSeconds = 300; // 5 minutes = 300s
+    let countdownInterval = null;
+
+    /**
+     * Nettoie les valeurs numériques venant d'Excel/Google Sheets :
+     * - Remplace la virgule décimale par un point
+     * - Supprime les espaces standards et insécables (\u00A0, \u202F)
+     */
+    function cleanNumeric(val) {
+      if (!val) return 0;
+      const str = String(val)
+        .replace(/\s+/g, '')
+        .replace(/\u202F/g, '')
+        .replace(/\u00A0/g, '')
+        .replace(',', '.');
+      const num = parseFloat(str);
+      return isNaN(num) ? 0 : num;
+    }
+
+    /**
+     * Récupère le CSV depuis Google Sheets et traite les données
+     */
+    async function fetchSheetData() {
+      const statusBadge = document.getElementById("status-badge");
+      const statusDot = document.getElementById("status-dot");
+      const statusText = document.getElementById("status-text");
+      const refreshIcon = document.getElementById("refresh-icon");
+      const errorBox = document.getElementById("error-box");
+
+      // Animation du bouton
+      refreshIcon.classList.add("animate-spin");
+      statusText.innerText = "Synchronisation...";
+
+      try {
+        // Paramètre anti-cache (_t) pour forcer la dernière version publiée par Google
+        const cacheBustingUrl = `${GOOGLE_SHEET_CSV_URL}&_t=${Date.now()}`;
+        const response = await fetch(cacheBustingUrl);
+
+        if (!response.ok) {
+          throw new Error(`Erreur réseau HTTP ${response.status}`);
+        }
+
+        const csvText = await response.text();
+
+        // Utilisation de PapaParse pour parser le contenu CSV
+        Papa.parse(csvText, {
+          skipEmptyLines: true,
+          complete: function(results) {
+            processParsedCSV(results.data);
+            errorBox.classList.add("hidden");
+
+            // Mise à jour de l'état "Succès"
+            statusBadge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+            statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+            statusText.innerText = "Synchronisé (toutes les 5 min)";
+            
+            // Réinitialiser le compte à rebours de 5 min
+            countdownSeconds = 300;
+            document.getElementById("kpi-last-sync").innerText = `Dernière mise à jour : ${new Date().toLocaleTimeString("fr-FR")}`;
+          },
+          error: function(err) {
+            throw new Error(err.message || "Erreur lors de l'analyse du CSV.");
+          }
+        });
+
+      } catch (err) {
+        console.error("Erreur de synchronisation Google Sheets :", err);
+        errorBox.classList.remove("hidden");
+        document.getElementById("error-message").innerText = `Impossible d'accéder au Google Sheet : ${err.message}`;
+
+        statusBadge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200";
+        statusDot.className = "w-2 h-2 rounded-full bg-rose-500";
+        statusText.innerText = "Échec de connexion";
+      } finally {
+        refreshIcon.classList.remove("animate-spin");
+      }
+    }
+
+    /**
+     * Traite les lignes brutes retournées par PapaParse
+     */
+    function processParsedCSV(rows) {
+      if (!rows || rows.length === 0) return;
+
+      // 1. Détection dynamique de la ligne d'en-tête de la table des consommations
+      let headerRowIndex = -1;
+      for (let i = 0; i < rows.length; i++) {
+        const lineStr = rows[i].join(" ").toLowerCase();
+        if (lineStr.includes("consommation elec") || (lineStr.includes("typologie") && lineStr.includes("bâtiment"))) {
+          headerRowIndex = i;
+          break;
+        }
+      }
+
+      if (headerRowIndex === -1) {
+        console.warn("En-tête de tableau non trouvé, utilisation de l'indice 0");
+        headerRowIndex = 0;
+      }
+
+      const headers = rows[headerRowIndex].map(h => String(h).trim().toLowerCase());
+      const idCol = headers.findIndex(h => h.includes("id bâtiment") || h.includes("id batiment"));
+      const typeCol = headers.findIndex(h => h.includes("typologie") || h.includes("type"));
+      const consoCol = headers.findIndex(h => h.includes("consommation elec") && h.includes("kwh/j"));
+
+      const buildings = [];
+
+      // 2. Extraction des lignes de données (jusqu'au Total ou fin de section)
+      for (let i = headerRowIndex + 1; i < rows.length; i++) {
+        const row = rows[i];
+        const firstCell = String(row[0] || "").trim().toLowerCase();
+
+        // Arrêt si on atteint la ligne Total ou la section 2
+        if (firstCell.startsWith("total") || /^\d+\./.test(firstCell)) {
+          break;
+        }
+
+        const id = idCol !== -1 && row[idCol] ? String(row[idCol]).trim() : `BAT-${i}`;
+        const type = typeCol !== -1 && row[typeCol] ? String(row[typeCol]).trim() : "Bâtiment";
+        const conso = consoCol !== -1 ? cleanNumeric(row[consoCol]) : 0;
+
+        if (id && conso > 0) {
+          buildings.push({ id, type, conso });
+        }
+      }
+
+      // 3. Calcul de la Consommation Totale
+      const totalKwh = buildings.reduce((acc, b) => acc + b.conso, 0);
+
+      // Calcul des pourcentages
+      buildings.forEach(b => {
+        b.percentage = totalKwh > 0 ? ((b.conso / totalKwh) * 100).toFixed(1) : 0;
+      });
+
+      // 4. Mise à jour de l'affichage
+      updateUI(buildings, totalKwh);
+    }
+
+    /**
+     * Met à jour le DOM et le graphique
+     */
+    function updateUI(buildings, totalKwh) {
+      // KPIs
+      document.getElementById("kpi-total").innerText = totalKwh.toLocaleString("fr-FR");
+      document.getElementById("kpi-count").innerText = buildings.length;
+      document.getElementById("foot-total").innerText = `${totalKwh.toLocaleString("fr-FR")} kWh/j`;
+      document.getElementById("table-foot").classList.remove("hidden");
+      document.getElementById("table-badge").innerText = `${buildings.length} bâtiments analysés`;
+
+      // Tableau HTML
+      const tbody = document.getElementById("table-body");
+      tbody.innerHTML = "";
+
+      buildings.forEach(b => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50/80 transition-colors fade-in";
+        tr.innerHTML = `
+          <td class="py-3.5 px-6 font-mono font-bold text-slate-800">${b.id}</td>
+          <td class="py-3.5 px-6 font-semibold text-slate-700">${b.type}</td>
+          <td class="py-3.5 px-6 text-right font-black text-slate-900">${b.conso.toLocaleString("fr-FR")} <span class="text-xs font-normal text-slate-400">kWh/j</span></td>
+          <td class="py-3.5 px-6 text-right font-bold text-emerald-600">${b.percentage}%</td>
+          <td class="py-3.5 px-6">
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div class="bg-emerald-600 h-2 rounded-full transition-all duration-500" style="width: ${Math.min(b.percentage * 3, 100)}%"></div>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Graphique Chart.js
+      renderChart(buildings);
+    }
+
+    /**
+     * Initialise ou met à jour le graphique Chart.js
+     */
+    function renderChart(buildings) {
+      const labels = buildings.map(b => `${b.id} (${b.type})`);
+      const values = buildings.map(b => b.conso);
+      const ctx = document.getElementById('consumptionChart').getContext('2d');
+
+      if (chartInstance) {
+        chartInstance.data.labels = labels;
+        chartInstance.data.datasets[0].data = values;
+        chartInstance.update();
+      } else {
+        chartInstance = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Consommation Électrique (kWh/j)',
+              data: values,
+              backgroundColor: '#059669',
+              hoverBackgroundColor: '#047857',
+              borderRadius: 8,
+              maxBarThickness: 45
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return `Consommation : ${context.parsed.y.toLocaleString("fr-FR")} kWh/j`;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: {
+                  callback: function(value) {
+                    return value + ' kWh/j';
+                  }
+                }
+              },
+              x: {
+                grid: { display: false },
+                ticks: { font: { size: 10 } }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Gestion du compte à rebours visuel (rafraîchissement automatique toutes les 5 minutes)
+    function startCountdown() {
+      if (countdownInterval) clearInterval(countdownInterval);
+      countdownInterval = setInterval(() => {
+        countdownSeconds--;
+        if (countdownSeconds <= 0) {
+          fetchSheetData();
+        } else {
+          const mins = Math.floor(countdownSeconds / 60);
+          const secs = countdownSeconds % 60;
+          document.getElementById("kpi-timer").innerText = 
+            `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+      }, 1000);
+    }
+
+    // Lancement au chargement de la page
+    window.addEventListener("DOMContentLoaded", () => {
+      fetchSheetData();
+      startCountdown();
+    });
+  </script>
+
+</body>
+</html>

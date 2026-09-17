@@ -118,6 +118,22 @@ interface BuildingStats {
   economy?: string;
   trend?: string;
   surface?: string;
+  unitsCount?: number;
+  powerWinterKw?: number;
+  powerSummerKw?: number;
+  powerHeatwaveKw?: number;
+  consumptionYearMwh?: number;
+}
+
+interface GTBEquipment {
+  location: string;
+  category: string;
+  name: string;
+  brandModel: string;
+  quantity: string | number;
+  protocol: string;
+  pointType: string;
+  status: string;
 }
 
 // --- Translations ---
@@ -222,11 +238,28 @@ const BAR_DATA = [
   { name: 'Bât. J', value: 4100, status: 'optimal' },
 ];
 
+const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzA9anmbi31SQYS9-Qzo1oFGEagoJ6GcDljSYd7kJe8OCLzyujYZnTmpYlM92ljA/pub?output=csv";
+
 const TABLE_DATA: BuildingStats[] = [
-  { id: '1', name: 'Bâtiment A', location: '1 Place Georges Frêche, 34267 Montpellier (Hôtel de Ville)', status: 'OPTIMAL', consumption: '12,450 kWh', economy: '15%', trend: '-2.4%', type: 'Bureaux', occupancy: '92%' },
-  { id: '2', name: 'Bâtiment G', location: '1000 Rue de la Vieille Poste, 34000 Montpellier (Millénaire Tech)', status: 'ALERTE', consumption: '24,200 kWh', economy: '5%', trend: '+18.2%', type: 'Logistique', occupancy: '45%' },
-  { id: '3', name: 'Bâtiment J', location: '209 Avenue des Apothicaires, 34090 Montpellier (Euromédecine)', status: 'ATTENTION', consumption: '15,890 kWh', economy: '12%', trend: '+5.1%', type: 'R&D', occupancy: '78%' },
-  { id: '4', name: 'Bâtiment B', location: "Place du Nombre d'Or, 34000 Montpellier (Espace Antigone)", status: 'OPTIMAL', consumption: '11,120 kWh', economy: '18%', trend: '-0.8%', type: 'Bureaux', occupancy: '88%' },
+  { id: 'BAT-01', name: 'Bâtiment 01 (T3 Familial)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-01)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-02', name: 'Bâtiment 02 (T3 Familial)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-02)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-03', name: 'Bâtiment 03 (T3 Familial)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-03)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-04', name: 'Bâtiment 04 (T3 Familial)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-04)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-05', name: 'Bâtiment 05 (T3 Familial)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-05)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-06', name: 'Bâtiment 06 (T1bis Étudiant)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-06)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-07', name: 'Bâtiment 07 (T1bis Étudiant)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-07)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-08', name: 'Bâtiment 08 (T1bis Étudiant)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-08)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-09', name: 'Bâtiment 09 (T1bis Étudiant)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-09)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-10', name: 'Bâtiment 10 (T1bis Étudiant)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-10)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+];
+
+const GTB_INITIAL_EQUIPMENT: GTBEquipment[] = [
+  { location: "Bâtiments (x10)", category: "CVC - Chauffage/Froid", name: "PAC VRV IV+ Réversible", brandModel: "DAIKIN REYQ8U", quantity: 10, protocol: "BACnet / IP", pointType: "Commande & Alarme", status: "Actif" },
+  { location: "Bâtiments (x10)", category: "CVC - Distribution", name: "Boîtier BS Box multi-ports", brandModel: "DAIKIN BS16Q14AV1B", quantity: 40, protocol: "Modbus RTU", pointType: "Régulation débit", status: "Actif" },
+  { location: "Bâtiments (x10)", category: "CVC - Confort", name: "Unités Gainables Logements", brandModel: "DAIKIN FXSQ-A", quantity: 200, protocol: "Bus KNX", pointType: "Consigne & Température", status: "Actif" },
+  { location: "Bâtiments (x10)", category: "CVC - ECS", name: "Hydrobox ECS Individuelle", brandModel: "DAIKIN HXHD", quantity: 200, protocol: "Modbus RTU", pointType: "Sonde Température", status: "Actif" },
+  { location: "Bâtiments (x10)", category: "CVC - Ventilation", name: "Centrale VMC Hygro B", brandModel: "Motorisation EC", quantity: 10, protocol: "Modbus RTU", pointType: "Débit & Alarme Filtre", status: "Actif" },
+  { location: "Bâtiments (x10)", category: "GTB - Comptage", name: "Compteur Électrique Linky/Modbus", brandModel: "Enedis / Schneider", quantity: 200, protocol: "Modbus / RS485", pointType: "Télérelève kWh", status: "Actif" },
 ];
 
 const ANALYTICS_TREND = [
@@ -1619,6 +1652,58 @@ const BuildingConsumptionGraphCard = React.memo(({
     return history;
   }, [selected]);
 
+  const ChartCustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const entry = payload[0];
+      const data = entry.payload;
+      const bldg = buildingsList.find(b => b.id.toString() === data.id);
+      return (
+        <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 rounded-xl shadow-2xl border border-slate-700 text-xs z-50 min-w-[200px]">
+          <div className="flex items-center justify-between gap-2 mb-1.5 pb-1.5 border-b border-slate-700/80">
+            <span className="font-bold text-emerald-400">{data.fullName || data.name}</span>
+            <span className={cn(
+              "text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase",
+              data.status === 'ALERTE' ? "bg-rose-500/20 text-rose-300 border border-rose-500/40" : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+            )}>
+              {data.status || 'OK'}
+            </span>
+          </div>
+          <div className="space-y-1 text-slate-300 text-[11px]">
+            <p className="flex justify-between">
+              <span>Conso quotidienne :</span>
+              <span className="font-bold text-white font-mono">{data.displayValue || `${entry.value} kWh/j`}</span>
+            </p>
+            {bldg?.powerWinterKw !== undefined && (
+              <p className="flex justify-between">
+                <span>Besoin Hiver :</span>
+                <span className="font-bold text-sky-300 font-mono">{bldg.powerWinterKw} kW</span>
+              </p>
+            )}
+            {bldg?.powerSummerKw !== undefined && (
+              <p className="flex justify-between">
+                <span>Besoin Été :</span>
+                <span className="font-bold text-amber-300 font-mono">{bldg.powerSummerKw} kW</span>
+              </p>
+            )}
+            {bldg?.powerHeatwaveKw !== undefined && (
+              <p className="flex justify-between">
+                <span>Pic Canicule :</span>
+                <span className="font-bold text-rose-300 font-mono">{bldg.powerHeatwaveKw} kW</span>
+              </p>
+            )}
+            {bldg?.consumptionYearMwh !== undefined && (
+              <p className="flex justify-between pt-1 border-t border-slate-800 text-[10px]">
+                <span>Conso Annuelle :</span>
+                <span className="font-bold text-emerald-300 font-mono">{bldg.consumptionYearMwh} MWh/an</span>
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/60 shadow-sm p-4 sm:p-5 mb-4 transition-all">
       {/* Header with Title & Selector Controls */}
@@ -1738,11 +1823,11 @@ const BuildingConsumptionGraphCard = React.memo(({
               <YAxis 
                 axisLine={false} 
                 tickLine={false} 
-                width={56}
+                width={62}
                 tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
-                tickFormatter={(val) => val === 0 ? '0 MWh' : `${Math.round(val / 1000)} MWh`}
+                tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)} MWh` : `${val} kWh`}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc', radius: 6 }} />
+              <Tooltip content={<ChartCustomTooltip />} cursor={{ fill: '#f8fafc', radius: 6 }} />
               <Bar 
                 dataKey="value" 
                 radius={[8, 8, 0, 0]} 
@@ -1781,7 +1866,7 @@ const BuildingConsumptionGraphCard = React.memo(({
                 tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
                 tickFormatter={(val) => `${val} kWh`}
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<ChartCustomTooltip />} />
               <Area 
                 type="monotone" 
                 dataKey="value" 
@@ -1805,13 +1890,21 @@ const BuildingConsumptionGraphCard = React.memo(({
             </div>
             <div>
               <p className="font-bold text-slate-800">{selected.name}</p>
-              <p className="text-[10px] text-slate-500 font-medium">{selected.location} • {selected.surface || '2 400 m²'}</p>
+              <p className="text-[10px] text-slate-500 font-medium">
+                {selected.location} • {selected.unitsCount ? `${selected.unitsCount} log.` : ''} {selected.surface ? `• ${selected.surface}` : ''}
+              </p>
+              {(selected.powerWinterKw !== undefined || selected.powerSummerKw !== undefined) && (
+                <p className="text-[10px] text-emerald-700 font-semibold mt-0.5">
+                  Besoin Hiver : {selected.powerWinterKw ?? '--'} kW • Été : {selected.powerSummerKw ?? '--'} kW (Canicule : {selected.powerHeatwaveKw ?? '--'} kW)
+                  {selected.consumptionYearMwh ? ` • Annuel : ${selected.consumptionYearMwh} MWh/an` : ''}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-4 ml-auto">
             <div className="text-right">
               <span className="text-[10px] uppercase font-bold text-slate-400 block">{language === 'fr' ? 'Consommation Totale' : 'Total Consumption'}</span>
-              <span className="font-bold font-display text-slate-900">{parseEnergy(selected.consumption).toLocaleString()} kWh</span>
+              <span className="font-bold font-display text-slate-900">{parseEnergy(selected.consumption).toLocaleString()} kWh/j</span>
             </div>
             <div className="text-right">
               <span className="text-[10px] uppercase font-bold text-slate-400 block">{language === 'fr' ? 'Statut Site' : 'Site Status'}</span>
@@ -2281,7 +2374,29 @@ const MontpellierMapCard = React.memo(({
 });
 MontpellierMapCard.displayName = 'MontpellierMapCard';
 
-const DashboardView = ({ selectedBuildingId, onSelectBuilding, language, buildingsList, metrics, onOptimize, currentDate }: { selectedBuildingId: string, onSelectBuilding: (id: string) => void, language: string, buildingsList: any[], metrics: any, onOptimize: () => void, currentDate: string }) => {
+const DashboardView = ({ 
+  selectedBuildingId, 
+  onSelectBuilding, 
+  language, 
+  buildingsList, 
+  metrics, 
+  onOptimize, 
+  currentDate,
+  isSyncing,
+  lastSyncTime,
+  onForceSync
+}: { 
+  selectedBuildingId: string; 
+  onSelectBuilding: (id: string) => void; 
+  language: string; 
+  buildingsList: any[]; 
+  metrics: any; 
+  onOptimize: () => void; 
+  currentDate: string;
+  isSyncing?: boolean;
+  lastSyncTime?: string;
+  onForceSync?: () => void;
+}) => {
   const { width: windowWidth } = useWindowSize();
   const t = translations[language as keyof typeof translations] || translations.fr;
   const { isGlobal, selected, consumption, trend, avgEfficiency, topConsumer, anomaliesCount } = metrics;
@@ -2320,11 +2435,28 @@ const DashboardView = ({ selectedBuildingId, onSelectBuilding, language, buildin
 
   return (
     <ViewContainer>
-      <div className="mb-3 sm:mb-4">
-        <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.4em] mb-1 drop-shadow-sm">{currentDate}</h2>
-        <h1 className="text-xl sm:text-2xl font-bold font-display text-slate-900 tracking-tight">
-          {language === 'fr' ? 'Tableau de Bord' : 'Energy Dashboard'}
-        </h1>
+      <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+        <div>
+          <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.4em] mb-1 drop-shadow-sm">{currentDate}</h2>
+          <h1 className="text-xl sm:text-2xl font-bold font-display text-slate-900 tracking-tight">
+            {language === 'fr' ? 'Tableau de Bord' : 'Energy Dashboard'}
+          </h1>
+        </div>
+        <div className="flex items-center gap-2 text-[11px] text-slate-600 font-semibold bg-white/90 px-3.5 py-1.5 rounded-full border border-slate-200 shadow-xs self-start sm:self-auto backdrop-blur-xs">
+          <span className={cn("w-2 h-2 rounded-full", isSyncing ? "bg-amber-500 animate-spin" : "bg-emerald-500 animate-pulse")} />
+          <span>{language === 'fr' ? 'Google Sheets en direct' : 'Live Google Sheets'}</span>
+          {onForceSync && (
+            <button
+              type="button"
+              onClick={onForceSync}
+              disabled={isSyncing}
+              title={language === 'fr' ? 'Actualiser maintenant avec Google Sheets' : 'Sync now with Google Sheets'}
+              className="ml-1 p-1 hover:bg-slate-100 rounded-md text-slate-500 hover:text-emerald-700 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5", isSyncing && "animate-spin text-emerald-600")} />
+            </button>
+          )}
+        </div>
       </div>
 
       <motion.div 
@@ -2363,67 +2495,140 @@ const DashboardView = ({ selectedBuildingId, onSelectBuilding, language, buildin
   );
 };
 
-const BuildingsView = ({ language, onAddClick, onDeleteClick, onEditClick, buildingsList }: { language: string, onAddClick: () => void, onDeleteClick: (id: number) => void, onEditClick: (b: any) => void, buildingsList: any[] }) => {
+const BuildingsView = ({ 
+  language, 
+  onAddClick, 
+  onDeleteClick, 
+  onEditClick, 
+  buildingsList,
+  isSyncing,
+  lastSyncTime,
+  onForceSync
+}: { 
+  language: string; 
+  onAddClick: () => void; 
+  onDeleteClick: (id: number) => void; 
+  onEditClick: (b: any) => void; 
+  buildingsList: any[];
+  isSyncing?: boolean;
+  lastSyncTime?: string;
+  onForceSync?: () => void;
+}) => {
   return (
     <ViewContainer>
-      <div className="flex justify-between items-center mb-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-800">{language === 'fr' ? 'Parc Immobilier' : 'Real Estate Portfolio'}</h2>
-          <p className="text-sm text-slate-400 font-medium mt-1">{language === 'fr' ? 'Surveillance et gestion de vos sites actifs.' : 'Monitoring and management of your active sites.'}</p>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-800">{language === 'fr' ? 'Parc Immobilier' : 'Real Estate Portfolio'}</h2>
+            <div className="flex items-center gap-2 text-[11px] text-slate-600 font-semibold bg-white/90 px-3 py-1 rounded-full border border-slate-200 shadow-xs backdrop-blur-xs">
+              <span className={cn("w-2 h-2 rounded-full", isSyncing ? "bg-amber-500 animate-spin" : "bg-emerald-500 animate-pulse")} />
+              <span>{language === 'fr' ? 'Liaison Google Sheets' : 'Google Sheets Linked'}</span>
+              {onForceSync && (
+                <button
+                  onClick={onForceSync}
+                  disabled={isSyncing}
+                  title="Actualiser depuis Google Sheets"
+                  className="p-1 hover:bg-slate-100 rounded text-slate-500 hover:text-emerald-700 transition active:scale-95 disabled:opacity-50"
+                >
+                  <RefreshCw className={cn("w-3 h-3", isSyncing && "animate-spin text-emerald-600")} />
+                </button>
+              )}
+            </div>
+          </div>
+          <p className="text-sm text-slate-400 font-medium mt-1">
+            {language === 'fr' ? 'Surveillance, puissances thermiques (Hiver/Été/Canicule) et consommations du parc.' : 'Monitoring, thermal power (Winter/Summer/Heatwave) and portfolio consumption.'}
+          </p>
         </div>
         <button 
           onClick={onAddClick}
-          className="bg-emerald-900 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-900/20 active:scale-95 transition-all flex items-center gap-2"
+          className="bg-emerald-900 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-900/20 active:scale-95 transition-all flex items-center gap-2 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" /> {language === 'fr' ? 'Ajouter' : 'Add'}
         </button>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         {buildingsList.map((b) => (
-          <div key={b.id} className="bg-white rounded-2xl border border-slate-200/60 p-4 md:p-5 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-            <div className="flex justify-between items-start mb-3 md:mb-4">
-              <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-all">
-                <Building2 className="w-5 h-5" />
+          <div key={b.id} className="bg-white rounded-2xl border border-slate-200/60 p-4 md:p-5 shadow-sm hover:shadow-md transition-all group relative overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-start mb-3">
+                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-all">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider", 
+                    b.status === "OPTIMAL" ? "bg-emerald-50 text-emerald-600" : 
+                    b.status === "ATTENTION" ? "bg-amber-50 text-amber-600" : 
+                    "bg-rose-50 text-rose-600"
+                  )}>
+                    {b.status}
+                  </span>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditClick(b);
+                    }}
+                    className="p-1 text-slate-300 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                  >
+                    <Settings2 className="w-3 h-3" />
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteClick(b.id);
+                    }}
+                    className="p-1 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider", 
-                  b.status === "OPTIMAL" ? "bg-emerald-50 text-emerald-600" : 
-                  b.status === "ATTENTION" ? "bg-amber-50 text-amber-600" : 
-                  "bg-rose-50 text-rose-600"
-                )}>
-                  {b.status}
-                </span>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditClick(b);
-                  }}
-                  className="p-1 text-slate-300 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
-                >
-                  <Settings2 className="w-3 h-3" />
-                </button>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteClick(b.id);
-                  }}
-                  className="p-1 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
+
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {b.type && (
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-bold">
+                    {b.type}
+                  </span>
+                )}
+                {b.unitsCount && (
+                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold">
+                    {b.unitsCount} log.
+                  </span>
+                )}
               </div>
+
+              <h3 className="font-bold text-slate-800 mb-1">{b.name}</h3>
+              <p className="text-[11px] font-medium text-slate-400 mb-3 line-clamp-1">{b.location}</p>
+
+              {(b.powerWinterKw !== undefined || b.powerSummerKw !== undefined) && (
+                <div className="bg-slate-50/80 rounded-xl p-2.5 mb-3 text-[11px] space-y-1 border border-slate-100">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Besoin Hiver :</span>
+                    <span className="font-bold text-sky-700">{b.powerWinterKw ?? '--'} kW</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Besoin Été :</span>
+                    <span className="font-bold text-amber-700">{b.powerSummerKw ?? '--'} kW</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Pic Canicule :</span>
+                    <span className="font-bold text-rose-600">{b.powerHeatwaveKw ?? '--'} kW</span>
+                  </div>
+                </div>
+              )}
             </div>
-            <h3 className="font-bold text-slate-800 mb-1">{b.name}</h3>
-            <p className="text-xs font-bold text-slate-400 uppercase mb-4">{b.location}</p>
             
-            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-50">
+            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 mt-auto">
               <div>
-                <p className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">{language === 'fr' ? 'CONSO' : 'CONS'}</p>
-                <p className="text-xs font-bold text-slate-700">{parseEnergy(b.consumption).toLocaleString()} kWh</p>
+                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{language === 'fr' ? 'CONSO ÉLEC' : 'ELEC CONS'}</p>
+                <p className="text-xs font-bold text-slate-800">{parseEnergy(b.consumption).toLocaleString()} kWh/j</p>
+                {b.consumptionYearMwh && (
+                  <p className="text-[9px] text-emerald-600 font-semibold">{b.consumptionYearMwh} MWh/an</p>
+                )}
               </div>
               <div>
-                <p className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">{language === 'fr' ? 'ÉCONOMIE' : 'SAVINGS'}</p>
-                <p className="text-xs font-bold text-emerald-600">{b.economy}</p>
+                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{language === 'fr' ? 'ÉCONOMIE' : 'SAVINGS'}</p>
+                <p className="text-xs font-bold text-emerald-600">{b.economy || '15%'}</p>
+                <p className="text-[9px] text-slate-400 font-medium">{b.trend || '-1.2%'}</p>
               </div>
             </div>
           </div>
@@ -2733,7 +2938,23 @@ const ReportsView = ({ language, buildingsList, currentDate }: { language: strin
   );
 };
 
-const GTBView = ({ language, buildingsList, selectedBuildingId }: { language: string, buildingsList: any[], selectedBuildingId: string }) => {
+const GTBView = ({ 
+  language, 
+  buildingsList, 
+  selectedBuildingId,
+  gtbEquipments = [],
+  isSyncing,
+  lastSyncTime,
+  onForceSync
+}: { 
+  language: string; 
+  buildingsList: any[]; 
+  selectedBuildingId: string;
+  gtbEquipments?: GTBEquipment[];
+  isSyncing?: boolean;
+  lastSyncTime?: string;
+  onForceSync?: () => void;
+}) => {
   const selectedBuilding = buildingsList.find(b => b.id.toString() === selectedBuildingId) || buildingsList[0];
   const t = translations[language as keyof typeof translations] || translations.fr;
 
@@ -2753,13 +2974,29 @@ const GTBView = ({ language, buildingsList, selectedBuildingId }: { language: st
 
   return (
     <ViewContainer>
-      <div className="mb-6 md:mb-8">
-        <h2 className="text-2xl md:text-3xl font-bold text-slate-800">{language === 'fr' ? 'Contrôle GTB' : 'BMS Control'}</h2>
-        <p className="text-sm text-slate-400 font-medium mt-1">
-          {language === 'fr' 
-            ? `Gestion centralisée : ${selectedBuilding?.name || 'Tous les sites'}` 
-            : `Centralized management: ${selectedBuilding?.name || 'All Sites'}`}
-        </p>
+      <div className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-800">{language === 'fr' ? 'Contrôle GTB / GTC' : 'BMS / BAS Control'}</h2>
+          <p className="text-sm text-slate-400 font-medium mt-1">
+            {language === 'fr' 
+              ? `Gestion centralisée & points de supervision : ${selectedBuilding?.name || 'Tous les sites'}` 
+              : `Centralized management & supervision points: ${selectedBuilding?.name || 'All Sites'}`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-[11px] text-slate-600 font-semibold bg-white/90 px-3.5 py-1.5 rounded-full border border-slate-200 shadow-xs self-start sm:self-auto backdrop-blur-xs">
+          <span className={cn("w-2 h-2 rounded-full", isSyncing ? "bg-amber-500 animate-spin" : "bg-emerald-500 animate-pulse")} />
+          <span>{language === 'fr' ? 'Google Sheets GTB' : 'Google Sheets BMS'}</span>
+          {onForceSync && (
+            <button
+              onClick={onForceSync}
+              disabled={isSyncing}
+              title="Actualiser les équipements GTB"
+              className="p-1 hover:bg-slate-100 rounded text-slate-500 hover:text-emerald-700 transition active:scale-95 disabled:opacity-50"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5", isSyncing && "animate-spin text-emerald-600")} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -2961,6 +3198,76 @@ const GTBView = ({ language, buildingsList, selectedBuildingId }: { language: st
           </div>
         </div>
       </div>
+
+      {/* Google Sheets GTC / GTB Equipment Live Inventory */}
+      {gtbEquipments && gtbEquipments.length > 0 && (
+        <div className="mt-8 bg-white rounded-3xl p-5 md:p-7 border border-slate-200/80 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-100">
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-emerald-100 text-emerald-800 rounded-xl">
+                  <Cpu className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 font-display">
+                    {language === 'fr' ? 'Inventaire des Équipements GTB & Points de Contrôle' : 'BMS Equipment Inventory & Control Points'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {language === 'fr' ? 'Synchronisé en direct avec la Section 2 de votre Google Sheets / Excel' : 'Synced live with Section 2 of your Google Sheets / Excel'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-600 self-start sm:self-auto">
+              {gtbEquipments.length} {language === 'fr' ? 'équipements supervisés' : 'supervised items'}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                  <th className="py-3 px-4">Localisation</th>
+                  <th className="py-3 px-4">Lot / Catégorie</th>
+                  <th className="py-3 px-4">Équipement Supervisé</th>
+                  <th className="py-3 px-4 text-center">Quantité</th>
+                  <th className="py-3 px-4">Protocole</th>
+                  <th className="py-3 px-4">Point GTB</th>
+                  <th className="py-3 px-4 text-center">Statut</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {gtbEquipments.map((eq, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-semibold text-slate-800 whitespace-nowrap">{eq.location}</td>
+                    <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-semibold text-[11px] border border-emerald-100">
+                        {eq.category}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="font-bold text-slate-800">{eq.name}</div>
+                      <div className="text-[10px] text-slate-400 font-mono">{eq.brandModel}</div>
+                    </td>
+                    <td className="py-3 px-4 text-center font-bold text-slate-800">{eq.quantity}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <span className="px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 font-mono text-[10px] font-bold border border-sky-100">
+                        {eq.protocol}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-slate-600 font-medium">{eq.pointType}</td>
+                    <td className="py-3 px-4 text-center">
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] uppercase tracking-wide">
+                        {eq.status || 'Actif'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </ViewContainer>
   );
 };
@@ -2975,6 +3282,10 @@ export default function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [buildings, setBuildings] = useState<BuildingStats[]>([]);
   const [activeWeatherCity, setActiveWeatherCity] = useState<WeatherCity>(POPULAR_CITIES[0]);
+  const [isSyncingSheet, setIsSyncingSheet] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>('');
+  const [gtbEquipments, setGtbEquipments] = useState<GTBEquipment[]>(GTB_INITIAL_EQUIPMENT);
+  const hasGoogleSheetsSyncRef = React.useRef(false);
 
   // Synchronize city if selected building specifies a known city location
   useEffect(() => {
@@ -3077,7 +3388,7 @@ export default function App() {
   // Sync Buildings with Firestore
   React.useEffect(() => {
     if (!user || isGuest) {
-      if (isGuest) setBuildings(TABLE_DATA);
+      if (isGuest && !hasGoogleSheetsSyncRef.current) setBuildings(TABLE_DATA);
       return;
     }
 
@@ -3096,7 +3407,10 @@ export default function App() {
             .catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/buildings`));
         });
       } else {
-        setBuildings(buildingsData);
+        // Only override if Google Sheets hasn't synced live data
+        if (!hasGoogleSheetsSyncRef.current) {
+          setBuildings(buildingsData);
+        }
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, `users/${user.uid}/buildings`);
@@ -3456,9 +3770,202 @@ export default function App() {
     if (!isGuest) updateProfileInFirestore(userProfile, newSettings);
   };
 
+  // Synchronisation continue en direct avec le Google Sheets / Excel
+  const fetchGoogleSheetsBackground = React.useCallback(async () => {
+    try {
+      setIsSyncingSheet(true);
+      const cacheBustUrl = `${GOOGLE_SHEETS_CSV_URL}&_t=${Date.now()}`;
+      const response = await fetch(cacheBustUrl);
+      if (!response.ok) return;
+
+      const csvText = await response.text();
+      const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+      const parseLine = (line: string): string[] => {
+        const regex = /(?:^|,)(?:"([^"]*(?:""[^"]*)*)"|([^",]*))/g;
+        const elements: string[] = [];
+        let matches;
+        while ((matches = regex.exec(line)) !== null) {
+          if (matches.index === regex.lastIndex) regex.lastIndex++;
+          const val = matches[1] !== undefined ? matches[1].replace(/""/g, '"') : matches[2];
+          elements.push(val !== undefined ? val.trim() : "");
+        }
+        return elements;
+      };
+
+      const cleanVal = (str: string): number => {
+        if (!str) return 0;
+        const cleaned = str
+          .replace(/\s+/g, '')
+          .replace(/\u202F/g, '')
+          .replace(/\u00A0/g, '')
+          .replace(',', '.');
+        return parseFloat(cleaned) || 0;
+      };
+
+      // 1. RECHERCHE ET PARSING DE LA SECTION 1 (BÂTIMENTS, PUISSANCES & CONSOMMATIONS)
+      let buildingHeaderIndex = -1;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].toLowerCase();
+        if (
+          line.includes('consommation elec') ||
+          (line.includes('typologie') && (line.includes('bâtiment') || line.includes('batiment'))) ||
+          line.includes('besoin hiver') ||
+          line.includes('id bâtiment') ||
+          line.includes('id batiment')
+        ) {
+          buildingHeaderIndex = i;
+          break;
+        }
+      }
+
+      const parsedBuildings: BuildingStats[] = [];
+
+      if (buildingHeaderIndex !== -1) {
+        const headers = parseLine(lines[buildingHeaderIndex]);
+        const idCol = headers.findIndex(h => /id\s*b[aâ]timent|identifiant|code/i.test(h));
+        const typeCol = headers.findIndex(h => /typologie|type|usage|cat[eé]gorie/i.test(h));
+        const unitsCol = headers.findIndex(h => /logement|nb\s*logement|nombre\s*logement|unit[eé]s/i.test(h));
+        const winterCol = headers.findIndex(h => /hiver|winter|besoin\s*hiver/i.test(h));
+        const summerCol = headers.findIndex(h => /[eé]t[eé]\s*courant|besoin\s*[eé]t[eé]|summer/i.test(h));
+        const heatwaveCol = headers.findIndex(h => /canicule|heatwave|pic\s*[eé]t[eé]/i.test(h));
+        const consoCol = headers.findIndex(h => /consommation\s*elec.*kwh\/j|conso.*kwh\/j|kwh\/j/i.test(h));
+        const annualCol = headers.findIndex(h => /mwh\/an|annuel|consommation.*an/i.test(h));
+
+        for (let i = buildingHeaderIndex + 1; i < lines.length; i++) {
+          const cells = parseLine(lines[i]);
+          const firstCell = (cells[0] || '').trim();
+
+          // Arrêt si on atteint la ligne TOTAL ou la Section 2
+          if (/^total/i.test(firstCell) || /^2\./i.test(firstCell) || cells.every(c => !c)) {
+            break;
+          }
+
+          const rawId = idCol !== -1 && cells[idCol] ? cells[idCol].trim() : `BAT-${String(parsedBuildings.length + 1).padStart(2, '0')}`;
+          const type = typeCol !== -1 && cells[typeCol] ? cells[typeCol].trim() : 'Bâtiment';
+          const units = unitsCol !== -1 && cells[unitsCol] ? Math.round(cleanVal(cells[unitsCol])) : undefined;
+          const powerWinter = winterCol !== -1 && cells[winterCol] ? cleanVal(cells[winterCol]) : undefined;
+          const powerSummer = summerCol !== -1 && cells[summerCol] ? cleanVal(cells[summerCol]) : undefined;
+          const powerHeatwave = heatwaveCol !== -1 && cells[heatwaveCol] ? cleanVal(cells[heatwaveCol]) : undefined;
+          const conso = consoCol !== -1 ? cleanVal(cells[consoCol]) : 0;
+          const annualMwh = annualCol !== -1 && cells[annualCol] 
+            ? cleanVal(cells[annualCol]) 
+            : (conso > 0 ? +(conso * 365 / 1000).toFixed(1) : undefined);
+
+          if (rawId && (conso > 0 || powerWinter !== undefined || type)) {
+            const cleanIdStr = rawId.replace(/^BAT-?/i, '');
+            const buildingName = typeCol !== -1 && cells[typeCol]
+              ? `Bâtiment ${cleanIdStr} (${type})`
+              : (rawId.startsWith('BAT-') ? `Bâtiment ${cleanIdStr}` : rawId);
+
+            parsedBuildings.push({
+              id: rawId,
+              name: buildingName,
+              location: `Écoquartier Smart Microgrid, 34000 Montpellier (Lot ${rawId})`,
+              status: conso > 200 ? 'ATTENTION' : 'OPTIMAL',
+              consumption: `${conso.toLocaleString('fr-FR')} kWh`,
+              economy: `${Math.round(14 + (parsedBuildings.length % 6))}%`,
+              trend: parsedBuildings.length % 2 === 0 ? '-2.1%' : '+0.8%',
+              type,
+              occupancy: '95%',
+              unitsCount: units,
+              powerWinterKw: powerWinter,
+              powerSummerKw: powerSummer,
+              powerHeatwaveKw: powerHeatwave,
+              consumptionYearMwh: annualMwh
+            });
+          }
+        }
+      }
+
+      // 2. RECHERCHE ET PARSING DE LA SECTION 2 (GTB / GTC & POINTS DE CONTRÔLE)
+      let gtbHeaderIndex = -1;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].toLowerCase();
+        if (
+          (line.includes('équipement') || line.includes('equipement')) &&
+          (line.includes('protocole') || line.includes('marque') || line.includes('gtb'))
+        ) {
+          gtbHeaderIndex = i;
+          break;
+        }
+      }
+
+      const parsedEquipments: GTBEquipment[] = [];
+      if (gtbHeaderIndex !== -1) {
+        const gtbHeaders = parseLine(lines[gtbHeaderIndex]);
+        const locCol = gtbHeaders.findIndex(h => /localisation|zone|site|b[aâ]timent/i.test(h));
+        const catCol = gtbHeaders.findIndex(h => /lot|cat[eé]gorie/i.test(h));
+        const eqCol = gtbHeaders.findIndex(h => /[eé]quipement|supervis[eé]|nom/i.test(h));
+        const brandCol = gtbHeaders.findIndex(h => /marque|mod[eè]le/i.test(h));
+        const qtyCol = gtbHeaders.findIndex(h => /quantit[eé]|qt[eé]|nombre/i.test(h));
+        const protoCol = gtbHeaders.findIndex(h => /protocole|bus/i.test(h));
+        const pointCol = gtbHeaders.findIndex(h => /point.*gtb|point.*contr[oô]le|supervision|type.*point/i.test(h));
+        const statCol = gtbHeaders.findIndex(h => /statut|[eé]tat/i.test(h));
+
+        for (let i = gtbHeaderIndex + 1; i < lines.length; i++) {
+          const cells = parseLine(lines[i]);
+          if (cells.every(c => !c) || /^3\./.test(cells[0] || '')) break;
+
+          const eqName = eqCol !== -1 ? cells[eqCol] : cells[2];
+          if (eqName) {
+            parsedEquipments.push({
+              location: locCol !== -1 && cells[locCol] ? cells[locCol] : 'Site',
+              category: catCol !== -1 && cells[catCol] ? cells[catCol] : 'Général',
+              name: eqName,
+              brandModel: brandCol !== -1 && cells[brandCol] ? cells[brandCol] : 'Standard',
+              quantity: qtyCol !== -1 ? Math.round(cleanVal(cells[qtyCol])) || 1 : 1,
+              protocol: protoCol !== -1 && cells[protoCol] ? cells[protoCol] : 'BACnet / IP',
+              pointType: pointCol !== -1 && cells[pointCol] ? cells[pointCol] : 'Supervision',
+              status: statCol !== -1 && cells[statCol] ? cells[statCol] : 'Actif'
+            });
+          }
+        }
+      }
+
+      if (parsedBuildings.length > 0) {
+        hasGoogleSheetsSyncRef.current = true;
+        setBuildings(parsedBuildings);
+      }
+      if (parsedEquipments.length > 0) {
+        setGtbEquipments(parsedEquipments);
+      }
+
+      const now = new Date();
+      setLastSyncTime(now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    } catch (err) {
+      console.warn('Liaison Google Sheets en direct:', err);
+    } finally {
+      setIsSyncingSheet(false);
+    }
+  }, []);
+
+  // Forcer une actualisation manuelle immédiate
+  const forceSyncGoogleSheets = React.useCallback(() => {
+    fetchGoogleSheetsBackground();
+  }, [fetchGoogleSheetsBackground]);
+
+  // Synchronisation au chargement initial (les actualisations suivantes se font manuellement via le bouton de synchronisation)
+  React.useEffect(() => {
+    fetchGoogleSheetsBackground();
+  }, [fetchGoogleSheetsBackground]);
+
   const renderContent = () => {
     switch (activeView) {
-      case 'dashboard': return <DashboardView selectedBuildingId={selectedBuilding} onSelectBuilding={setSelectedBuilding} language={settings.language} buildingsList={memoizedBuildings} metrics={metrics} onOptimize={handleSmartOptimize} currentDate={formattedDate} />;
+      case 'dashboard': return (
+        <DashboardView 
+          selectedBuildingId={selectedBuilding} 
+          onSelectBuilding={setSelectedBuilding} 
+          language={settings.language} 
+          buildingsList={memoizedBuildings} 
+          metrics={metrics} 
+          onOptimize={handleSmartOptimize} 
+          currentDate={formattedDate}
+          isSyncing={isSyncingSheet}
+          lastSyncTime={lastSyncTime}
+          onForceSync={forceSyncGoogleSheets}
+        />
+      );
       case 'buildings': return (
         <BuildingsView 
           language={settings.language} 
@@ -3466,11 +3973,24 @@ export default function App() {
           onDeleteClick={handleDeleteBuilding}
           onEditClick={(b: any) => setEditingBuilding(b)}
           buildingsList={memoizedBuildings} 
+          isSyncing={isSyncingSheet}
+          lastSyncTime={lastSyncTime}
+          onForceSync={forceSyncGoogleSheets}
         />
       );
       case 'analytics': return <AnalyticsView language={settings.language} buildingsList={memoizedBuildings} metrics={metrics} currentDate={formattedDate} />;
       case 'reports': return <ReportsView language={settings.language} buildingsList={memoizedBuildings} currentDate={formattedDate} />;
-      case 'gtb': return <GTBView language={settings.language} buildingsList={memoizedBuildings} selectedBuildingId={selectedBuilding} />;
+      case 'gtb': return (
+        <GTBView 
+          language={settings.language} 
+          buildingsList={memoizedBuildings} 
+          selectedBuildingId={selectedBuilding}
+          gtbEquipments={gtbEquipments}
+          isSyncing={isSyncingSheet}
+          lastSyncTime={lastSyncTime}
+          onForceSync={forceSyncGoogleSheets}
+        />
+      );
       case 'settings': return (
         <SettingsView 
           userProfile={userProfile} 
@@ -3482,7 +4002,20 @@ export default function App() {
           handlePhotoUpload={handlePhotoUpload}
         />
       );
-      default: return <DashboardView selectedBuildingId={selectedBuilding} onSelectBuilding={setSelectedBuilding} language={settings.language} buildingsList={memoizedBuildings} metrics={metrics} onOptimize={handleSmartOptimize} currentDate={formattedDate} />;
+      default: return (
+        <DashboardView 
+          selectedBuildingId={selectedBuilding} 
+          onSelectBuilding={setSelectedBuilding} 
+          language={settings.language} 
+          buildingsList={memoizedBuildings} 
+          metrics={metrics} 
+          onOptimize={handleSmartOptimize} 
+          currentDate={formattedDate}
+          isSyncing={isSyncingSheet}
+          lastSyncTime={lastSyncTime}
+          onForceSync={forceSyncGoogleSheets}
+        />
+      );
     }
   };
 
