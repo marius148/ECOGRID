@@ -26,6 +26,7 @@ import {
   Filter,
   ArrowUpRight,
   ArrowDownRight,
+  ExternalLink,
   Sparkles,
   FileDown,
   Clock,
@@ -96,6 +97,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import { CiiEnergieLogo } from './components/CiiEnergieLogo';
+import { CityWeatherWidget, POPULAR_CITIES, type WeatherCity } from './components/CityWeatherWidget';
 import { auth, db, googleProvider, signInWithPopup, onAuthStateChanged } from './lib/firebase';
 import type { FirebaseAuthUser } from './lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, addDoc, deleteDoc } from 'firebase/firestore';
@@ -221,10 +223,10 @@ const BAR_DATA = [
 ];
 
 const TABLE_DATA: BuildingStats[] = [
-  { id: '1', name: 'Bâtiment A', location: 'Montpellier - Port Marianne', status: 'OPTIMAL', consumption: '12,450 kWh', economy: '15%', trend: '-2.4%', type: 'Bureaux', occupancy: '92%' },
-  { id: '2', name: 'Bâtiment G', location: 'Montpellier - Millénaire', status: 'ALERTE', consumption: '24,200 kWh', economy: '5%', trend: '+18.2%', type: 'Logistique', occupancy: '45%' },
-  { id: '3', name: 'Bâtiment J', location: 'Montpellier - Euromédecine', status: 'ATTENTION', consumption: '15,890 kWh', economy: '12%', trend: '+5.1%', type: 'R&D', occupancy: '78%' },
-  { id: '4', name: 'Bâtiment B', location: 'Montpellier - Antigone', status: 'OPTIMAL', consumption: '11,120 kWh', economy: '18%', trend: '-0.8%', type: 'Bureaux', occupancy: '88%' },
+  { id: '1', name: 'Bâtiment A', location: '1 Place Georges Frêche, 34267 Montpellier (Hôtel de Ville)', status: 'OPTIMAL', consumption: '12,450 kWh', economy: '15%', trend: '-2.4%', type: 'Bureaux', occupancy: '92%' },
+  { id: '2', name: 'Bâtiment G', location: '1000 Rue de la Vieille Poste, 34000 Montpellier (Millénaire Tech)', status: 'ALERTE', consumption: '24,200 kWh', economy: '5%', trend: '+18.2%', type: 'Logistique', occupancy: '45%' },
+  { id: '3', name: 'Bâtiment J', location: '209 Avenue des Apothicaires, 34090 Montpellier (Euromédecine)', status: 'ATTENTION', consumption: '15,890 kWh', economy: '12%', trend: '+5.1%', type: 'R&D', occupancy: '78%' },
+  { id: '4', name: 'Bâtiment B', location: "Place du Nombre d'Or, 34000 Montpellier (Espace Antigone)", status: 'OPTIMAL', consumption: '11,120 kWh', economy: '18%', trend: '-0.8%', type: 'Bureaux', occupancy: '88%' },
 ];
 
 const ANALYTICS_TREND = [
@@ -322,7 +324,9 @@ const LoginView = ({ onLogin, onGuest }: { onLogin: () => void, onGuest: () => v
       <div className="mb-6">
         <CiiEnergieLogo align="center" size="lg" />
       </div>
-      <p className="text-slate-500 font-medium mb-8 text-xs leading-relaxed">Système d'intendance énergétique, monitoring multi-sites et supervision GTB.</p>
+      <p className="text-slate-500 font-semibold mb-8 text-xs uppercase tracking-[0.12em] leading-relaxed">
+        L'énergie d'aujourd'hui<br />Le climat de demain
+      </p>
       
       <div className="w-full space-y-4">
         <button 
@@ -673,9 +677,9 @@ const EnergyMixCard = React.memo(({ language, buildingsList, isGlobal, selectedB
 
     return [
       { name: language === 'fr' ? 'Solaire' : 'Solar', value: solarPct, color: '#10b981', gradient: 'url(#solarGradient)' },
-      { name: language === 'fr' ? 'Éolien' : 'Wind', value: windPct, color: '#475569', gradient: 'url(#windGradient)' },
-      { name: language === 'fr' ? 'Réseau' : 'Grid', value: gridPct, color: '#6366f1', gradient: 'url(#gridGradient)' },
-      { name: 'Cogénération', value: cogenerationPct, color: '#94a3b8', gradient: 'url(#cogenGradient)' }
+      { name: language === 'fr' ? 'Éolien' : 'Wind', value: windPct, color: '#7ec22a', gradient: 'url(#windGradient)' },
+      { name: language === 'fr' ? 'Réseau' : 'Grid', value: gridPct, color: '#334155', gradient: 'url(#gridGradient)' },
+      { name: 'Cogénération', value: cogenerationPct, color: '#f59e0b', gradient: 'url(#cogenGradient)' }
     ];
   }, [language, buildingsList, isGlobal, selectedBuilding]);
 
@@ -695,34 +699,34 @@ const EnergyMixCard = React.memo(({ language, buildingsList, isGlobal, selectedB
       </div>
 
       <div className="flex flex-col items-center gap-4">
-        <div className="relative w-28 h-28 xs:w-32 xs:h-32">
+        <div className="relative w-36 h-36 sm:w-40 sm:h-40 flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
+            <PieChart margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
               <defs>
                 <linearGradient id="solarGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
                   <stop offset="100%" stopColor="#059669" stopOpacity={1} />
                 </linearGradient>
                 <linearGradient id="windGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#7ec22a" stopOpacity={1} />
+                  <stop offset="100%" stopColor="#65a30d" stopOpacity={1} />
+                </linearGradient>
+                <linearGradient id="gridGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#475569" stopOpacity={1} />
                   <stop offset="100%" stopColor="#1e293b" stopOpacity={1} />
                 </linearGradient>
-                <linearGradient id="gridGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity={1} />
-                  <stop offset="100%" stopColor="#4f46e5" stopOpacity={1} />
-                </linearGradient>
                 <linearGradient id="cogenGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#94a3b8" stopOpacity={1} />
-                  <stop offset="100%" stopColor="#64748b" stopOpacity={1} />
+                  <stop offset="0%" stopColor="#f59e0b" stopOpacity={1} />
+                  <stop offset="100%" stopColor="#d97706" stopOpacity={1} />
                 </linearGradient>
               </defs>
               <Pie 
                 data={energyMixData} 
                 cx="50%" 
                 cy="50%" 
-                innerRadius={42} 
-                outerRadius={58} 
-                paddingAngle={5} 
+                innerRadius="62%" 
+                outerRadius="88%" 
+                paddingAngle={4} 
                 dataKey="value"
                 stroke="none"
               >
@@ -1593,9 +1597,11 @@ const BuildingConsumptionGraphCard = React.memo(({
 
   const dynamicBarData = React.useMemo(() => buildingsList.map(b => {
     const val = parseEnergy(b.consumption);
+    const shortName = b.name.includes(' - ') ? b.name.split(' - ')[0] : b.name;
     return {
       id: b.id.toString(),
-      name: b.name,
+      name: shortName,
+      fullName: b.name,
       value: val,
       displayValue: `${val.toLocaleString()} kWh`,
       status: b.status,
@@ -1708,7 +1714,7 @@ const BuildingConsumptionGraphCard = React.memo(({
         <ResponsiveContainer width="100%" height="100%">
           {isGlobal ? (
             /* Bar Chart comparing all buildings */
-            <BarChart data={dynamicBarData} margin={{ top: 15, right: 15, left: -20, bottom: 25 }}>
+            <BarChart data={dynamicBarData} margin={{ top: 15, right: 15, left: 10, bottom: 20 }}>
               <defs>
                 <linearGradient id="globalBarGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#064E3B" stopOpacity={1} />
@@ -1727,13 +1733,14 @@ const BuildingConsumptionGraphCard = React.memo(({
                 tick={{ fill: '#475569', fontSize: 11, fontWeight: 700 }}
                 interval={0}
                 dy={8}
-                tickFormatter={(val) => val.length > 14 ? `${val.substring(0, 14)}...` : val}
+                tickFormatter={(val) => val.includes(' - ') ? val.split(' - ')[0] : val}
               />
               <YAxis 
                 axisLine={false} 
                 tickLine={false} 
+                width={56}
                 tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
-                tickFormatter={(val) => `${(val / 1000).toFixed(0)}k kWh`}
+                tickFormatter={(val) => val === 0 ? '0 MWh' : `${Math.round(val / 1000)} MWh`}
               />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc', radius: 6 }} />
               <Bar 
@@ -1753,7 +1760,7 @@ const BuildingConsumptionGraphCard = React.memo(({
             </BarChart>
           ) : (
             /* Area Chart for individual building history */
-            <AreaChart data={historyData} margin={{ top: 15, right: 15, left: -20, bottom: 5 }}>
+            <AreaChart data={historyData} margin={{ top: 15, right: 15, left: 10, bottom: 5 }}>
               <defs>
                 <linearGradient id="singleBldgGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#059669" stopOpacity={0.35}/>
@@ -1770,6 +1777,7 @@ const BuildingConsumptionGraphCard = React.memo(({
               <YAxis 
                 axisLine={false} 
                 tickLine={false} 
+                width={56}
                 tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
                 tickFormatter={(val) => `${val} kWh`}
               />
@@ -1817,25 +1825,40 @@ const BuildingConsumptionGraphCard = React.memo(({
 });
 BuildingConsumptionGraphCard.displayName = 'BuildingConsumptionGraphCard';
 
-const MONTPELLIER_BUILDINGS_COORDS: Record<string, { lat: number; lng: number; district: string }> = {
-  '1': { lat: 43.6035, lng: 3.8982, district: 'Montpellier - Port Marianne' },
-  '2': { lat: 43.6120, lng: 3.9180, district: 'Montpellier - Millénaire' },
-  '3': { lat: 43.6380, lng: 3.8370, district: 'Montpellier - Euromédecine' },
-  '4': { lat: 43.6080, lng: 3.8890, district: 'Montpellier - Antigone' },
-  '5': { lat: 43.6085, lng: 3.8795, district: 'Montpellier - Place de la Comédie' },
-  '6': { lat: 43.6040, lng: 3.9210, district: 'Montpellier - Odysseum' }
+interface MontpellierBuildingCoords {
+  lat: number;
+  lng: number;
+  address: string;
+  district: string;
+}
+
+const MONTPELLIER_BUILDINGS_COORDS: Record<string, MontpellierBuildingCoords> = {
+  '1': { lat: 43.5997, lng: 3.8967, address: '1 Place Georges Frêche, 34267 Montpellier', district: 'Port Marianne / Richter' },
+  '2': { lat: 43.6128, lng: 3.9189, address: '1000 Rue de la Vieille Poste, 34000 Montpellier', district: 'Parc Millénaire' },
+  '3': { lat: 43.6394, lng: 3.8368, address: '209 Avenue des Apothicaires, 34090 Montpellier', district: 'Euromédecine' },
+  '4': { lat: 43.6083, lng: 3.8894, address: "Place du Nombre d'Or, 34000 Montpellier", district: 'Antigone' },
+  '5': { lat: 43.6085, lng: 3.8795, address: '1 Place de la Comédie, 34000 Montpellier', district: 'Centre Historique / Comédie' },
+  '6': { lat: 43.6042, lng: 3.9215, address: 'Place de France, 34000 Montpellier', district: 'Odysseum' },
+  '7': { lat: 43.5982, lng: 3.9031, address: '200 Rue Raymond Dugrand, 34000 Montpellier', district: 'Bassin Jacques Cœur' }
 };
 
-const getBuildingMapCoords = (b: any, index: number) => {
-  if (MONTPELLIER_BUILDINGS_COORDS[b.id.toString()]) {
+const getBuildingMapCoords = (b: any, index: number): MontpellierBuildingCoords => {
+  if (b && b.id && MONTPELLIER_BUILDINGS_COORDS[b.id.toString()]) {
     return MONTPELLIER_BUILDINGS_COORDS[b.id.toString()];
   }
-  const latOffset = (index % 3) * 0.012 - 0.012;
-  const lngOffset = Math.floor(index / 3) * 0.015 - 0.015;
+  const realAddresses = [
+    { lat: 43.6085, lng: 3.8795, address: '1 Place de la Comédie, 34000 Montpellier', district: 'Centre Historique' },
+    { lat: 43.6042, lng: 3.9215, address: 'Place de France, 34000 Montpellier', district: 'Odysseum' },
+    { lat: 43.5982, lng: 3.9031, address: '200 Rue Raymond Dugrand, 34000 Montpellier', district: 'Port Marianne Sud' },
+    { lat: 43.6265, lng: 3.8645, address: 'Rue de la Roqueturière, 34090 Montpellier', district: 'Aiguelongue' },
+    { lat: 43.6001, lng: 3.8450, address: 'Avenue de Lodève, 34070 Montpellier', district: 'Chamberte' },
+  ];
+  const item = realAddresses[index % realAddresses.length];
   return {
-    lat: 43.6108 + latOffset,
-    lng: 3.8767 + lngOffset,
-    district: `Montpellier - ${b.location || 'Secteur Métropole'}`
+    lat: item.lat,
+    lng: item.lng,
+    address: b && b.location && b.location.includes('Montpellier') ? b.location : item.address,
+    district: item.district
   };
 };
 
@@ -1854,30 +1877,50 @@ const MontpellierMapCard = React.memo(({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const [mapTileType, setMapTileType] = useState<'plan' | 'satellite' | 'dark'>('plan');
+  const [mapTileType, setMapTileType] = useState<'plan' | 'satellite' | 'terrain' | 'embed'>('plan');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchedLocation, setSearchedLocation] = useState<{
+    lat: number;
+    lng: number;
+    address: string;
+    displayName?: string;
+  } | null>(null);
+  const searchMarkerRef = useRef<L.Marker | null>(null);
 
   const selectedBuilding = React.useMemo(() => {
     return buildingsList.find(b => b.id.toString() === selectedBuildingId) || null;
   }, [buildingsList, selectedBuildingId]);
 
+  const selectedCoords = selectedBuilding ? getBuildingMapCoords(selectedBuilding, 0) : null;
+
+  // Real Google Maps tile layers (No API key required)
   const tileUrls = {
-    plan: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    plan: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+    satellite: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+    terrain: 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}'
   };
 
   useEffect(() => {
+    if (mapTileType === 'embed') {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+      return;
+    }
+
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
       center: [43.6108, 3.8767],
-      zoom: 12,
+      zoom: 13,
       zoomControl: false,
       attributionControl: false
     });
 
-    const tileLayer = L.tileLayer(tileUrls.plan, {
-      maxZoom: 19
+    const tileLayer = L.tileLayer(tileUrls[mapTileType as keyof typeof tileUrls] || tileUrls.plan, {
+      maxZoom: 20
     }).addTo(map);
 
     tileLayerRef.current = tileLayer;
@@ -1887,22 +1930,22 @@ const MontpellierMapCard = React.memo(({
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, []);
+  }, [mapTileType]);
 
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    if (mapTileType === 'embed' || !mapInstanceRef.current) return;
     if (tileLayerRef.current) {
       mapInstanceRef.current.removeLayer(tileLayerRef.current);
     }
-    const newTileLayer = L.tileLayer(tileUrls[mapTileType], {
-      maxZoom: 19
+    const newTileLayer = L.tileLayer(tileUrls[mapTileType as keyof typeof tileUrls] || tileUrls.plan, {
+      maxZoom: 20
     }).addTo(mapInstanceRef.current);
     tileLayerRef.current = newTileLayer;
   }, [mapTileType]);
 
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map) return;
+    if (!map || mapTileType === 'embed') return;
 
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
@@ -1910,43 +1953,43 @@ const MontpellierMapCard = React.memo(({
     buildingsList.forEach((b, index) => {
       const coords = getBuildingMapCoords(b, index);
       const isSelected = selectedBuildingId === b.id.toString();
-      const statusColor = b.status === 'ALERTE' ? '#e11d48' : b.status === 'ATTENTION' ? '#f59e0b' : '#059669';
+      const statusColor = b.status === 'ALERTE' ? '#e11d48' : b.status === 'ATTENTION' ? '#f59e0b' : '#10b981';
 
       const customIcon = L.divIcon({
-        className: 'custom-leaflet-marker',
+        className: 'custom-google-maps-marker',
         html: `
           <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
             ${b.status === 'ALERTE' ? `<div style="position: absolute; top: -6px; width: 36px; height: 36px; border-radius: 9999px; background-color: rgba(225,29,72,0.3); animation: ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>` : ''}
-            <div style="width: 28px; height: 28px; border-radius: 9999px; background-color: #0f172a; border: 2.5px solid ${isSelected ? '#f59e0b' : '#ffffff'}; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); transform: ${isSelected ? 'scale(1.2)' : 'scale(1)'}; transition: all 0.2s;">
-              <div style="width: 10px; height: 10px; border-radius: 9999px; background-color: ${statusColor};"></div>
+            <div style="width: 30px; height: 30px; border-radius: 9999px; background-color: #0f172a; border: 2.5px solid ${isSelected ? '#10b981' : '#ffffff'}; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.35); transform: ${isSelected ? 'scale(1.25)' : 'scale(1)'}; transition: all 0.2s;">
+              <div style="width: 11px; height: 11px; border-radius: 9999px; background-color: ${statusColor};"></div>
             </div>
-            <div style="margin-top: 4px; padding: 2px 8px; background-color: rgba(15,23,42,0.92); color: #ffffff; font-weight: 700; font-size: 10px; border-radius: 6px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); white-space: nowrap; border: 1px solid rgba(255,255,255,0.2); font-family: sans-serif;">
+            <div style="margin-top: 4px; padding: 3px 8px; background-color: rgba(15,23,42,0.95); color: #ffffff; font-weight: 700; font-size: 10px; border-radius: 6px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.25); white-space: nowrap; border: 1px solid rgba(255,255,255,0.2); font-family: sans-serif;">
               ${b.name}
             </div>
           </div>
         `,
-        iconSize: [32, 44],
-        iconAnchor: [16, 22]
+        iconSize: [34, 46],
+        iconAnchor: [17, 23]
       });
 
       const marker = L.marker([coords.lat, coords.lng], { icon: customIcon }).addTo(map);
 
       marker.on('click', () => {
         onSelectBuilding(b.id.toString());
-        map.flyTo([coords.lat, coords.lng], 14, { duration: 1 });
+        map.flyTo([coords.lat, coords.lng], 15, { duration: 1 });
       });
 
       markersRef.current.push(marker);
 
       if (isSelected) {
-        map.flyTo([coords.lat, coords.lng], 14, { duration: 1 });
+        map.flyTo([coords.lat, coords.lng], 15, { duration: 1 });
       }
     });
-  }, [buildingsList, selectedBuildingId, onSelectBuilding]);
+  }, [buildingsList, selectedBuildingId, onSelectBuilding, mapTileType]);
 
   const handleResetView = () => {
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo([43.6108, 3.8767], 12, { duration: 1 });
+      mapInstanceRef.current.flyTo([43.6108, 3.8767], 13, { duration: 1 });
     }
   };
 
@@ -1958,92 +2001,278 @@ const MontpellierMapCard = React.memo(({
     if (mapInstanceRef.current) mapInstanceRef.current.zoomOut();
   };
 
-  return (
-    <div className="bg-white/85 backdrop-blur-md rounded-2xl border border-white/60 shadow-md p-4 sm:p-5 flex flex-col gap-3 relative">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-emerald-100/80 text-emerald-800 rounded-lg">
-              <MapPin className="w-4 h-4" />
+  const handleAddressSearch = async (addressToSearch?: string) => {
+    const query = (typeof addressToSearch === 'string' ? addressToSearch : searchQuery).trim();
+    if (!query) return;
+
+    setIsSearching(true);
+    if (typeof addressToSearch === 'string') {
+      setSearchQuery(addressToSearch);
+    }
+
+    try {
+      const fullQuery = query.toLowerCase().includes('montpellier') || query.toLowerCase().includes('france')
+        ? query
+        : `${query}, Montpellier, France`;
+
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullQuery)}&limit=1`, {
+        headers: { 'Accept-Language': 'fr' }
+      });
+      let data = await res.json();
+
+      if ((!data || data.length === 0) && fullQuery !== query) {
+        const fallback = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`, {
+          headers: { 'Accept-Language': 'fr' }
+        });
+        data = await fallback.json();
+      }
+
+      let lat = 43.6108;
+      let lng = 3.8767;
+      let displayName = query;
+
+      if (data && data.length > 0) {
+        lat = parseFloat(data[0].lat);
+        lng = parseFloat(data[0].lon);
+        displayName = data[0].display_name.split(',').slice(0, 3).join(', ');
+      }
+
+      setSearchedLocation({ lat, lng, address: query, displayName });
+
+      const map = mapInstanceRef.current;
+      if (map && mapTileType !== 'embed') {
+        if (searchMarkerRef.current) {
+          searchMarkerRef.current.remove();
+        }
+
+        const searchIcon = L.divIcon({
+          className: 'custom-search-marker',
+          html: `
+            <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 1000;">
+              <div style="position: absolute; top: -6px; width: 38px; height: 38px; border-radius: 9999px; background-color: rgba(16,185,129,0.35); animation: ping 1.2s cubic-bezier(0,0,0.2,1) infinite;"></div>
+              <div style="width: 30px; height: 30px; border-radius: 9999px; background-color: #059669; border: 2.5px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4);">
+                <div style="width: 10px; height: 10px; border-radius: 9999px; background-color: #ffffff;"></div>
+              </div>
+              <div style="margin-top: 4px; padding: 2px 7px; background-color: #0f172a; color: #ffffff; font-weight: 700; font-size: 10px; border-radius: 6px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.25); white-space: nowrap; border: 1px solid rgba(255,255,255,0.25); font-family: sans-serif; max-width: 180px; overflow: hidden; text-overflow: ellipsis;">
+                📍 ${query}
+              </div>
             </div>
-            <h3 className="text-base sm:text-lg font-bold font-display text-slate-800">
-              {language === 'fr' ? 'Carte EcoGrid Montpellier' : 'Montpellier EcoGrid Map'}
-            </h3>
+          `,
+          iconSize: [34, 46],
+          iconAnchor: [17, 23]
+        });
+
+        const newMarker = L.marker([lat, lng], { icon: searchIcon }).addTo(map);
+        searchMarkerRef.current = newMarker;
+        map.flyTo([lat, lng], 16, { duration: 1.2 });
+      }
+    } catch {
+      setSearchedLocation({ lat: 43.6108, lng: 3.8767, address: query, displayName: query });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setSearchedLocation(null);
+    if (searchMarkerRef.current) {
+      searchMarkerRef.current.remove();
+      searchMarkerRef.current = null;
+    }
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo([43.6108, 3.8767], 13, { duration: 1 });
+    }
+  };
+
+  const targetAddress = searchedLocation 
+    ? searchedLocation.address 
+    : (selectedCoords ? selectedCoords.address : 'Montpellier, France');
+
+  const embedQuery = encodeURIComponent(targetAddress);
+
+  return (
+    <div id="montpellier-google-maps-card" className="bg-white/85 backdrop-blur-md rounded-2xl border border-white/60 shadow-md p-4 sm:p-5 flex flex-col gap-3 relative">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="p-1.5 bg-emerald-100/80 text-emerald-800 rounded-lg">
+            <MapPin className="w-4 h-4" />
           </div>
-          <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-0.5">
-            {language === 'fr' ? 'Cartographie temps réel des sites métropolitains' : 'Real-time mapping of Montpellier sites'}
-          </p>
+          <h3 className="text-base sm:text-lg font-bold font-display text-slate-800">
+            {language === 'fr' ? 'Carte' : 'Map'}
+          </h3>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200/60 text-[10px] font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Montpellier 3M
-          </span>
-        </div>
+        {/* Onglet de recherche d'adresse directe */}
+        <form 
+          onSubmit={(e) => { e.preventDefault(); handleAddressSearch(); }} 
+          className="flex items-center gap-1.5 w-full sm:w-auto min-w-0"
+        >
+          <div className="relative flex-1 sm:w-60 md:w-72">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={language === 'fr' ? "Rechercher une adresse..." : "Search an address..."}
+              className="w-full bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200/80 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                title={language === 'fr' ? 'Effacer' : 'Clear'}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+          <button
+            type="submit"
+            disabled={isSearching || !searchQuery.trim()}
+            className="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1 shrink-0 active:scale-95"
+          >
+            {isSearching ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <span>{language === 'fr' ? 'Trouver' : 'Find'}</span>
+            )}
+          </button>
+        </form>
       </div>
 
+      {/* Résultat d'adresse trouvée */}
+      {searchedLocation && (
+        <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-emerald-50/90 border border-emerald-200 rounded-xl text-xs text-emerald-900 animate-fadeIn">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="text-[11px] font-semibold truncate">
+              📍 {searchedLocation.displayName || searchedLocation.address}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchedLocation.address)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2 py-0.5 bg-white text-emerald-800 border border-emerald-300 rounded text-[10px] font-bold hover:bg-emerald-100 flex items-center gap-1 transition-colors"
+              title="Ouvrir dans Maps"
+            >
+              <span>Maps</span>
+              <ExternalLink className="w-2.5 h-2.5 text-emerald-600" />
+            </a>
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              className="text-emerald-700 hover:text-emerald-900 p-0.5"
+              title="Fermer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50/80 p-2 rounded-xl border border-slate-200/50 text-xs">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           <button
+            type="button"
             onClick={() => setMapTileType('plan')}
             className={cn("px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all", mapTileType === 'plan' ? "bg-slate-900 text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200")}
           >
-            🗺️ Plan
+            Plan
           </button>
           <button
+            type="button"
             onClick={() => setMapTileType('satellite')}
             className={cn("px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all", mapTileType === 'satellite' ? "bg-slate-900 text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200")}
           >
-            🛰️ Satellite
+            Satellite
           </button>
           <button
-            onClick={() => setMapTileType('dark')}
-            className={cn("px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all", mapTileType === 'dark' ? "bg-slate-900 text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200")}
+            type="button"
+            onClick={() => setMapTileType('embed')}
+            className={cn("px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all", mapTileType === 'embed' ? "bg-emerald-700 text-white shadow-sm" : "bg-white text-emerald-800 hover:bg-emerald-50 border border-emerald-200")}
           >
-            🌙 Sombre
+            Direct
           </button>
         </div>
 
-        <div className="flex items-center gap-1 ml-auto">
-          <button
-            onClick={handleResetView}
-            className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[10px] font-bold transition-colors flex items-center gap-1 shadow-xs"
-            title="Recentrer Montpellier"
-          >
-            <span>📍</span>
-            <span>{language === 'fr' ? 'Recentrer' : 'Center'}</span>
-          </button>
-          <button onClick={handleZoomIn} className="w-6 h-6 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center text-slate-800 font-bold text-xs shadow-xs">
-            +
-          </button>
-          <button onClick={handleZoomOut} className="w-6 h-6 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center text-slate-800 font-bold text-xs shadow-xs">
-            -
-          </button>
-        </div>
+        {mapTileType !== 'embed' && (
+          <div className="flex items-center gap-1 ml-auto">
+            <button
+              type="button"
+              onClick={handleResetView}
+              className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[10px] font-bold transition-colors flex items-center gap-1 shadow-xs"
+              title="Recentrer Montpellier"
+            >
+              <span>📍</span>
+              <span>{language === 'fr' ? 'Recentrer' : 'Center'}</span>
+            </button>
+            <button type="button" onClick={handleZoomIn} className="w-6 h-6 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center text-slate-800 font-bold text-xs shadow-xs">
+              +
+            </button>
+            <button type="button" onClick={handleZoomOut} className="w-6 h-6 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center text-slate-800 font-bold text-xs shadow-xs">
+              -
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="w-full h-[260px] sm:h-[300px] rounded-xl overflow-hidden border border-slate-200/80 relative shadow-inner z-10">
-        <div ref={mapContainerRef} className="w-full h-full" />
+      <div className="w-full h-[280px] sm:h-[320px] rounded-xl overflow-hidden border border-slate-200/80 relative shadow-inner z-10">
+        {mapTileType === 'embed' ? (
+          <iframe
+            title="Carte Montpellier"
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            loading="lazy"
+            allowFullScreen
+            src={`https://maps.google.com/maps?q=${embedQuery}&t=${mapTileType === 'satellite' ? 'k' : 'm'}&z=${selectedBuilding ? 16 : 13}&ie=UTF8&iwloc=&output=embed`}
+            className="w-full h-full"
+          />
+        ) : (
+          <div ref={mapContainerRef} className="w-full h-full" />
+        )}
 
-        {selectedBuilding && (
-          <div className="absolute bottom-3 left-3 right-3 bg-slate-900/90 backdrop-blur-md text-white p-3 rounded-xl border border-slate-700/80 shadow-2xl z-[1000] flex items-center justify-between gap-2">
+        {selectedBuilding && selectedCoords && (
+          <div className="absolute bottom-3 left-3 right-3 bg-slate-900/95 backdrop-blur-md text-white p-3 rounded-xl border border-slate-700/80 shadow-2xl z-[1000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <p className="font-bold text-xs truncate font-display">{selectedBuilding.name}</p>
                 <Tag status={selectedBuilding.status} />
               </div>
-              <p className="text-[10px] text-slate-300 truncate mt-0.5">
-                📍 {selectedBuilding.location} • {parseEnergy(selectedBuilding.consumption).toLocaleString()} kWh
+              <p className="text-[11px] text-slate-200 font-semibold truncate mt-1 flex items-center gap-1">
+                <span>📍</span>
+                <span>{selectedCoords.address}</span>
+                <span className="text-slate-400 font-normal">({selectedCoords.district})</span>
+              </p>
+              <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                Consommation : <span className="text-emerald-400 font-bold">{parseEnergy(selectedBuilding.consumption).toLocaleString()} kWh</span> • Type : {selectedBuilding.type || 'Bureaux'}
               </p>
             </div>
-            <button
-              onClick={() => onSelectBuilding('all')}
-              className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-bold rounded-lg border border-emerald-500/40 shrink-0 transition-colors"
-            >
-              🌐 {language === 'fr' ? 'Vue Globale' : 'Global View'}
-            </button>
+            
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedCoords.address)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2.5 py-1.5 bg-white hover:bg-emerald-50 text-slate-900 text-[10px] font-bold rounded-lg border border-slate-200 transition-colors flex items-center gap-1 shadow-sm"
+                title="Voir l'itinéraire du site"
+              >
+                <span>{language === 'fr' ? 'Itinéraire' : 'Directions'}</span>
+                <ExternalLink className="w-3 h-3 text-emerald-600" />
+              </a>
+              <button
+                type="button"
+                onClick={() => onSelectBuilding('all')}
+                className="px-2.5 py-1.5 bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-300 text-[10px] font-bold rounded-lg border border-emerald-500/40 shrink-0 transition-colors"
+              >
+                {language === 'fr' ? 'Vue Globale' : 'Global View'}
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -2744,7 +2973,21 @@ export default function App() {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [selectedBuilding, setSelectedBuilding] = useState<string>('all');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [buildings, setBuildings] = useState<BuildingStats[]>([]);
+  const [activeWeatherCity, setActiveWeatherCity] = useState<WeatherCity>(POPULAR_CITIES[0]);
 
+  // Synchronize city if selected building specifies a known city location
+  useEffect(() => {
+    if (selectedBuilding !== 'all') {
+      const b = buildings.find(item => item.id.toString() === selectedBuilding.toString());
+      if (b && b.location) {
+        const found = POPULAR_CITIES.find(c => b.location.toLowerCase().includes(c.name.toLowerCase()));
+        if (found) {
+          setActiveWeatherCity(found);
+        }
+      }
+    }
+  }, [selectedBuilding, buildings]);
   // Update date automatically every minute to stay current
   React.useEffect(() => {
     const timer = setInterval(() => setCurrentDate(new Date()), 60000);
@@ -2755,7 +2998,6 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [buildings, setBuildings] = useState<BuildingStats[]>([]);
   const [isAddBuildingModalOpen, setIsAddBuildingModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -3418,8 +3660,8 @@ export default function App() {
          isSidebarOpen ? "translate-x-0 shadow-[20px_0_60px_-15px_rgba(15,23,42,0.1)]" : "-translate-x-full"
        )}>
         {/* Brand Header */}
-        <div className="p-6 pt-7 pb-5 flex flex-col items-center justify-center border-b border-slate-100/80 mb-2">
-          <CiiEnergieLogo align="center" size="md" />
+        <div className="px-8 pt-7 pb-5 flex items-center justify-start border-b border-slate-100/80 mb-2">
+          <CiiEnergieLogo align="left" size="md" />
         </div>
 
         {/* Navigation Items */}
@@ -3432,27 +3674,12 @@ export default function App() {
           <SidebarItem icon={Settings} label={currentTranslations.settings} active={activeView === 'settings'} onClick={() => { setActiveView('settings'); setIsSidebarOpen(false); }} />
         </nav>
         
-        {/* Sidebar Bottom Photo Promo Card (Matching Reference Image) */}
-        <div className="p-4 mx-2 my-3 rounded-3xl bg-slate-900 text-white relative overflow-hidden shadow-xl group border border-slate-800">
-          <div 
-            className="absolute inset-0 bg-cover bg-center opacity-40 group-hover:scale-105 transition-transform duration-700 pointer-events-none" 
-            style={{ backgroundImage: `url(${ecoGridBgImg})` }}
+        {/* Real Live City Weather Widget with Day-by-Day Forecasts (Open-Meteo) */}
+        <div className="mx-2 my-2.5">
+          <CityWeatherWidget 
+            currentCity={activeWeatherCity} 
+            onCityChange={setActiveWeatherCity}
           />
-          <div className="relative z-10 space-y-2">
-            <div className="w-8 h-8 rounded-xl bg-sky-500/80 backdrop-blur-md flex items-center justify-center text-white">
-              <Sun className="w-4 h-4 animate-spin-slow" />
-            </div>
-            <h4 className="font-extrabold text-sm text-white leading-snug">Clean Energy.<br />Brighter Tomorrow</h4>
-            <p className="text-[10px] text-slate-300 leading-relaxed font-medium">
-              You've reduced <span className="text-emerald-400 font-bold">158 tons</span> of CO₂ emissions this year.
-            </p>
-            <button 
-              onClick={() => setActiveView('analytics')}
-              className="w-full mt-2 py-2 bg-white text-slate-900 rounded-xl text-[11px] font-extrabold hover:bg-sky-50 transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow-md"
-            >
-              View Impact <ArrowRight className="w-3.5 h-3.5 text-sky-600" />
-            </button>
-          </div>
         </div>
 
         {/* Logout Footer */}

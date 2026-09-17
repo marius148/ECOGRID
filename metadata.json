@@ -1,6 +1,6 @@
 {
   "name": "CII ENERGIE",
-  "description": "Système de gestion de l'intendance énergétique pour le suivi et l'optimisation des consommations de bâtiments par CII ENERGIE.",
+  "description": "Système de gestion de l'intendance énergétique pour le suivi et l'optimisation des consommations de bâtiments par CII ENERGIE avec météo réelle et prévisions jour par jour.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
