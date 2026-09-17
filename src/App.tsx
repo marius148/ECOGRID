@@ -95,7 +95,7 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
-import { CiiEnergieLogo, CiiEnergieIcon } from './components/CiiEnergieLogo';
+import { CiiEnergieLogo } from './components/CiiEnergieLogo';
 import { auth, db, googleProvider, signInWithPopup, onAuthStateChanged } from './lib/firebase';
 import type { FirebaseAuthUser } from './lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, addDoc, deleteDoc } from 'firebase/firestore';
@@ -319,16 +319,8 @@ const LoginView = ({ onLogin, onGuest }: { onLogin: () => void, onGuest: () => v
   <div className="min-h-screen flex items-center justify-center p-4 font-sans relative overflow-hidden bg-slate-900">
     <GlobalWindFarmBackground skyTheme="auto" />
     <div className="w-full max-w-md bg-white/95 rounded-[3rem] p-10 md:p-12 shadow-2xl border border-white/80 flex flex-col items-center text-center relative z-10">
-      <div className="w-24 h-24 bg-white border-2 border-emerald-100 rounded-[2.5rem] flex items-center justify-center mb-6 shadow-xl shadow-emerald-950/10 p-2">
-        <CiiEnergieIcon className="w-full h-full" />
-      </div>
-      <div className="flex items-baseline gap-1.5 font-extrabold text-3xl font-display mb-1">
-        <span className="text-[#246b32]">CII</span>
-        <span className="text-[#7aba26]">ENERGIE</span>
-      </div>
-      <div className="flex flex-col text-[10px] font-bold text-slate-700 uppercase tracking-widest leading-tight mb-3">
-        <span>L'Énergie d'aujourd'hui</span>
-        <span className="text-slate-500">Le climat de demain</span>
+      <div className="mb-6">
+        <CiiEnergieLogo align="center" size="lg" />
       </div>
       <p className="text-slate-500 font-medium mb-8 text-xs leading-relaxed">Système d'intendance énergétique, monitoring multi-sites et supervision GTB.</p>
       
@@ -3356,10 +3348,7 @@ export default function App() {
           >
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-          <div className="flex items-baseline gap-1">
-            <span className="font-bold text-emerald-900 text-sm">CII</span>
-            <span className="font-medium text-emerald-500 text-xs">ENERGIE</span>
-          </div>
+          <CiiEnergieLogo size="sm" align="left" />
         </div>
         
         {/* Mobile Building Dropdown Selector */}
@@ -3420,12 +3409,6 @@ export default function App() {
               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
             )}
           </button>
-          <div 
-            onClick={() => setActiveView('settings')}
-            className="w-8 h-8 rounded-full overflow-hidden border-2 border-white shadow-md ring-1 ring-emerald-500/10 cursor-pointer active:scale-90 transition-transform"
-          >
-            <img src={userProfile.photo} alt="User" className="w-full h-full object-cover" />
-          </div>
         </div>
       </div>
  
@@ -3435,8 +3418,8 @@ export default function App() {
          isSidebarOpen ? "translate-x-0 shadow-[20px_0_60px_-15px_rgba(15,23,42,0.1)]" : "-translate-x-full"
        )}>
         {/* Brand Header */}
-        <div className="p-5 pt-7 pb-4">
-          <CiiEnergieLogo />
+        <div className="p-6 pt-7 pb-5 flex flex-col items-center justify-center border-b border-slate-100/80 mb-2">
+          <CiiEnergieLogo align="center" size="md" />
         </div>
 
         {/* Navigation Items */}
@@ -3472,23 +3455,15 @@ export default function App() {
           </div>
         </div>
 
-        {/* User Profile Footer */}
-        <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0">
-              <img src={userProfile.photo} alt="User" className="w-full h-full object-cover" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-slate-800 leading-none">{userProfile.name}</span>
-              <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">{userProfile.role}</span>
-            </div>
-          </div>
+        {/* Logout Footer */}
+        <div className="p-3 border-t border-slate-100 flex items-center bg-slate-50/50">
           <button 
             onClick={handleLogout} 
-            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl font-semibold text-xs transition-colors"
             title={currentTranslations.signout}
           >
             <LogOut className="w-4 h-4" />
+            <span>{currentTranslations.signout}</span>
           </button>
         </div>
       </aside>
@@ -3585,19 +3560,17 @@ export default function App() {
               <button 
                 onClick={() => setIsHelpOpen(true)}
                 className="flex p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all relative outline-none"
+                title={settings.language === 'fr' ? 'Aide' : 'Help'}
               >
                 <HelpCircle className="w-5 h-5" />
               </button>
-              <div className="flex flex-col items-end mr-1">
-                <span className="text-[10px] font-bold text-slate-800 leading-none">{userProfile.name}</span>
-                <span className="text-[8px] font-medium text-slate-400 uppercase tracking-wider mt-0.5">{userProfile.role}</span>
-              </div>
-              <div 
-                onClick={() => setActiveView('settings')}
-                className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-md ring-1 ring-emerald-500/10 cursor-pointer hover:ring-emerald-500/30 transition-all"
+              <button
+                onClick={handleLogout}
+                className="flex p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all relative outline-none"
+                title={currentTranslations.signout}
               >
-                <img src={userProfile.photo} alt="User" className="w-full h-full object-cover" />
-              </div>
+                <LogOut className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </header>
