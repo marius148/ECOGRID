@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 180" width="100%" height="100%">
+  <defs>
+    <style>
+      .cii-dark { fill: #205e2e; }
+      .cii-green { fill: #78be20; }
+      .cii-stroke { stroke: #266d33; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .cii-stroke-white { stroke: #266d33; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; fill: #ffffff; }
+      .cii-text-dark { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 800; font-size: 42px; letter-spacing: -0.5px; }
+      .cii-tagline { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 2px; fill: #1c2420; }
+    </style>
+  </defs>
+
+  <!-- Left Icon / Emblem inside 160x160 area -->
+  <g transform="translate(10, 10)">
+    <!-- Outer Green Circular Arc -->
+    <path d="M 48 34 A 48 48 0 1 0 82 48" stroke="#266d33" stroke-width="4.2" stroke-linecap="round" fill="none" />
+    
+    <!-- Left Building with window slats -->
+    <rect x="29" y="60" width="20" height="46" class="cii-stroke-white" />
+    <line x1="33" y1="68" x2="45" y2="68" stroke="#266d33" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="33" y1="76" x2="45" y2="76" stroke="#266d33" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="33" y1="84" x2="45" y2="84" stroke="#266d33" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="33" y1="92" x2="45" y2="92" stroke="#266d33" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="33" y1="100" x2="45" y2="100" stroke="#266d33" stroke-width="2.5" stroke-linecap="round" />
+
+    <!-- Center Eco Skyscraper with Antenna -->
+    <path d="M 49 106 L 49 38 L 61 24 L 61 10 L 64 10 L 64 24 L 73 34 L 73 106 Z" class="cii-stroke-white" />
+    <line x1="56" y1="38" x2="56" y2="106" stroke="#266d33" stroke-width="2.2" />
+    <line x1="51" y1="46" x2="71" y2="46" stroke="#266d33" stroke-width="2" />
+    <line x1="51" y1="54" x2="71" y2="54" stroke="#266d33" stroke-width="2" />
+    <line x1="51" y1="62" x2="71" y2="62" stroke="#266d33" stroke-width="2" />
+    <line x1="51" y1="70" x2="71" y2="70" stroke="#266d33" stroke-width="2" />
+    <line x1="51" y1="78" x2="71" y2="78" stroke="#266d33" stroke-width="2" />
+    <line x1="51" y1="86" x2="71" y2="86" stroke="#266d33" stroke-width="2" />
+    <line x1="51" y1="94" x2="71" y2="94" stroke="#266d33" stroke-width="2" />
+    <line x1="51" y1="102" x2="71" y2="102" stroke="#266d33" stroke-width="2" />
+
+    <!-- Right Building Wing -->
+    <path d="M 73 60 L 81 60 L 81 106 L 73 106" class="cii-stroke-white" />
+    <line x1="75" y1="70" x2="80" y2="70" stroke="#266d33" stroke-width="2" />
+    <line x1="75" y1="80" x2="80" y2="80" stroke="#266d33" stroke-width="2" />
+    <line x1="75" y1="90" x2="80" y2="90" stroke="#266d33" stroke-width="2" />
+
+    <!-- Baseline -->
+    <line x1="24" y1="106" x2="86" y2="106" stroke="#266d33" stroke-width="3" stroke-linecap="round" />
+  </g>
+
+  <!-- Typography on the Right -->
+  <g transform="translate(150, 45)">
+    <!-- CII ENERGIE -->
+    <text x="0" y="40" class="cii-text-dark">
+      <tspan class="cii-dark">CII </tspan>
+      <tspan class="cii-green">ENERGIE</tspan>
+    </text>
+
+    <!-- Tagline -->
+    <text x="35" y="78" class="cii-tagline">L'ENERGIE D'AUJOURD'HUI</text>
+    <text x="48" y="102" class="cii-tagline">LE CLIMAT DE DEMAIN</text>
+  </g>
+</svg>

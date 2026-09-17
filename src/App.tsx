@@ -95,6 +95,7 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
+import { CiiEnergieLogo, CiiEnergieIcon } from './components/CiiEnergieLogo';
 import { auth, db, googleProvider, signInWithPopup, onAuthStateChanged } from './lib/firebase';
 import type { FirebaseAuthUser } from './lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, addDoc, deleteDoc } from 'firebase/firestore';
@@ -317,12 +318,19 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 const LoginView = ({ onLogin, onGuest }: { onLogin: () => void, onGuest: () => void }) => (
   <div className="min-h-screen flex items-center justify-center p-4 font-sans relative overflow-hidden bg-slate-900">
     <GlobalWindFarmBackground skyTheme="auto" />
-    <div className="w-full max-w-md bg-white/95 rounded-[3rem] p-10 md:p-14 shadow-2xl border border-white/80 flex flex-col items-center text-center relative z-10">
-      <div className="w-24 h-24 bg-emerald-950 rounded-[2.5rem] flex items-center justify-center mb-10 shadow-2xl shadow-emerald-950/20 rotate-3">
-        <Zap className="w-12 h-12 text-emerald-400 fill-emerald-400/20" />
+    <div className="w-full max-w-md bg-white/95 rounded-[3rem] p-10 md:p-12 shadow-2xl border border-white/80 flex flex-col items-center text-center relative z-10">
+      <div className="w-24 h-24 bg-white border-2 border-emerald-100 rounded-[2.5rem] flex items-center justify-center mb-6 shadow-xl shadow-emerald-950/10 p-2">
+        <CiiEnergieIcon className="w-full h-full" />
       </div>
-      <h1 className="text-4xl font-bold font-display text-slate-900 mb-3 tracking-tight">EcoGrid</h1>
-      <p className="text-slate-500 font-medium mb-12 text-sm leading-relaxed">Performance énergétique intelligente & pilotage GTB optimisé par l'IA.</p>
+      <div className="flex items-baseline gap-1.5 font-extrabold text-3xl font-display mb-1">
+        <span className="text-[#246b32]">CII</span>
+        <span className="text-[#7aba26]">ENERGIE</span>
+      </div>
+      <div className="flex flex-col text-[10px] font-bold text-slate-700 uppercase tracking-widest leading-tight mb-3">
+        <span>L'Énergie d'aujourd'hui</span>
+        <span className="text-slate-500">Le climat de demain</span>
+      </div>
+      <p className="text-slate-500 font-medium mb-8 text-xs leading-relaxed">Système d'intendance énergétique, monitoring multi-sites et supervision GTB.</p>
       
       <div className="w-full space-y-4">
         <button 
@@ -3427,16 +3435,8 @@ export default function App() {
          isSidebarOpen ? "translate-x-0 shadow-[20px_0_60px_-15px_rgba(15,23,42,0.1)]" : "-translate-x-full"
        )}>
         {/* Brand Header */}
-        <div className="p-6 pt-8 pb-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-sky-500 text-white flex items-center justify-center shadow-lg shadow-sky-500/25 shrink-0">
-            <Zap className="w-5 h-5 fill-current" />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="font-extrabold text-xl leading-none text-slate-900 tracking-tight font-display flex items-baseline gap-1">
-              EcoGrid <span className="text-sky-500 text-xs font-bold uppercase tracking-wider">Solar</span>
-            </h1>
-            <span className="text-[10px] font-semibold text-slate-400 mt-1">Smart Clean Energy</span>
-          </div>
+        <div className="p-5 pt-7 pb-4">
+          <CiiEnergieLogo />
         </div>
 
         {/* Navigation Items */}
