@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['name', 'email', 'photo', 'role', 'settings', 'updatedAt']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.photo is string && data.photo.size() <= 2000000 &&
+             data.role is string && data.role.size() <= 100 &&
+             data.settings is map &&
+             data.updatedAt != null;
+    }
+
+    function isValidBuilding(data) {
+      return data.keys().hasAll(['name', 'location', 'status', 'consumption']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.location is string && data.location.size() <= 200 &&
+             data.status in ['OPTIMAL', 'ALERTE', 'ATTENTION', 'NORMAL'] &&
+             data.consumption is string && data.consumption.size() <= 50;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(request.resource.data);
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(request.resource.data);
+
+      // Buildings subcollection
+      match /buildings/{buildingId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidBuilding(request.resource.data);
+        allow update: if isOwner(userId) && isValidBuilding(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

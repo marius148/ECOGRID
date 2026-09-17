@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user name, role, photo, and system settings.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "photo": { "type": "string", "description": "URL or base64 of user photo" },
+        "role": { "type": "string" },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "notificationsEmail": { "type": "boolean" },
+            "notificationsPush": { "type": "boolean" },
+            "twoFactorAuth": { "type": "boolean" },
+            "autoOptimize": { "type": "boolean" },
+            "darkMode": { "type": "boolean" },
+            "language": { "type": "string", "enum": ["fr", "en"] }
+          },
+          "required": ["notificationsEmail", "notificationsPush", "twoFactorAuth", "autoOptimize", "darkMode", "language"]
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "photo", "role", "settings", "updatedAt"]
+    },
+    "Building": {
+      "title": "Building",
+      "description": "Represents an energy-managed building/site.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPTIMAL", "ALERTE", "ATTENTION", "NORMAL"] },
+        "consumption": { "type": "string", "description": "formatted string e.g. '12,450 kWh'" },
+        "economy": { "type": "string" },
+        "trend": { "type": "string" },
+        "surface": { "type": "string" },
+        "occupancy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "location", "status", "consumption"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles and settings, secured by userId."
+    },
+    "/users/{userId}/buildings/{buildingId}": {
+      "schema": "Building",
+      "description": "User-specific buildings portfolio."
+    }
+  }
+}
