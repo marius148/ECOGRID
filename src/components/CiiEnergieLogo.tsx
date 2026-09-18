@@ -21,9 +21,9 @@ export const CiiEnergieLogo: React.FC<CiiEnergieLogoProps> = ({
   };
 
   return (
-    <div className={`flex items-center ${isCenter ? 'justify-center text-center w-full' : 'justify-start text-left'} select-none ${className}`}>
+    <div className={`flex items-center ${isCenter ? 'justify-center text-center w-full' : 'justify-start text-left'} select-none whitespace-nowrap shrink-0 ${className}`}>
       {/* Brand Title: CII ENERGIE */}
-      <h1 className={`flex items-baseline gap-2 font-black ${titleSizes[size]} leading-none font-display`}>
+      <h1 className={`flex items-baseline gap-1.5 sm:gap-2 font-black ${titleSizes[size]} leading-none font-display whitespace-nowrap`}>
         <span className="text-[#236b33] font-black tracking-tight">CII</span>
         <span className="text-[#7ec22a] font-black tracking-tight">ENERGIE</span>
       </h1>
