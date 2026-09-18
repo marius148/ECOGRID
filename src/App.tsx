@@ -241,25 +241,34 @@ const BAR_DATA = [
 const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzA9anmbi31SQYS9-Qzo1oFGEagoJ6GcDljSYd7kJe8OCLzyujYZnTmpYlM92ljA/pub?output=csv";
 
 const TABLE_DATA: BuildingStats[] = [
-  { id: 'BAT-01', name: 'Bâtiment 01 (T3 Familial)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-01)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-02', name: 'Bâtiment 02 (T3 Familial)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-02)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-03', name: 'Bâtiment 03 (T3 Familial)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-03)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-04', name: 'Bâtiment 04 (T3 Familial)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-04)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-05', name: 'Bâtiment 05 (T3 Familial)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-05)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-06', name: 'Bâtiment 06 (T1bis Étudiant)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-06)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
-  { id: 'BAT-07', name: 'Bâtiment 07 (T1bis Étudiant)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-07)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
-  { id: 'BAT-08', name: 'Bâtiment 08 (T1bis Étudiant)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-08)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
-  { id: 'BAT-09', name: 'Bâtiment 09 (T1bis Étudiant)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-09)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
-  { id: 'BAT-10', name: 'Bâtiment 10 (T1bis Étudiant)', location: 'Écoquartier Smart Microgrid, 34000 Montpellier (Lot BAT-10)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-01', name: 'bat 1', location: 'Rue de Malbosc, 34080 Montpellier (bat 1)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-02', name: 'bat 2', location: 'Rue de Malbosc, 34080 Montpellier (bat 2)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-03', name: 'bat 3', location: 'Rue de Malbosc, 34080 Montpellier (bat 3)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-04', name: 'bat 4', location: 'Rue de Malbosc, 34080 Montpellier (bat 4)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-05', name: 'bat 5', location: 'Rue de Malbosc, 34080 Montpellier (bat 5)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-06', name: 'bat 6', location: 'Rue de Malbosc, 34080 Montpellier (bat 6)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-07', name: 'bat 7', location: 'Rue de Malbosc, 34080 Montpellier (bat 7)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-08', name: 'bat 8', location: 'Rue de Malbosc, 34080 Montpellier (bat 8)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-09', name: 'bat 9', location: 'Rue de Malbosc, 34080 Montpellier (bat 9)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-10', name: 'bat 10', location: 'Rue de Malbosc, 34080 Montpellier (bat 10)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
 ];
 
 const GTB_INITIAL_EQUIPMENT: GTBEquipment[] = [
-  { location: "Bâtiments (x10)", category: "CVC - Chauffage/Froid", name: "PAC VRV IV+ Réversible", brandModel: "DAIKIN REYQ8U", quantity: 10, protocol: "BACnet / IP", pointType: "Commande & Alarme", status: "Actif" },
-  { location: "Bâtiments (x10)", category: "CVC - Distribution", name: "Boîtier BS Box multi-ports", brandModel: "DAIKIN BS16Q14AV1B", quantity: 40, protocol: "Modbus RTU", pointType: "Régulation débit", status: "Actif" },
-  { location: "Bâtiments (x10)", category: "CVC - Confort", name: "Unités Gainables Logements", brandModel: "DAIKIN FXSQ-A", quantity: 200, protocol: "Bus KNX", pointType: "Consigne & Température", status: "Actif" },
-  { location: "Bâtiments (x10)", category: "CVC - ECS", name: "Hydrobox ECS Individuelle", brandModel: "DAIKIN HXHD", quantity: 200, protocol: "Modbus RTU", pointType: "Sonde Température", status: "Actif" },
-  { location: "Bâtiments (x10)", category: "CVC - Ventilation", name: "Centrale VMC Hygro B", brandModel: "Motorisation EC", quantity: 10, protocol: "Modbus RTU", pointType: "Débit & Alarme Filtre", status: "Actif" },
-  { location: "Bâtiments (x10)", category: "GTB - Comptage", name: "Compteur Électrique Linky/Modbus", brandModel: "Enedis / Schneider", quantity: 200, protocol: "Modbus / RS485", pointType: "Télérelève kWh", status: "Actif" },
+  { location: "Bâtiments", category: "CVC - Chauffage/Froid", name: "PAC VRV IV+ Réversible", brandModel: "DAIKIN REYQ8U", quantity: 10, protocol: "BACnet / IP", pointType: "Commande & Alarme", status: "Actif" },
+  { location: "Bâtiments", category: "CVC - Distribution", name: "Boîtier BS Box multi-ports", brandModel: "DAIKIN BS16Q14AV1B", quantity: 40, protocol: "Modbus RTU", pointType: "Régulation débit", status: "Actif" },
+  { location: "Bâtiments", category: "CVC - Confort", name: "Unités Gainables Logements", brandModel: "DAIKIN FXSQ-A", quantity: 200, protocol: "Bus KNX", pointType: "Consigne & Température", status: "Actif" },
+  { location: "Bâtiments", category: "CVC - ECS", name: "Hydrobox ECS Individuelle", brandModel: "DAIKIN HXHD", quantity: 200, protocol: "Modbus RTU", pointType: "Sonde Température", status: "Actif" },
+  { location: "Bâtiments", category: "CVC - Ventilation", name: "Centrale VMC Hygro B", brandModel: "Motorisation EC", quantity: 10, protocol: "Modbus RTU", pointType: "Débit & Alarme Filtre", status: "Actif" },
+  { location: "Bâtiments", category: "GTB - Comptage", name: "Compteur Électrique Linky/Modbus", brandModel: "Enedis / Schneider", quantity: 200, protocol: "Modbus / RS485", pointType: "Télérelève kWh", status: "Actif" },
+  { location: "Bâtiments", category: "GTB - Comptage", name: "Compteur Eau Froide", brandModel: "Compteur Télérelevé", quantity: 200, protocol: "M-Bus", pointType: "Index Volumétrique m3", status: "Actif" },
+  { location: "Sous-stations", category: "GTB - Comptage", name: "Compteur Énergie Thermique (CET)", brandModel: "Siemens / Kamstrup", quantity: 10, protocol: "M-Bus", pointType: "Énergie Chaud/Froid", status: "Actif" },
+  { location: "Bâtiments", category: "Sécurité", name: "Trappes Désenfumage SSI", brandModel: "Norme NF S61-937", quantity: 10, protocol: "TOR (SSI)", pointType: "Report Alarme / Position", status: "Actif" },
+  { location: "Zone Technique", category: "Production ENR", name: "Champ Photovoltaïque 1296 kWc", brandModel: "Modules 500 Wc", quantity: 2592, protocol: "Modbus TCP", pointType: "Puissance & Tension", status: "Actif" },
+  { location: "Zone Technique", category: "Production ENR", name: "Onduleurs Triphasés 110 kVA", brandModel: "SMA / Huawei", quantity: 10, protocol: "Modbus TCP", pointType: "Rendement & État", status: "Actif" },
+  { location: "Zone Technique", category: "Stockage ENR", name: "Batterie LFP 1000 kWh", brandModel: "Pack Lithium LFP", quantity: 1, protocol: "CANbus / Modbus", pointType: "SOC / Charge / Surchauffe", status: "Actif" },
+  { location: "Centrale Énergie", category: "Trigénération", name: "Cogénération Biométhane 100 kWe", brandModel: "TEDOM Cento / 2G", quantity: 1, protocol: "OPC-UA / Modbus", pointType: "Puissance / Temp / Rendement", status: "Actif" },
+  { location: "Centrale Énergie", category: "Trigénération", name: "Machine Absorption LiBr 70 kW", brandModel: "Absorption Eau/LiBr", quantity: 1, protocol: "Modbus RTU", pointType: "COP & Temp Eau Glacée", status: "Actif" },
+  { location: "Local GTC", category: "Supervision", name: "Serveur Central GTC Class B", brandModel: "GTC EN ISO 52120-1", quantity: 1, protocol: "OPC-UA / REST", pointType: "Supervision 91 Points", status: "Actif" },
 ];
 
 const ANALYTICS_TREND = [
@@ -1628,13 +1637,16 @@ const BuildingConsumptionGraphCard = React.memo(({
   const isGlobal = selectedBuildingId === 'all';
   const selected = buildingsList.find(b => b.id.toString() === selectedBuildingId);
 
-  const dynamicBarData = React.useMemo(() => buildingsList.map(b => {
+  const dynamicBarData = React.useMemo(() => buildingsList.map((b, idx) => {
     const val = parseEnergy(b.consumption);
-    const shortName = b.name.includes(' - ') ? b.name.split(' - ')[0] : b.name;
+    const match = (b.id || '').toString().match(/\d+/) || (b.name || '').toString().match(/\d+/);
+    const num = match ? parseInt(match[0], 10) : (idx + 1);
+    const batLabel = `bat-${num}`;
     return {
       id: b.id.toString(),
-      name: shortName,
-      fullName: b.name,
+      name: batLabel,
+      batLabel,
+      fullName: b.name.startsWith('bat-') ? `${b.name}${b.type ? ` (${b.type})` : ''}` : `${batLabel} : ${b.name}`,
       value: val,
       displayValue: `${val.toLocaleString()} kWh`,
       status: b.status,
@@ -1642,21 +1654,43 @@ const BuildingConsumptionGraphCard = React.memo(({
     };
   }), [buildingsList]);
 
-  // Selected building's weekly history data
-  const historyData = React.useMemo(() => {
-    if (!selected) return [];
-    const history = BUILDING_HISTORY[selected.id.toString()] || [
-      { name: 'Lun', value: 450 }, { name: 'Mar', value: 490 }, { name: 'Mer', value: 420 },
-      { name: 'Jeu', value: 510 }, { name: 'Ven', value: 480 }, { name: 'Sam', value: 340 }, { name: 'Dim', value: 310 }
-    ];
-    return history;
+  // Selected building's daily kWh computed directly from Google Sheets
+  const dailyKwh = React.useMemo(() => {
+    return selected ? parseEnergy(selected.consumption) || 196 : 196;
   }, [selected]);
+
+  // Selected building's 7-day weekly bar chart data derived from Google Sheet data
+  const buildingWeeklyData = React.useMemo(() => {
+    if (!selected) return [];
+    const daysConfig = [
+      { day: 'Lun', factor: 0.99, label: language === 'fr' ? 'Lundi' : 'Monday' },
+      { day: 'Mar', factor: 1.02, label: language === 'fr' ? 'Mardi' : 'Tuesday' },
+      { day: 'Mer', factor: 1.00, label: language === 'fr' ? 'Mercredi' : 'Wednesday' },
+      { day: 'Jeu', factor: 1.03, label: language === 'fr' ? 'Jeudi' : 'Thursday' },
+      { day: 'Ven', factor: 0.98, label: language === 'fr' ? 'Vendredi' : 'Friday' },
+      { day: 'Sam', factor: 0.95, label: language === 'fr' ? 'Samedi' : 'Saturday' },
+      { day: 'Dim', factor: 1.03, label: language === 'fr' ? 'Dimanche' : 'Sunday' },
+    ];
+
+    return daysConfig.map(d => {
+      const v = Math.round(dailyKwh * d.factor);
+      return {
+        id: selected.id.toString(),
+        name: d.day,
+        dayLabel: d.label,
+        fullName: `${d.label} — ${selected.name}`,
+        value: v,
+        displayValue: `${v.toLocaleString()} kWh/j`,
+        status: selected.status
+      };
+    });
+  }, [selected, dailyKwh, language]);
 
   const ChartCustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const entry = payload[0];
       const data = entry.payload;
-      const bldg = buildingsList.find(b => b.id.toString() === data.id);
+      const bldg = selected || buildingsList.find(b => b.id.toString() === data.id);
       return (
         <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 rounded-xl shadow-2xl border border-slate-700 text-xs z-50 min-w-[200px]">
           <div className="flex items-center justify-between gap-2 mb-1.5 pb-1.5 border-b border-slate-700/80">
@@ -1670,29 +1704,33 @@ const BuildingConsumptionGraphCard = React.memo(({
           </div>
           <div className="space-y-1 text-slate-300 text-[11px]">
             <p className="flex justify-between">
-              <span>Conso quotidienne :</span>
+              <span>{language === 'fr' ? 'Conso du jour :' : 'Daily Consumption :'}</span>
               <span className="font-bold text-white font-mono">{data.displayValue || `${entry.value} kWh/j`}</span>
             </p>
+            <p className="flex justify-between text-slate-400 text-[10px]">
+              <span>{language === 'fr' ? 'Base Google Sheets :' : 'Google Sheets Base :'}</span>
+              <span className="font-semibold text-emerald-300 font-mono">{dailyKwh.toLocaleString()} kWh/j</span>
+            </p>
             {bldg?.powerWinterKw !== undefined && (
-              <p className="flex justify-between">
+              <p className="flex justify-between pt-1 border-t border-slate-800 text-[10px]">
                 <span>Besoin Hiver :</span>
                 <span className="font-bold text-sky-300 font-mono">{bldg.powerWinterKw} kW</span>
               </p>
             )}
             {bldg?.powerSummerKw !== undefined && (
-              <p className="flex justify-between">
+              <p className="flex justify-between text-[10px]">
                 <span>Besoin Été :</span>
                 <span className="font-bold text-amber-300 font-mono">{bldg.powerSummerKw} kW</span>
               </p>
             )}
             {bldg?.powerHeatwaveKw !== undefined && (
-              <p className="flex justify-between">
+              <p className="flex justify-between text-[10px]">
                 <span>Pic Canicule :</span>
                 <span className="font-bold text-rose-300 font-mono">{bldg.powerHeatwaveKw} kW</span>
               </p>
             )}
             {bldg?.consumptionYearMwh !== undefined && (
-              <p className="flex justify-between pt-1 border-t border-slate-800 text-[10px]">
+              <p className="flex justify-between text-[10px]">
                 <span>Conso Annuelle :</span>
                 <span className="font-bold text-emerald-300 font-mono">{bldg.consumptionYearMwh} MWh/an</span>
               </p>
@@ -1706,100 +1744,58 @@ const BuildingConsumptionGraphCard = React.memo(({
 
   return (
     <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/60 shadow-sm p-4 sm:p-5 mb-4 transition-all">
-      {/* Header with Title & Selector Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
+      {/* Header with Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 pb-3 border-b border-slate-100">
         <div>
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-emerald-100/80 text-emerald-800 rounded-lg">
               <BarChart3 className="w-4 h-4" />
             </div>
             <h3 className="text-base sm:text-lg font-bold font-display text-slate-800">
-              {language === 'fr' ? 'Graphique de Consommation Énergétique' : 'Energy Consumption Graph'}
+              {isGlobal 
+                ? (language === 'fr' ? 'Graphique de Consommation Énergétique' : 'Energy Consumption Graph')
+                : (language === 'fr' ? `Graphique de Consommation — ${selected?.name}` : `Consumption Graph — ${selected?.name}`)}
             </h3>
           </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
             {isGlobal
-              ? (language === 'fr' ? 'Comparatif de consommation de tous les bâtiments du parc' : 'Comparative view of all portfolio buildings')
-              : (language === 'fr' ? `Suivi détaillé : ${selected?.name} (${selected?.location || 'France'})` : `Detailed tracking: ${selected?.name}`)}
+              ? (language === 'fr' ? 'Comparatif de consommation de tous les bâtiments du parc (bat-1 à bat-10)' : 'Comparative view of all portfolio buildings (bat-1 to bat-10)')
+              : (language === 'fr' ? `Suivi journalier synchronisé avec Google Sheets : ${selected?.name} (${selected?.location || 'Montpellier'})` : `Daily tracking synced with Google Sheets: ${selected?.name}`)}
           </p>
         </div>
 
-        {/* Dropdown & Action Buttons */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="relative w-full sm:w-auto">
-            <select
-              value={selectedBuildingId}
-              onChange={(e) => onSelectBuilding(e.target.value)}
-              className="w-full sm:w-auto appearance-none bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl pl-3 pr-8 py-2 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
-            >
-              <option value="all">🌐 {language === 'fr' ? 'Tous les bâtiments (Vue globale)' : 'All Buildings (Global View)'}</option>
-              {buildingsList.map(b => (
-                <option key={b.id} value={b.id.toString()}>
-                  🏢 {b.name} ({parseEnergy(b.consumption).toLocaleString()} kWh)
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        {!isGlobal && (
+          <button
+            type="button"
+            onClick={() => onSelectBuilding('all')}
+            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200/60 transition-colors flex items-center gap-1.5 shrink-0 self-start sm:self-auto cursor-pointer"
+            title={language === 'fr' ? 'Revenir à la vue globale' : 'Back to global view'}
+          >
+            <span>🌐</span>
+            <span>{language === 'fr' ? 'Vue globale (Tous les bâtiments)' : 'Global view (All buildings)'}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Visual Legend for Individual Building Mode conforming to site colors */}
+      {!isGlobal && (
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2 px-1 text-[11px]">
+          <div className="flex items-center gap-2 text-slate-600 font-medium">
+            <span className="w-3 h-3 rounded-xs bg-emerald-700 inline-block" />
+            <span>{language === 'fr' ? 'Consommation journalière (kWh/j)' : 'Daily Consumption (kWh/d)'}</span>
           </div>
-
-          {!isGlobal && (
-            <button
-              onClick={() => onSelectBuilding('all')}
-              className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200/60 transition-colors flex items-center gap-1 shrink-0"
-              title={language === 'fr' ? 'Revenir à la vue globale' : 'Back to global view'}
-            >
-              <span>🌐</span>
-              <span className="hidden md:inline">{language === 'fr' ? 'Vue globale' : 'Global view'}</span>
-            </button>
-          )}
+          <div className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
+            {language === 'fr' ? `Données Google Sheets : ${dailyKwh} kWh/j` : `Google Sheets: ${dailyKwh} kWh/d`}
+          </div>
         </div>
-      </div>
-
-      {/* Building Quick Selector Tab Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-2 mb-3">
-        <button
-          onClick={() => onSelectBuilding('all')}
-          className={cn(
-            "px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 border",
-            isGlobal 
-              ? "bg-emerald-700 text-white border-emerald-700 shadow-sm" 
-              : "bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200/60"
-          )}
-        >
-          <span>🌐</span>
-          <span>{language === 'fr' ? 'Tous les sites' : 'All Sites'}</span>
-          <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-white/20 font-mono">{buildingsList.length}</span>
-        </button>
-
-        {buildingsList.map(b => {
-          const isSelected = selectedBuildingId === b.id.toString();
-          return (
-            <button
-              key={b.id}
-              onClick={() => onSelectBuilding(b.id.toString())}
-              className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 border",
-                isSelected
-                  ? "bg-slate-900 text-white border-slate-900 shadow-sm"
-                  : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200/60"
-              )}
-            >
-              <Building2 className={cn("w-3.5 h-3.5", isSelected ? "text-emerald-400" : "text-slate-400")} />
-              <span>{b.name}</span>
-              {b.status === 'ALERTE' && (
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-              )}
-            </button>
-          );
-        })}
-      </div>
+      )}
 
       {/* The Interactive Chart Container */}
-      <div className="w-full h-[220px] sm:h-[260px] mt-1">
+      <div className="w-full h-[260px] sm:h-[300px] mt-1 min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           {isGlobal ? (
             /* Bar Chart comparing all buildings */
-            <BarChart data={dynamicBarData} margin={{ top: 15, right: 15, left: 10, bottom: 20 }}>
+            <BarChart data={dynamicBarData} margin={{ top: 15, right: 15, left: 10, bottom: 25 }}>
               <defs>
                 <linearGradient id="globalBarGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#064E3B" stopOpacity={1} />
@@ -1813,12 +1809,11 @@ const BuildingConsumptionGraphCard = React.memo(({
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis 
                 dataKey="name" 
-                axisLine={false} 
+                axisLine={{ stroke: '#cbd5e1' }} 
                 tickLine={false} 
-                tick={{ fill: '#475569', fontSize: 11, fontWeight: 700 }}
+                tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }}
                 interval={0}
-                dy={8}
-                tickFormatter={(val) => val.includes(' - ') ? val.split(' - ')[0] : val}
+                dy={6}
               />
               <YAxis 
                 axisLine={false} 
@@ -1827,13 +1822,16 @@ const BuildingConsumptionGraphCard = React.memo(({
                 tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
                 tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)} MWh` : `${val} kWh`}
               />
-              <Tooltip content={<ChartCustomTooltip />} cursor={{ fill: '#f8fafc', radius: 6 }} />
+              <Tooltip content={<ChartCustomTooltip />} cursor={{ fill: '#f8fafc', radius: 6 }} isAnimationActive={false} />
               <Bar 
                 dataKey="value" 
                 radius={[8, 8, 0, 0]} 
-                barSize={28}
+                maxBarSize={36}
                 className="cursor-pointer"
-                onClick={(data) => onSelectBuilding(data.id)}
+                onClick={(entry: any) => {
+                  const targetId = entry?.id || entry?.payload?.id || entry?.activePayload?.[0]?.payload?.id;
+                  if (targetId) onSelectBuilding(targetId);
+                }}
               >
                 {dynamicBarData.map((entry, index) => (
                   <Cell 
@@ -1844,44 +1842,43 @@ const BuildingConsumptionGraphCard = React.memo(({
               </Bar>
             </BarChart>
           ) : (
-            /* Area Chart for individual building history */
-            <AreaChart data={historyData} margin={{ top: 15, right: 15, left: 10, bottom: 5 }}>
+            /* Bar Chart for individual building showing the 7 days of the week in site colors */
+            <BarChart data={buildingWeeklyData} margin={{ top: 15, right: 15, left: 10, bottom: 25 }}>
               <defs>
-                <linearGradient id="singleBldgGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#059669" stopOpacity={0.35}/>
-                  <stop offset="95%" stopColor="#059669" stopOpacity={0}/>
+                <linearGradient id="singleBldgDailyGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#047857" stopOpacity={1} />
+                  <stop offset="100%" stopColor="#064E3B" stopOpacity={0.85} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis 
                 dataKey="name" 
-                axisLine={false} 
+                axisLine={{ stroke: '#cbd5e1' }} 
                 tickLine={false} 
-                tick={{ fill: '#475569', fontSize: 11, fontWeight: 700 }}
+                tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }}
+                interval={0}
+                dy={6}
               />
               <YAxis 
                 axisLine={false} 
                 tickLine={false} 
-                width={56}
+                width={62}
                 tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
                 tickFormatter={(val) => `${val} kWh`}
               />
-              <Tooltip content={<ChartCustomTooltip />} />
-              <Area 
-                type="monotone" 
+              <Tooltip content={<ChartCustomTooltip />} cursor={{ fill: '#f8fafc', radius: 6 }} isAnimationActive={false} />
+              <Bar 
                 dataKey="value" 
-                stroke="#059669" 
-                strokeWidth={3} 
-                fillOpacity={1} 
-                fill="url(#singleBldgGrad)" 
-                activeDot={{ r: 6, fill: '#047857', stroke: '#fff', strokeWidth: 2 }}
+                radius={[8, 8, 0, 0]} 
+                maxBarSize={44}
+                fill="url(#singleBldgDailyGrad)"
               />
-            </AreaChart>
+            </BarChart>
           )}
         </ResponsiveContainer>
       </div>
 
-      {/* Selected Building Details Footer Strip */}
+      {/* Selected Building Details Footer Strip using the site's light theme */}
       {!isGlobal && selected && (
         <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs bg-slate-50/80 p-3 rounded-xl">
           <div className="flex items-center gap-3">
@@ -1903,7 +1900,7 @@ const BuildingConsumptionGraphCard = React.memo(({
           </div>
           <div className="flex items-center gap-4 ml-auto">
             <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">{language === 'fr' ? 'Consommation Totale' : 'Total Consumption'}</span>
+              <span className="text-[10px] uppercase font-bold text-slate-400 block">{language === 'fr' ? 'Consommation' : 'Consumption'}</span>
               <span className="font-bold font-display text-slate-900">{parseEnergy(selected.consumption).toLocaleString()} kWh/j</span>
             </div>
             <div className="text-right">
@@ -1926,32 +1923,45 @@ interface MontpellierBuildingCoords {
 }
 
 const MONTPELLIER_BUILDINGS_COORDS: Record<string, MontpellierBuildingCoords> = {
-  '1': { lat: 43.5997, lng: 3.8967, address: '1 Place Georges Frêche, 34267 Montpellier', district: 'Port Marianne / Richter' },
-  '2': { lat: 43.6128, lng: 3.9189, address: '1000 Rue de la Vieille Poste, 34000 Montpellier', district: 'Parc Millénaire' },
-  '3': { lat: 43.6394, lng: 3.8368, address: '209 Avenue des Apothicaires, 34090 Montpellier', district: 'Euromédecine' },
-  '4': { lat: 43.6083, lng: 3.8894, address: "Place du Nombre d'Or, 34000 Montpellier", district: 'Antigone' },
-  '5': { lat: 43.6085, lng: 3.8795, address: '1 Place de la Comédie, 34000 Montpellier', district: 'Centre Historique / Comédie' },
-  '6': { lat: 43.6042, lng: 3.9215, address: 'Place de France, 34000 Montpellier', district: 'Odysseum' },
-  '7': { lat: 43.5982, lng: 3.9031, address: '200 Rue Raymond Dugrand, 34000 Montpellier', district: 'Bassin Jacques Cœur' }
+  '1': { lat: 43.6326, lng: 3.8310, address: 'Rue de Malbosc, 34080 Montpellier (bat-1)', district: 'Quartier Malbosc' },
+  '2': { lat: 43.6329, lng: 3.8314, address: 'Rue de Malbosc, 34080 Montpellier (bat-2)', district: 'Quartier Malbosc' },
+  '3': { lat: 43.6332, lng: 3.8318, address: 'Rue de Malbosc, 34080 Montpellier (bat-3)', district: 'Quartier Malbosc' },
+  '4': { lat: 43.6335, lng: 3.8322, address: 'Rue de Malbosc, 34080 Montpellier (bat-4)', district: 'Quartier Malbosc' },
+  '5': { lat: 43.6338, lng: 3.8326, address: 'Rue de Malbosc, 34080 Montpellier (bat-5)', district: 'Quartier Malbosc' },
+  '6': { lat: 43.6341, lng: 3.8330, address: 'Rue de Malbosc, 34080 Montpellier (bat-6)', district: 'Quartier Malbosc' },
+  '7': { lat: 43.6344, lng: 3.8334, address: 'Rue de Malbosc, 34080 Montpellier (bat-7)', district: 'Quartier Malbosc' },
+  '8': { lat: 43.6347, lng: 3.8338, address: 'Rue de Malbosc, 34080 Montpellier (bat-8)', district: 'Quartier Malbosc' },
+  '9': { lat: 43.6350, lng: 3.8342, address: 'Rue de Malbosc, 34080 Montpellier (bat-9)', district: 'Quartier Malbosc' },
+  '10': { lat: 43.6353, lng: 3.8346, address: 'Rue de Malbosc, 34080 Montpellier (bat-10)', district: 'Quartier Malbosc' },
+  'BAT-01': { lat: 43.6326, lng: 3.8310, address: 'Rue de Malbosc, 34080 Montpellier (bat-1)', district: 'Quartier Malbosc' },
+  'BAT-02': { lat: 43.6329, lng: 3.8314, address: 'Rue de Malbosc, 34080 Montpellier (bat-2)', district: 'Quartier Malbosc' },
+  'BAT-03': { lat: 43.6332, lng: 3.8318, address: 'Rue de Malbosc, 34080 Montpellier (bat-3)', district: 'Quartier Malbosc' },
+  'BAT-04': { lat: 43.6335, lng: 3.8322, address: 'Rue de Malbosc, 34080 Montpellier (bat-4)', district: 'Quartier Malbosc' },
+  'BAT-05': { lat: 43.6338, lng: 3.8326, address: 'Rue de Malbosc, 34080 Montpellier (bat-5)', district: 'Quartier Malbosc' },
+  'BAT-06': { lat: 43.6341, lng: 3.8330, address: 'Rue de Malbosc, 34080 Montpellier (bat-6)', district: 'Quartier Malbosc' },
+  'BAT-07': { lat: 43.6344, lng: 3.8334, address: 'Rue de Malbosc, 34080 Montpellier (bat-7)', district: 'Quartier Malbosc' },
+  'BAT-08': { lat: 43.6347, lng: 3.8338, address: 'Rue de Malbosc, 34080 Montpellier (bat-8)', district: 'Quartier Malbosc' },
+  'BAT-09': { lat: 43.6350, lng: 3.8342, address: 'Rue de Malbosc, 34080 Montpellier (bat-9)', district: 'Quartier Malbosc' },
+  'BAT-10': { lat: 43.6353, lng: 3.8346, address: 'Rue de Malbosc, 34080 Montpellier (bat-10)', district: 'Quartier Malbosc' },
 };
 
 const getBuildingMapCoords = (b: any, index: number): MontpellierBuildingCoords => {
-  if (b && b.id && MONTPELLIER_BUILDINGS_COORDS[b.id.toString()]) {
-    return MONTPELLIER_BUILDINGS_COORDS[b.id.toString()];
+  if (b) {
+    const rawId = (b.id || '').toString();
+    if (MONTPELLIER_BUILDINGS_COORDS[rawId]) return MONTPELLIER_BUILDINGS_COORDS[rawId];
+    const match = rawId.match(/\d+/) || (b.name || '').toString().match(/\d+/);
+    if (match && MONTPELLIER_BUILDINGS_COORDS[match[0]]) {
+      return MONTPELLIER_BUILDINGS_COORDS[match[0]];
+    }
   }
-  const realAddresses = [
-    { lat: 43.6085, lng: 3.8795, address: '1 Place de la Comédie, 34000 Montpellier', district: 'Centre Historique' },
-    { lat: 43.6042, lng: 3.9215, address: 'Place de France, 34000 Montpellier', district: 'Odysseum' },
-    { lat: 43.5982, lng: 3.9031, address: '200 Rue Raymond Dugrand, 34000 Montpellier', district: 'Port Marianne Sud' },
-    { lat: 43.6265, lng: 3.8645, address: 'Rue de la Roqueturière, 34090 Montpellier', district: 'Aiguelongue' },
-    { lat: 43.6001, lng: 3.8450, address: 'Avenue de Lodève, 34070 Montpellier', district: 'Chamberte' },
-  ];
-  const item = realAddresses[index % realAddresses.length];
+  const idx = index + 1;
+  const latOffset = (idx * 0.0003);
+  const lngOffset = (idx * 0.0004);
   return {
-    lat: item.lat,
-    lng: item.lng,
-    address: b && b.location && b.location.includes('Montpellier') ? b.location : item.address,
-    district: item.district
+    lat: 43.6325 + latOffset,
+    lng: 3.8308 + lngOffset,
+    address: b && b.location ? b.location : `Rue de Malbosc, 34080 Montpellier (bat-${idx})`,
+    district: 'Quartier Malbosc'
   };
 };
 
@@ -2006,8 +2016,8 @@ const MontpellierMapCard = React.memo(({
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
-      center: [43.6108, 3.8767],
-      zoom: 13,
+      center: [43.6335, 3.8322],
+      zoom: 15,
       zoomControl: false,
       attributionControl: false
     });
@@ -2018,6 +2028,9 @@ const MontpellierMapCard = React.memo(({
 
     tileLayerRef.current = tileLayer;
     mapInstanceRef.current = map;
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
 
     return () => {
       map.remove();
@@ -2043,46 +2056,59 @@ const MontpellierMapCard = React.memo(({
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
-    buildingsList.forEach((b, index) => {
-      const coords = getBuildingMapCoords(b, index);
-      const isSelected = selectedBuildingId === b.id.toString();
-      const statusColor = b.status === 'ALERTE' ? '#e11d48' : b.status === 'ATTENTION' ? '#f59e0b' : '#10b981';
-
-      const customIcon = L.divIcon({
-        className: 'custom-google-maps-marker',
+    if (selectedBuildingId === 'all') {
+      const centerCoords = { lat: 43.6338, lng: 3.8326 };
+      const campusIcon = L.divIcon({
+        className: 'custom-campus-marker',
         html: `
           <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
-            ${b.status === 'ALERTE' ? `<div style="position: absolute; top: -6px; width: 36px; height: 36px; border-radius: 9999px; background-color: rgba(225,29,72,0.3); animation: ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>` : ''}
-            <div style="width: 30px; height: 30px; border-radius: 9999px; background-color: #0f172a; border: 2.5px solid ${isSelected ? '#10b981' : '#ffffff'}; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.35); transform: ${isSelected ? 'scale(1.25)' : 'scale(1)'}; transition: all 0.2s;">
-              <div style="width: 11px; height: 11px; border-radius: 9999px; background-color: ${statusColor};"></div>
+            <div style="position: absolute; top: -8px; width: 46px; height: 46px; border-radius: 9999px; background-color: rgba(16,185,129,0.25); animation: ping 2s cubic-bezier(0,0,0.2,1) infinite;"></div>
+            <div style="width: 36px; height: 36px; border-radius: 9999px; background-color: #064e3b; border: 3px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px -3px rgba(0,0,0,0.35); transform: scale(1.1); transition: all 0.2s;">
+              <div style="width: 14px; height: 14px; border-radius: 9999px; background-color: #10b981;"></div>
             </div>
-            <div style="margin-top: 4px; padding: 3px 8px; background-color: rgba(15,23,42,0.95); color: #ffffff; font-weight: 700; font-size: 10px; border-radius: 6px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.25); white-space: nowrap; border: 1px solid rgba(255,255,255,0.2); font-family: sans-serif;">
-              ${b.name}
+            <div style="margin-top: 6px; padding: 4px 10px; background-color: #064e3b; color: #ffffff; font-weight: 800; font-size: 11px; border-radius: 8px; box-shadow: 0 6px 12px -2px rgba(0,0,0,0.35); white-space: nowrap; border: 1.5px solid #10b981; font-family: sans-serif; letter-spacing: 0.02em;">
+              📍 Résidence Écoquartier Malbosc (10 Bâtiments)
             </div>
           </div>
         `,
-        iconSize: [34, 46],
-        iconAnchor: [17, 23]
+        iconSize: [40, 52],
+        iconAnchor: [20, 26]
       });
-
-      const marker = L.marker([coords.lat, coords.lng], { icon: customIcon }).addTo(map);
-
-      marker.on('click', () => {
-        onSelectBuilding(b.id.toString());
-        map.flyTo([coords.lat, coords.lng], 15, { duration: 1 });
-      });
-
-      markersRef.current.push(marker);
-
-      if (isSelected) {
+      const campusMarker = L.marker([centerCoords.lat, centerCoords.lng], { icon: campusIcon }).addTo(map);
+      markersRef.current.push(campusMarker);
+      map.flyTo([centerCoords.lat, centerCoords.lng], 15, { duration: 1 });
+    } else {
+      const bIndex = buildingsList.findIndex(b => b.id.toString() === selectedBuildingId);
+      const b = buildingsList[bIndex] || buildingsList[0];
+      if (b) {
+        const coords = getBuildingMapCoords(b, bIndex >= 0 ? bIndex : 0);
+        const statusColor = b.status === 'ALERTE' ? '#e11d48' : b.status === 'ATTENTION' ? '#f59e0b' : '#10b981';
+        const customIcon = L.divIcon({
+          className: 'custom-google-maps-marker',
+          html: `
+            <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+              <div style="position: absolute; top: -6px; width: 42px; height: 42px; border-radius: 9999px; background-color: rgba(16,185,129,0.3); animation: ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
+              <div style="width: 32px; height: 32px; border-radius: 9999px; background-color: #064e3b; border: 3px solid #10b981; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.35); transform: scale(1.15); transition: all 0.2s;">
+                <div style="width: 12px; height: 12px; border-radius: 9999px; background-color: ${statusColor};"></div>
+              </div>
+              <div style="margin-top: 5px; padding: 4px 10px; background-color: #064e3b; color: #ffffff; font-weight: 800; font-size: 11px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); white-space: nowrap; border: 1.5px solid #34d399; font-family: sans-serif;">
+                ${b.name} • ${b.consumption || '196 kWh'}
+              </div>
+            </div>
+          `,
+          iconSize: [36, 48],
+          iconAnchor: [18, 24]
+        });
+        const marker = L.marker([coords.lat, coords.lng], { icon: customIcon }).addTo(map);
+        markersRef.current.push(marker);
         map.flyTo([coords.lat, coords.lng], 15, { duration: 1 });
       }
-    });
+    }
   }, [buildingsList, selectedBuildingId, onSelectBuilding, mapTileType]);
 
   const handleResetView = () => {
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo([43.6108, 3.8767], 13, { duration: 1 });
+      mapInstanceRef.current.flyTo([43.6335, 3.8322], 15, { duration: 1 });
     }
   };
 
@@ -2120,8 +2146,8 @@ const MontpellierMapCard = React.memo(({
         data = await fallback.json();
       }
 
-      let lat = 43.6108;
-      let lng = 3.8767;
+      let lat = 43.6335;
+      let lng = 3.8322;
       let displayName = query;
 
       if (data && data.length > 0) {
@@ -2160,7 +2186,7 @@ const MontpellierMapCard = React.memo(({
         map.flyTo([lat, lng], 16, { duration: 1.2 });
       }
     } catch {
-      setSearchedLocation({ lat: 43.6108, lng: 3.8767, address: query, displayName: query });
+      setSearchedLocation({ lat: 43.6335, lng: 3.8322, address: query, displayName: query });
     } finally {
       setIsSearching(false);
     }
@@ -2174,13 +2200,13 @@ const MontpellierMapCard = React.memo(({
       searchMarkerRef.current = null;
     }
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo([43.6108, 3.8767], 13, { duration: 1 });
+      mapInstanceRef.current.flyTo([43.6335, 3.8322], 15, { duration: 1 });
     }
   };
 
   const targetAddress = searchedLocation 
     ? searchedLocation.address 
-    : (selectedCoords ? selectedCoords.address : 'Montpellier, France');
+    : (selectedCoords ? selectedCoords.address : 'Rue de Malbosc, 34080 Montpellier, France');
 
   const embedQuery = encodeURIComponent(targetAddress);
 
@@ -2942,6 +2968,7 @@ const GTBView = ({
   language, 
   buildingsList, 
   selectedBuildingId,
+  onSelectBuilding,
   gtbEquipments = [],
   isSyncing,
   lastSyncTime,
@@ -2950,324 +2977,478 @@ const GTBView = ({
   language: string; 
   buildingsList: any[]; 
   selectedBuildingId: string;
+  onSelectBuilding?: (id: string) => void;
   gtbEquipments?: GTBEquipment[];
   isSyncing?: boolean;
   lastSyncTime?: string;
   onForceSync?: () => void;
 }) => {
-  const selectedBuilding = buildingsList.find(b => b.id.toString() === selectedBuildingId) || buildingsList[0];
-  const t = translations[language as keyof typeof translations] || translations.fr;
+  const [selectedTarget, setSelectedTarget] = useState<string>(selectedBuildingId || 'all');
+  const [selectedLot, setSelectedLot] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
-  if (buildingsList.length === 0) {
-    return (
-      <ViewContainer>
-        <div className="flex flex-col items-center justify-center h-[60vh] text-center px-6">
-          <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mb-6">
-            <Cpu className="w-10 h-10" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">{language === 'fr' ? 'GTB Désactivée' : 'BMS Disabled'}</h2>
-          <p className="text-slate-400 max-w-sm">{language === 'fr' ? 'Connectez un bâtiment pour accéder aux outils de gestion technique centralisée.' : 'Connect a building to access centralized technical management tools.'}</p>
-        </div>
-      </ViewContainer>
-    );
-  }
+  // Synchroniser la sélection si le parent la modifie
+  useEffect(() => {
+    if (selectedBuildingId) {
+      setSelectedTarget(selectedBuildingId);
+    }
+  }, [selectedBuildingId]);
+
+  const handleTargetChange = (newTarget: string) => {
+    setSelectedTarget(newTarget);
+    if (onSelectBuilding && (newTarget === 'all' || buildingsList.some(b => b.id.toString() === newTarget))) {
+      onSelectBuilding(newTarget);
+    }
+  };
+
+  const selectedBuilding = buildingsList.find(b => b.id.toString() === selectedTarget) || null;
+  const isAllBuildings = selectedTarget === 'all';
+  const isTechnicalZone = selectedTarget === 'zone-tech';
+  const isCentrale = selectedTarget === 'centrale';
+  const isLocalGtc = selectedTarget === 'local-gtc';
+  const isSingleBuilding = !!selectedBuilding;
+
+  // Calcul du nombre de logements et des puissances réelles tirées du Google Sheet
+  const buildingUnits = selectedBuilding ? (selectedBuilding.unitsCount || 20) : 200;
+  const powerWinter = selectedBuilding 
+    ? (selectedBuilding.powerWinterKw ?? 16.4) 
+    : buildingsList.reduce((acc, b) => acc + (b.powerWinterKw ?? 16.4), 0);
+  const powerSummer = selectedBuilding 
+    ? (selectedBuilding.powerSummerKw ?? 4.1) 
+    : buildingsList.reduce((acc, b) => acc + (b.powerSummerKw ?? 4.1), 0);
+  const powerHeatwave = selectedBuilding 
+    ? (selectedBuilding.powerHeatwaveKw ?? 7.2) 
+    : buildingsList.reduce((acc, b) => acc + (b.powerHeatwaveKw ?? 7.2), 0);
+
+  // Normalisation et calcul des équipements filtrés sans "(x10)"
+  const processedEquipments = gtbEquipments.map(eq => {
+    const rawLoc = eq.location || '';
+    const cleanLoc = rawLoc.replace(/\s*\([xX]10\)/g, '').replace(/\s*[xX]10/g, '').trim() || 'Bâtiment';
+    const isBuildingEquip = cleanLoc.toLowerCase().includes('bâtiment') || cleanLoc.toLowerCase().includes('batiment') || cleanLoc.toLowerCase().includes('sous-station');
+    
+    // Calcul de la quantité adaptée selon la sélection
+    let displayQty: number | string = eq.quantity;
+    let displayLoc = cleanLoc;
+
+    if (isSingleBuilding && selectedBuilding) {
+      if (isBuildingEquip) {
+        displayLoc = cleanLoc.toLowerCase().includes('sous-station') 
+          ? `Sous-station ${selectedBuilding.name}` 
+          : selectedBuilding.name;
+        // Si l'équipement était réparti sur les 10 bâtiments, afficher la quantité du bâtiment sélectionné
+        const totalNum = typeof eq.quantity === 'number' ? eq.quantity : parseInt(String(eq.quantity), 10) || 1;
+        if (totalNum >= 10 && totalNum % 10 === 0) {
+          displayQty = totalNum / 10;
+        } else if (totalNum === 10) {
+          displayQty = 1;
+        } else {
+          displayQty = Math.max(1, Math.round(totalNum / 10));
+        }
+      } else {
+        displayLoc = cleanLoc;
+      }
+    } else if (isAllBuildings) {
+      displayLoc = isBuildingEquip ? 'Bâtiments (1 à 10)' : cleanLoc;
+    }
+
+    return {
+      ...eq,
+      cleanLoc,
+      displayLoc,
+      displayQty,
+      isBuildingEquip
+    };
+  });
+
+  // Filtrage selon le site/bâtiment, le lot, et la recherche
+  const filteredEquipments = processedEquipments.filter(item => {
+    // 1. Filtre par Bâtiment / Zone
+    if (isSingleBuilding) {
+      // Pour un bâtiment individuel, montrer les équipements de bâtiment + optionnellement ceux du site
+      if (!item.isBuildingEquip && selectedLot === 'ALL') {
+        // Optionnel : on inclut les équipements techniques avec note de site commun
+      }
+    } else if (isTechnicalZone) {
+      if (!item.cleanLoc.toLowerCase().includes('zone technique')) return false;
+    } else if (isCentrale) {
+      if (!item.cleanLoc.toLowerCase().includes('centrale')) return false;
+    } else if (isLocalGtc) {
+      if (!item.cleanLoc.toLowerCase().includes('local gtc') && !item.cleanLoc.toLowerCase().includes('supervision')) return false;
+    }
+
+    // 2. Filtre par Lot
+    if (selectedLot !== 'ALL') {
+      if (selectedLot === 'CVC') {
+        if (!item.category.toUpperCase().includes('CVC')) return false;
+      } else if (!item.category.toUpperCase().includes(selectedLot.toUpperCase())) {
+        return false;
+      }
+    }
+
+    // 3. Filtre par recherche textuelle
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const match = 
+        item.name.toLowerCase().includes(q) ||
+        item.brandModel.toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q) ||
+        item.protocol.toLowerCase().includes(q) ||
+        item.pointType.toLowerCase().includes(q) ||
+        item.displayLoc.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+
+    return true;
+  });
+
+  // Liste unique des lots disponibles pour les puces de filtrage
+  const availableLots = ['ALL', 'CVC', 'GTB - Comptage', 'Sécurité', 'Production ENR', 'Stockage ENR', 'Trigénération', 'Supervision'];
 
   return (
     <ViewContainer>
-      <div className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* En-tête principal & statut de liaison Google Sheets */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-800">{language === 'fr' ? 'Contrôle GTB / GTC' : 'BMS / BAS Control'}</h2>
-          <p className="text-sm text-slate-400 font-medium mt-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase tracking-wider border border-emerald-200">
+              Supervision GTC / GTB
+            </span>
+            <span className="text-xs font-semibold text-slate-400">
+              {language === 'fr' ? 'Écoquartier Malbosc' : 'Malbosc Eco-district'}
+            </span>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">
+            {language === 'fr' ? 'Contrôle & Inventaire GTB' : 'BMS Control & Inventory'}
+          </h2>
+          <p className="text-xs md:text-sm text-slate-500 font-medium mt-1">
             {language === 'fr' 
-              ? `Gestion centralisée & points de supervision : ${selectedBuilding?.name || 'Tous les sites'}` 
-              : `Centralized management & supervision points: ${selectedBuilding?.name || 'All Sites'}`}
+              ? 'Équipements réels, points de contrôle et protocoles synchronisés en direct depuis votre Google Sheets' 
+              : 'Real equipment, control points and protocols synchronized live from your Google Sheets'}
           </p>
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-slate-600 font-semibold bg-white/90 px-3.5 py-1.5 rounded-full border border-slate-200 shadow-xs self-start sm:self-auto backdrop-blur-xs">
-          <span className={cn("w-2 h-2 rounded-full", isSyncing ? "bg-amber-500 animate-spin" : "bg-emerald-500 animate-pulse")} />
-          <span>{language === 'fr' ? 'Google Sheets GTB' : 'Google Sheets BMS'}</span>
+
+        {/* Badge Google Sheets & Bouton de synchronisation immédiate */}
+        <div className="flex items-center gap-2.5 bg-white border border-slate-200/90 rounded-2xl p-2 md:px-4 md:py-2.5 shadow-xs self-start md:self-auto">
+          <div className="flex items-center gap-2">
+            <span className={cn("w-2.5 h-2.5 rounded-full", isSyncing ? "bg-amber-500 animate-spin" : "bg-emerald-600 animate-pulse")} />
+            <div className="text-left">
+              <p className="text-[11px] font-bold text-slate-800 leading-tight">
+                {isSyncing 
+                  ? (language === 'fr' ? 'Synchronisation...' : 'Syncing...') 
+                  : (language === 'fr' ? 'Google Sheets Connecté' : 'Google Sheets Connected')}
+              </p>
+              <p className="text-[9px] font-semibold text-slate-400">
+                {lastSyncTime ? `${language === 'fr' ? 'Actualisé à' : 'Updated at'} ${lastSyncTime}` : 'En temps réel'}
+              </p>
+            </div>
+          </div>
           {onForceSync && (
             <button
               onClick={onForceSync}
               disabled={isSyncing}
-              title="Actualiser les équipements GTB"
-              className="p-1 hover:bg-slate-100 rounded text-slate-500 hover:text-emerald-700 transition active:scale-95 disabled:opacity-50"
+              title={language === 'fr' ? 'Actualiser les données Google Sheets' : 'Refresh Google Sheets data'}
+              className="ml-2 p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 text-xs font-bold border border-emerald-200/60"
             >
-              <RefreshCw className={cn("w-3.5 h-3.5", isSyncing && "animate-spin text-emerald-600")} />
+              <RefreshCw className={cn("w-3.5 h-3.5 text-emerald-700", isSyncing && "animate-spin")} />
+              <span className="hidden sm:inline text-[11px]">{language === 'fr' ? 'Synchroniser' : 'Sync'}</span>
             </button>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* HVAC Control */}
-        <div className="lg:col-span-2 bg-white rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 border border-slate-100 shadow-sm transition-all hover:shadow-md">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center shrink-0">
-                <Thermometer className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-800 leading-tight">{language === 'fr' ? 'Système CVC' : 'HVAC System'}</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{language === 'fr' ? 'Contrôle du climat' : 'Climate Control'}</p>
-              </div>
-            </div>
-            <div className="flex bg-slate-50 p-1 rounded-xl w-full sm:w-auto">
-              <button className="flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold bg-white text-emerald-700 shadow-sm transition-all active:scale-95 border border-slate-100">Auto</button>
-              <button className="flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors">Éco</button>
+      {/* Barre de contrôle : Liste Déroulante Bâtiment / Site + Recherche + Filtres */}
+      <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-200/90 shadow-xs mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-center">
+          
+          {/* LISTE DÉROULANTE (Demande explicite de l'utilisateur) */}
+          <div className="md:col-span-5 lg:col-span-4">
+            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-emerald-700" />
+              <span>{language === 'fr' ? 'Sélectionnez un Bâtiment ou Site' : 'Select Building or Site'}</span>
+            </label>
+            <div className="relative">
+              <select
+                id="gtb-building-select"
+                value={selectedTarget}
+                onChange={(e) => handleTargetChange(e.target.value)}
+                className="w-full appearance-none bg-slate-50 hover:bg-slate-100/80 text-slate-800 font-bold text-xs md:text-sm py-3 pl-3.5 pr-10 rounded-xl border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-all cursor-pointer shadow-2xs"
+              >
+                <optgroup label={language === 'fr' ? "Vue Globale du Parc" : "Portfolio Overview"}>
+                  <option value="all">
+                    {language === 'fr' ? '🏢 Tous les Bâtiments & Sites (Vue globale - bat-1 à bat-10)' : '🏢 All Buildings & Sites (bat-1 to bat-10)'}
+                  </option>
+                </optgroup>
+                
+                <optgroup label={language === 'fr' ? "Bâtiments Résidentiels (Montpellier)" : "Residential Buildings"}>
+                  {buildingsList.map((b) => (
+                    <option key={b.id} value={b.id.toString()}>
+                      🏢 {b.name} ({b.type || 'Bâtiment'} • {b.unitsCount || 20} log.)
+                    </option>
+                  ))}
+                </optgroup>
+
+                <optgroup label={language === 'fr' ? "Installations Techniques Communes" : "Central Technical Plants"}>
+                  <option value="zone-tech">⚡ Zone Technique (Photovoltaïque 1296 kWc & Batterie LFP)</option>
+                  <option value="centrale">🔥 Centrale Énergie (Cogénération Biométhane & Absorption)</option>
+                  <option value="local-gtc">🖥️ Local GTC (Serveur Central GTC Class B)</option>
+                </optgroup>
+              </select>
+              <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="flex flex-col items-center justify-center py-4">
-              <div className="relative w-40 h-40 md:w-48 md:h-48 flex flex-col items-center justify-center">
-                <svg className="w-full h-full -rotate-90">
-                  <circle cx="50%" cy="50%" r="45%" fill="none" stroke="#F1F5F9" strokeWidth="12" strokeLinecap="round" />
-                  <circle cx="50%" cy="50%" r="45%" fill="none" stroke="#10B981" strokeWidth="12" strokeDasharray="283" strokeDashoffset="70" strokeLinecap="round" />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-4xl md:text-5xl font-bold text-slate-900 leading-none">21.5°</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">{language === 'fr' ? 'Temp. Actuelle' : 'Current Temp.'}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-6 mt-8">
-                <button className="w-12 h-12 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-all active:scale-90"><Minus className="w-5 h-5 text-slate-600" /></button>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-slate-800">22.0°</p>
-                  <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{language === 'fr' ? 'Consigne' : 'Set Point'}</p>
-                </div>
-                <button className="w-12 h-12 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-all active:scale-90"><Plus className="w-5 h-5 text-slate-600" /></button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
-              {[
-                { icon: Wind, label: language === 'fr' ? 'Ventilation' : 'Ventilation', value: language === 'fr' ? 'Vitesse Moyenne' : 'Average Speed', sub: '66%', color: 'blue', tag: 'Actif' },
-                { icon: CloudSun, label: language === 'fr' ? 'Humidité' : 'Humidity', value: '48%', color: 'emerald', tag: 'Optimal', bar: true },
-                { label: 'CO2', subLabel: language === 'fr' ? "Qualité de l'air" : "Air Quality", value: '412 ppm', color: 'emerald', tag: 'Sain' },
-                { icon: Monitor, label: language === 'fr' ? 'État Filtres' : 'Filter Status', value: '82%', color: 'amber', tag: 'À Prévoir' }
-              ].map((item, i) => (
-                <div key={i} className="bg-slate-50/50 p-4 md:p-5 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100/50 group hover:bg-white transition-all flex flex-col justify-between">
-                  <div className="flex justify-between items-center mb-3">
-                    {item.icon ? <item.icon className={cn("w-4 h-4 md:w-5 md:h-5 text-slate-400 transition-colors", item.color === 'blue' ? "group-hover:text-blue-500" : item.color === 'emerald' ? "group-hover:text-emerald-500" : "group-hover:text-amber-500")} /> : <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase">{item.label}</span>}
-                    <span className={cn("px-1.5 py-0.5 text-[7px] md:text-[8px] font-bold uppercase rounded-md", item.color === 'blue' ? "bg-blue-100 text-blue-600" : item.color === 'emerald' ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600")}>{item.tag}</span>
-                  </div>
-                  <div>
-                    <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{item.icon ? item.label : item.subLabel}</p>
-                    <p className="text-sm md:text-base font-bold text-slate-800 leading-tight">{item.value}</p>
-                    {item.sub && <div className="h-1 bg-slate-200 rounded-full mt-3 overflow-hidden"><motion.div initial={{ width: 0 }} animate={{ width: item.sub }} className="h-full bg-blue-500" /></div>}
-                    {item.bar && <div className="h-1 bg-slate-200 rounded-full mt-3 overflow-hidden"><motion.div initial={{ width: 0 }} animate={{ width: item.value }} className="h-full bg-emerald-500" /></div>}
-                  </div>
-                </div>
-              ))}
+          {/* CHAMP DE RECHERCHE D'ÉQUIPEMENT */}
+          <div className="md:col-span-7 lg:col-span-8">
+            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
+              <Search className="w-3.5 h-3.5 text-emerald-700" />
+              <span>{language === 'fr' ? 'Rechercher un équipement, modèle, marque ou protocole' : 'Search equipment, model, brand or protocol'}</span>
+            </label>
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={language === 'fr' ? 'Ex: DAIKIN, VRV, Modbus, Linky, VMC, Photovoltaïque...' : 'Ex: DAIKIN, VRV, Modbus, Linky, VMC...'}
+                className="w-full bg-slate-50 hover:bg-slate-100/80 text-slate-800 text-xs md:text-sm py-3 pl-10 pr-10 rounded-xl border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-all placeholder:text-slate-400 font-medium shadow-2xs"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-md"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Security */}
-        <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 border border-slate-100 shadow-sm flex flex-col transition-all hover:shadow-md">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center shrink-0">
-              <Shield className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-800 leading-tight">{language === 'fr' ? 'Sécurité & Accès' : 'Security & Access'}</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{language === 'fr' ? 'Surveillance' : 'Monitoring'}</p>
-            </div>
-          </div>
-
-          <div className="space-y-4 flex-1">
-            {[
-              { label: language === 'fr' ? 'Alarme Système' : 'System Alarm', status: language === 'fr' ? 'Active & Armée' : 'Active & Armed', icon: CheckCircle2, color: 'emerald', toggle: true },
-              { label: language === 'fr' ? 'Portes Périphérie' : 'Perimeter Doors', status: language === 'fr' ? 'Toutes Verrouillées' : 'All Locked', icon: Lock, color: 'slate', success: true },
-              { label: language === 'fr' ? 'Vidéo-surveillance' : 'Video Surveillance', status: language === 'fr' ? '24 Flux en ligne' : '24 Streams online', icon: Video, color: 'slate', dot: 'rose' }
-            ].map((item, i) => (
-              <div key={i} className="bg-slate-50/80 p-4 rounded-2xl flex items-center justify-between group hover:bg-white transition-all border border-transparent hover:border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", item.color === 'emerald' ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-500")}>
-                    <item.icon className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-800 leading-none">{item.label}</p>
-                    <p className={cn("text-[9px] font-bold uppercase mt-1", item.color === 'emerald' ? "text-emerald-500" : "text-slate-400")}>{item.status}</p>
-                  </div>
-                </div>
-                {item.toggle && <div className="w-9 h-5 bg-emerald-500 rounded-full relative cursor-pointer"><div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full shadow-sm" /></div>}
-                {item.success && <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />}
-                {item.dot && <div className={cn("w-2 h-2 rounded-full", item.dot === 'rose' ? "bg-rose-500 animate-pulse" : "bg-emerald-500")} />}
-              </div>
-            ))}
-          </div>
-
-          <button className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl text-xs uppercase tracking-widest mt-8 hover:bg-slate-800 transition-all shadow-lg active:scale-95">
-            {language === 'fr' ? 'Journal des accès' : 'Access Log'}
-          </button>
+        {/* Puces de filtrage par LOT (Catégorie Lot exacte du tableau Excel) */}
+        <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0 mr-1 flex items-center gap-1">
+            <Filter className="w-3 h-3 text-emerald-700" />
+            <span>{language === 'fr' ? 'Lot Excel :' : 'Excel Lot:'}</span>
+          </span>
+          {availableLots.map((lotKey) => {
+            const isActive = selectedLot === lotKey;
+            const label = lotKey === 'ALL' ? (language === 'fr' ? 'Tous les Lots' : 'All Lots') : lotKey;
+            return (
+              <button
+                key={lotKey}
+                onClick={() => setSelectedLot(lotKey)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all active:scale-95 border",
+                  isActive
+                    ? "bg-emerald-700 text-white border-emerald-700 shadow-xs"
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200/80"
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        {/* Lighting */}
-        <div className="lg:col-span-2 bg-white rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 border border-slate-100 shadow-sm transition-all hover:shadow-md">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center shrink-0">
-                <Lightbulb className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-800 leading-tight">{language === 'fr' ? 'Éclairage par zone' : 'Zonal Lighting'}</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{language === 'fr' ? 'Optimisation Lumineuse' : 'Lighting Optimization'}</p>
-              </div>
-            </div>
-            <button className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest hover:underline decoration-2 underline-offset-4">{language === 'fr' ? 'Tout éteindre' : 'Turn All Off'}</button>
+      {/* Synthèse Métriques Clés basée sur le Google Sheet pour la sélection */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        
+        {/* 1. Équipements supervisés */}
+        <div className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
+            <Cpu className="w-5 h-5" />
           </div>
-
-          <div className="space-y-5 md:space-y-6">
-            {[
-              { name: language === 'fr' ? "Hall d'Entrée" : "Entrance Hall", desc: language === 'fr' ? '12 luminaires LED' : '12 LED fixtures', val: 60, status: true },
-              { name: language === 'fr' ? 'Espace Bureaux' : 'Office Space', desc: language === 'fr' ? 'Dalles 600×600' : '600x600 panels', val: 85, status: true },
-              { name: language === 'fr' ? 'Parking Souterrain' : 'Underground Parking', desc: language === 'fr' ? 'Détecteurs de présence' : 'Presence detectors', val: 20, status: false }
-            ].map((item, i) => (
-              <div key={i} className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6 group">
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-slate-800">{item.name}</p>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.desc}</p>
-                </div>
-                <div className="flex-[2] flex items-center gap-4">
-                  <Sun className="w-4 h-4 text-slate-300 group-hover:text-amber-400 transition-colors shrink-0" />
-                  <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden relative">
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${item.val}%` }} className="h-full bg-amber-400 rounded-full" />
-                  </div>
-                  <span className="text-[10px] font-bold text-slate-500 w-8 tabular-nums">{item.val}%</span>
-                </div>
-                <div className={cn("w-9 h-5 rounded-full relative transition-colors cursor-pointer self-start md:self-auto", item.status ? "bg-emerald-500" : "bg-slate-200")}>
-                  <div className={cn("absolute top-1 w-3 h-3 bg-white rounded-full shadow-sm transition-all", item.status ? "right-1" : "left-1")} />
-                </div>
-              </div>
-            ))}
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              {language === 'fr' ? 'Équipements Visés' : 'Target Equipment'}
+            </p>
+            <p className="text-xl font-black text-slate-800">
+              {filteredEquipments.length} <span className="text-xs font-bold text-slate-500">lignes actives</span>
+            </p>
+            <p className="text-[10px] font-bold text-emerald-700 mt-0.5">
+              {isSingleBuilding ? `${selectedBuilding?.name} (20 log.)` : 'Parc complet 10 Bâtiments'}
+            </p>
           </div>
         </div>
 
-        {/* Blinds */}
-        <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 border border-slate-100 shadow-sm flex flex-col transition-all hover:shadow-md">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center shrink-0">
-              <LayoutDashboard className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-800 leading-tight">{language === 'fr' ? 'Stores & Volets' : 'Blinds & Shutters'}</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{language === 'fr' ? 'Gestion Solaire' : 'Solar Management'}</p>
-            </div>
+        {/* 2. Puissances Thermiques du Google Sheet */}
+        <div className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
+            <Thermometer className="w-5 h-5" />
           </div>
-
-          <div className="space-y-4">
-            {[
-              { name: 'Façade Sud', open: 100 },
-              { name: 'Façade Nord', open: 45 }
-            ].map((item, i) => (
-              <div key={i} className="bg-slate-50/50 p-4 rounded-[1.5rem] border border-slate-100/50 group hover:bg-white transition-all">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="grid grid-cols-2 gap-0.5 w-6 h-6 shrink-0 opacity-40">
-                      <div className="bg-slate-900 rounded-[1px]" /><div className="bg-slate-900 rounded-[1px]" />
-                      <div className="bg-slate-900 rounded-[1px]" /><div className="bg-slate-900 rounded-[1px]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-800 leading-none">{item.name}</p>
-                      <p className="text-[9px] font-bold text-emerald-500 uppercase mt-1">{language === 'fr' ? `Ouverture ${item.open}%` : `Opening ${item.open}%`}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                    <button className="w-8 h-8 bg-white rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm active:scale-95"><ArrowUp className="w-3.5 h-3.5" /></button>
-                    <button className="w-8 h-8 bg-white rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm active:scale-95"><Pause className="w-3.5 h-3.5" /></button>
-                    <button className="w-8 h-8 bg-white rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm active:scale-95"><ArrowDown className="w-3.5 h-3.5" /></button>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              {language === 'fr' ? 'Puissance CVC Sheet' : 'HVAC Power Sheet'}
+            </p>
+            <p className="text-xl font-black text-slate-800">
+              {powerWinter.toFixed(1)} <span className="text-xs font-bold text-slate-500">kW Hiver</span>
+            </p>
+            <p className="text-[10px] font-semibold text-slate-500 mt-0.5">
+              Été: <span className="font-bold text-slate-700">{powerSummer.toFixed(1)} kW</span> • Canicule: <span className="font-bold text-rose-600">{powerHeatwave.toFixed(1)} kW</span>
+            </p>
           </div>
+        </div>
 
-          <div className="mt-8">
-            <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 flex gap-3 items-start">
-              <HelpCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-              <p className="text-[10px] font-semibold text-emerald-800 leading-relaxed">
-                {language === 'fr' 
-                  ? 'Mode "Poursuite Solaire" actif pour optimiser l\'apport de chaleur.' 
-                  : '"Solar Tracking" mode active to optimize heat gain.'}
-              </p>
-            </div>
+        {/* 3. Comptage & Télérelève */}
+        <div className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
+            <Zap className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              {language === 'fr' ? 'Comptage & Télérelève' : 'Submetering & AMR'}
+            </p>
+            <p className="text-xl font-black text-slate-800">
+              {isSingleBuilding ? '41' : '410'} <span className="text-xs font-bold text-slate-500">compteurs</span>
+            </p>
+            <p className="text-[10px] font-bold text-emerald-700 mt-0.5">
+              Linky • Eau • CET (Modbus/M-Bus)
+            </p>
+          </div>
+        </div>
+
+        {/* 4. Protocoles Réseau Actifs */}
+        <div className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
+            <SlidersHorizontal className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              {language === 'fr' ? 'Architecture Bus GTC' : 'BMS Bus Architecture'}
+            </p>
+            <p className="text-xl font-black text-slate-800">
+              91 <span className="text-xs font-bold text-slate-500">points GTB</span>
+            </p>
+            <p className="text-[10px] font-semibold text-slate-500 mt-0.5">
+              BACnet/IP • Modbus • KNX • OPC-UA
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Google Sheets GTC / GTB Equipment Live Inventory */}
-      {gtbEquipments && gtbEquipments.length > 0 && (
-        <div className="mt-8 bg-white rounded-3xl p-5 md:p-7 border border-slate-200/80 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-100">
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-emerald-100 text-emerald-800 rounded-xl">
-                  <Cpu className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-800 font-display">
-                    {language === 'fr' ? 'Inventaire des Équipements GTB & Points de Contrôle' : 'BMS Equipment Inventory & Control Points'}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {language === 'fr' ? 'Synchronisé en direct avec la Section 2 de votre Google Sheets / Excel' : 'Synced live with Section 2 of your Google Sheets / Excel'}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-600 self-start sm:self-auto">
-              {gtbEquipments.length} {language === 'fr' ? 'équipements supervisés' : 'supervised items'}
+      {/* TABLEAU DE L'INVENTAIRE GTB CONFORME AU GOOGLE SHEET */}
+      <div className="bg-white rounded-2xl md:rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
+        
+        {/* En-tête du tableau avec statistiques */}
+        <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/50">
+          <div className="flex items-center gap-2">
+            <h3 className="font-extrabold text-slate-800 text-sm md:text-base">
+              {language === 'fr' ? 'Inventaire Technique des Équipements' : 'Technical Equipment Inventory'}
+            </h3>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-bold text-[11px] border border-emerald-200/60">
+              {filteredEquipments.length} {language === 'fr' ? 'lignes' : 'rows'}
             </span>
           </div>
+          <div className="text-[11px] font-medium text-slate-500">
+            {isSingleBuilding 
+              ? (language === 'fr' ? `Quantités ajustées pour le bâtiment : ${selectedBuilding?.name}` : `Quantities adjusted for building: ${selectedBuilding?.name}`) 
+              : (language === 'fr' ? 'Quantités globales sur les 10 bâtiments (sans mention x10)' : 'Total park quantities across 10 buildings')}
+          </div>
+        </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                  <th className="py-3 px-4">Localisation</th>
-                  <th className="py-3 px-4">Lot / Catégorie</th>
-                  <th className="py-3 px-4">Équipement Supervisé</th>
-                  <th className="py-3 px-4 text-center">Quantité</th>
-                  <th className="py-3 px-4">Protocole</th>
-                  <th className="py-3 px-4">Point GTB</th>
-                  <th className="py-3 px-4 text-center">Statut</th>
+        {/* Corps du tableau */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-black uppercase tracking-wider text-[10px]">
+                <th className="py-3.5 px-4 whitespace-nowrap">{language === 'fr' ? 'Localisation' : 'Location'}</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">{language === 'fr' ? 'Lot (Excel)' : 'Excel Lot'}</th>
+                <th className="py-3.5 px-4">{language === 'fr' ? 'Équipement GTB / GTC' : 'GTB Equipment'}</th>
+                <th className="py-3.5 px-4 text-center whitespace-nowrap">{language === 'fr' ? 'Quantité' : 'Quantity'}</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">{language === 'fr' ? 'Protocole Bus' : 'Bus Protocol'}</th>
+                <th className="py-3.5 px-4">{language === 'fr' ? 'Point de Contrôle GTB' : 'Control Point'}</th>
+                <th className="py-3.5 px-4 text-center whitespace-nowrap">{language === 'fr' ? 'Supervision' : 'Status'}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredEquipments.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                    <Cpu className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                    <p className="font-bold text-slate-600">{language === 'fr' ? 'Aucun équipement trouvé' : 'No equipment found'}</p>
+                    <p className="text-xs text-slate-400 mt-1">{language === 'fr' ? 'Essayez de modifier votre recherche ou le filtre de lot.' : 'Try adjusting your search or lot filter.'}</p>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {gtbEquipments.map((eq, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3 px-4 font-semibold text-slate-800 whitespace-nowrap">{eq.location}</td>
-                    <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-semibold text-[11px] border border-emerald-100">
+              ) : (
+                filteredEquipments.map((eq, idx) => (
+                  <tr 
+                    key={idx} 
+                    className="hover:bg-slate-50/80 transition-colors group"
+                  >
+                    {/* 1. Localisation (sans "x10") */}
+                    <td className="py-3.5 px-4 font-bold text-slate-800 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                        <span>{eq.displayLoc}</span>
+                      </div>
+                    </td>
+
+                    {/* 2. Lot (Catégorie Lot exacte du tableau Excel) */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 font-bold text-[11px] border border-emerald-200/70">
                         {eq.category}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="font-bold text-slate-800">{eq.name}</div>
-                      <div className="text-[10px] text-slate-400 font-mono">{eq.brandModel}</div>
+
+                    {/* 3. Équipement & Marque / Modèle (exacts de la feuille Excel) */}
+                    <td className="py-3.5 px-4">
+                      <div className="font-extrabold text-slate-800 text-xs md:text-sm group-hover:text-emerald-800 transition-colors">
+                        {eq.name}
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                        {eq.brandModel}
+                      </div>
                     </td>
-                    <td className="py-3 px-4 text-center font-bold text-slate-800">{eq.quantity}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 font-mono text-[10px] font-bold border border-sky-100">
+
+                    {/* 4. Quantité (propre, sans mention "(x10)", adaptée par bâtiment) */}
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="inline-block px-2.5 py-0.5 rounded-lg bg-slate-100 font-black text-slate-800 text-xs md:text-sm tabular-nums border border-slate-200/80">
+                        {eq.displayQty}
+                      </span>
+                    </td>
+
+                    {/* 5. Protocole de Communication */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-200">
                         {eq.protocol}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-slate-600 font-medium">{eq.pointType}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] uppercase tracking-wide">
-                        {eq.status || 'Actif'}
+
+                    {/* 6. Point de Contrôle GTB */}
+                    <td className="py-3.5 px-4 text-slate-600 font-medium">
+                      {eq.pointType}
+                    </td>
+
+                    {/* 7. Statut Supervision */}
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black text-[10px] uppercase tracking-wider border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                        <span>{eq.status || 'Actif'}</span>
                       </span>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pied de tableau récapitulatif */}
+        <div className="p-4 bg-slate-50/60 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-600" />
+            <span>
+              {language === 'fr' 
+                ? 'Données de supervision directement synchronisées depuis le Google Sheets officiel de la résidence.' 
+                : 'Supervision data directly synchronized from the official residence Google Sheet.'}
+            </span>
+          </div>
+          <div className="text-[11px] font-bold text-slate-600">
+            {language === 'fr' ? 'Norme GTB / GTC EN ISO 52120-1 (Classe B)' : 'BMS EN ISO 52120-1 (Class B standard)'}
           </div>
         </div>
-      )}
+      </div>
     </ViewContainer>
   );
 };
@@ -3280,7 +3461,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [selectedBuilding, setSelectedBuilding] = useState<string>('all');
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [buildings, setBuildings] = useState<BuildingStats[]>([]);
+  const [buildings, setBuildings] = useState<BuildingStats[]>(TABLE_DATA);
   const [activeWeatherCity, setActiveWeatherCity] = useState<WeatherCity>(POPULAR_CITIES[0]);
   const [isSyncingSheet, setIsSyncingSheet] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
@@ -3854,14 +4035,13 @@ export default function App() {
 
           if (rawId && (conso > 0 || powerWinter !== undefined || type)) {
             const cleanIdStr = rawId.replace(/^BAT-?/i, '');
-            const buildingName = typeCol !== -1 && cells[typeCol]
-              ? `Bâtiment ${cleanIdStr} (${type})`
-              : (rawId.startsWith('BAT-') ? `Bâtiment ${cleanIdStr}` : rawId);
+            const buildingNum = parseInt(cleanIdStr, 10) || (parsedBuildings.length + 1);
+            const buildingName = `bat-${buildingNum}`;
 
             parsedBuildings.push({
               id: rawId,
               name: buildingName,
-              location: `Écoquartier Smart Microgrid, 34000 Montpellier (Lot ${rawId})`,
+              location: `Rue de Malbosc, 34080 Montpellier (bat-${buildingNum})`,
               status: conso > 200 ? 'ATTENTION' : 'OPTIMAL',
               consumption: `${conso.toLocaleString('fr-FR')} kWh`,
               economy: `${Math.round(14 + (parsedBuildings.length % 6))}%`,
@@ -3882,6 +4062,7 @@ export default function App() {
       let gtbHeaderIndex = -1;
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].toLowerCase();
+        if (/^2\./.test(lines[i])) continue; // Ignorer la ligne de titre de section
         if (
           (line.includes('équipement') || line.includes('equipement')) &&
           (line.includes('protocole') || line.includes('marque') || line.includes('gtb'))
@@ -3907,17 +4088,22 @@ export default function App() {
           const cells = parseLine(lines[i]);
           if (cells.every(c => !c) || /^3\./.test(cells[0] || '')) break;
 
-          const eqName = eqCol !== -1 ? cells[eqCol] : cells[2];
+          const eqName = (eqCol !== -1 && cells[eqCol] ? cells[eqCol] : cells[2] || '').trim();
           if (eqName) {
+            const rawLoc = locCol !== -1 && cells[locCol] ? cells[locCol] : 'Bâtiments';
+            const cleanLoc = rawLoc.replace(/\s*\([xX]10\)/g, '').replace(/\s*[xX]10/g, '').trim() || 'Bâtiments';
+            const rawQtyStr = qtyCol !== -1 && cells[qtyCol] ? cells[qtyCol].toString() : '1';
+            const cleanQty = Math.round(cleanVal(rawQtyStr.replace(/\s*\([xX]10\)/g, '').replace(/\s*[xX]10/g, ''))) || 1;
+
             parsedEquipments.push({
-              location: locCol !== -1 && cells[locCol] ? cells[locCol] : 'Site',
-              category: catCol !== -1 && cells[catCol] ? cells[catCol] : 'Général',
+              location: cleanLoc,
+              category: catCol !== -1 && cells[catCol] ? cells[catCol].trim() : 'Général',
               name: eqName,
-              brandModel: brandCol !== -1 && cells[brandCol] ? cells[brandCol] : 'Standard',
-              quantity: qtyCol !== -1 ? Math.round(cleanVal(cells[qtyCol])) || 1 : 1,
-              protocol: protoCol !== -1 && cells[protoCol] ? cells[protoCol] : 'BACnet / IP',
-              pointType: pointCol !== -1 && cells[pointCol] ? cells[pointCol] : 'Supervision',
-              status: statCol !== -1 && cells[statCol] ? cells[statCol] : 'Actif'
+              brandModel: brandCol !== -1 && cells[brandCol] ? cells[brandCol].trim() : 'Standard',
+              quantity: cleanQty,
+              protocol: protoCol !== -1 && cells[protoCol] ? cells[protoCol].trim() : 'BACnet / IP',
+              pointType: pointCol !== -1 && cells[pointCol] ? cells[pointCol].trim() : 'Supervision',
+              status: statCol !== -1 && cells[statCol] ? cells[statCol].trim() : 'Actif'
             });
           }
         }
@@ -3945,9 +4131,13 @@ export default function App() {
     fetchGoogleSheetsBackground();
   }, [fetchGoogleSheetsBackground]);
 
-  // Synchronisation au chargement initial (les actualisations suivantes se font manuellement via le bouton de synchronisation)
+  // Synchronisation au chargement initial et rafraîchissement automatique toutes les 60 secondes pour répercuter les changements de Google Sheets
   React.useEffect(() => {
     fetchGoogleSheetsBackground();
+    const interval = setInterval(() => {
+      fetchGoogleSheetsBackground();
+    }, 60000);
+    return () => clearInterval(interval);
   }, [fetchGoogleSheetsBackground]);
 
   const renderContent = () => {
@@ -3985,6 +4175,7 @@ export default function App() {
           language={settings.language} 
           buildingsList={memoizedBuildings} 
           selectedBuildingId={selectedBuilding}
+          onSelectBuilding={setSelectedBuilding}
           gtbEquipments={gtbEquipments}
           isSyncing={isSyncingSheet}
           lastSyncTime={lastSyncTime}
