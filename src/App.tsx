@@ -224,6 +224,31 @@ const parseEnergy = (val: any) => {
   return s.includes('MWh') ? numeric * 1000 : numeric;
 };
 
+// Formateur fiable évitant toute traduction erronée en "chauve-souris" par les navigateurs
+export const formatBuildingName = (name?: string, id?: string | number): string => {
+  if (!name) {
+    if (id) {
+      const match = String(id).match(/\d+/);
+      return match ? `Bâtiment ${parseInt(match[0], 10)}` : `Bâtiment ${id}`;
+    }
+    return 'Bâtiment';
+  }
+  const clean = name.trim();
+  // Remplace "bat-5", "bat 5", "BAT-05", "chauve-souris-5", "chauve-souris 5" par "Bâtiment 5"
+  const m = clean.match(/^(?:bat|chauve[- ]?souris)[- ]?0*(\d+)/i);
+  if (m) {
+    return `Bâtiment ${parseInt(m[1], 10)}`;
+  }
+  return clean;
+};
+
+export const cleanBuildingLocation = (loc?: string, id?: string | number): string => {
+  if (!loc) return 'Rue de Malbosc, 34080 Montpellier';
+  return loc
+    .replace(/\b(?:bat|chauve[- ]?souris)[- ]?0*(\d+)\b/gi, 'Bâtiment $1')
+    .replace(/\(Bâtiment\s*(\d+)\)/gi, '(Bâtiment $1)');
+};
+
 // --- Mock Data ---
 const BAR_DATA = [
   { name: 'Bât. A', value: 4200, status: 'optimal' },
@@ -241,16 +266,16 @@ const BAR_DATA = [
 const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzA9anmbi31SQYS9-Qzo1oFGEagoJ6GcDljSYd7kJe8OCLzyujYZnTmpYlM92ljA/pub?output=csv";
 
 const TABLE_DATA: BuildingStats[] = [
-  { id: 'BAT-01', name: 'bat 1', location: 'Rue de Malbosc, 34080 Montpellier (bat 1)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-02', name: 'bat 2', location: 'Rue de Malbosc, 34080 Montpellier (bat 2)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-03', name: 'bat 3', location: 'Rue de Malbosc, 34080 Montpellier (bat 3)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-04', name: 'bat 4', location: 'Rue de Malbosc, 34080 Montpellier (bat 4)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-05', name: 'bat 5', location: 'Rue de Malbosc, 34080 Montpellier (bat 5)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-06', name: 'bat 6', location: 'Rue de Malbosc, 34080 Montpellier (bat 6)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
-  { id: 'BAT-07', name: 'bat 7', location: 'Rue de Malbosc, 34080 Montpellier (bat 7)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
-  { id: 'BAT-08', name: 'bat 8', location: 'Rue de Malbosc, 34080 Montpellier (bat 8)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
-  { id: 'BAT-09', name: 'bat 9', location: 'Rue de Malbosc, 34080 Montpellier (bat 9)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
-  { id: 'BAT-10', name: 'bat 10', location: 'Rue de Malbosc, 34080 Montpellier (bat 10)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-01', name: 'Bâtiment 1', location: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 1)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-02', name: 'Bâtiment 2', location: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 2)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-03', name: 'Bâtiment 3', location: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 3)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-04', name: 'Bâtiment 4', location: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 4)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-05', name: 'Bâtiment 5', location: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 5)', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-06', name: 'Bâtiment 6', location: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 6)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-07', name: 'Bâtiment 7', location: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 7)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-08', name: 'Bâtiment 8', location: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 8)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-09', name: 'Bâtiment 9', location: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 9)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-10', name: 'Bâtiment 10', location: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 10)', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
 ];
 
 const GTB_INITIAL_EQUIPMENT: GTBEquipment[] = [
@@ -1641,16 +1666,16 @@ const BuildingConsumptionGraphCard = React.memo(({
     const val = parseEnergy(b.consumption);
     const match = (b.id || '').toString().match(/\d+/) || (b.name || '').toString().match(/\d+/);
     const num = match ? parseInt(match[0], 10) : (idx + 1);
-    const batLabel = `bat-${num}`;
+    const bName = formatBuildingName(b.name, b.id || num);
     return {
       id: b.id.toString(),
-      name: batLabel,
-      batLabel,
-      fullName: b.name.startsWith('bat-') ? `${b.name}${b.type ? ` (${b.type})` : ''}` : `${batLabel} : ${b.name}`,
+      name: bName,
+      batLabel: bName,
+      fullName: `${bName}${b.type ? ` (${b.type})` : ''}`,
       value: val,
       displayValue: `${val.toLocaleString()} kWh`,
       status: b.status,
-      location: b.location
+      location: cleanBuildingLocation(b.location, b.id || num)
     };
   }), [buildingsList]);
 
@@ -1759,8 +1784,8 @@ const BuildingConsumptionGraphCard = React.memo(({
           </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
             {isGlobal
-              ? (language === 'fr' ? 'Comparatif de consommation de tous les bâtiments du parc (bat-1 à bat-10)' : 'Comparative view of all portfolio buildings (bat-1 to bat-10)')
-              : (language === 'fr' ? `Suivi journalier synchronisé avec Google Sheets : ${selected?.name} (${selected?.location || 'Montpellier'})` : `Daily tracking synced with Google Sheets: ${selected?.name}`)}
+              ? (language === 'fr' ? 'Comparatif de consommation de tous les bâtiments du parc (Bâtiment 1 à Bâtiment 10)' : 'Comparative view of all portfolio buildings (Building 1 to 10)')
+              : (language === 'fr' ? `Suivi journalier synchronisé avec Google Sheets : ${formatBuildingName(selected?.name, selected?.id)} (${cleanBuildingLocation(selected?.location, selected?.id)})` : `Daily tracking synced with Google Sheets: ${formatBuildingName(selected?.name, selected?.id)}`)}
           </p>
         </div>
 
@@ -1923,26 +1948,26 @@ interface MontpellierBuildingCoords {
 }
 
 const MONTPELLIER_BUILDINGS_COORDS: Record<string, MontpellierBuildingCoords> = {
-  '1': { lat: 43.6326, lng: 3.8310, address: 'Rue de Malbosc, 34080 Montpellier (bat-1)', district: 'Quartier Malbosc' },
-  '2': { lat: 43.6329, lng: 3.8314, address: 'Rue de Malbosc, 34080 Montpellier (bat-2)', district: 'Quartier Malbosc' },
-  '3': { lat: 43.6332, lng: 3.8318, address: 'Rue de Malbosc, 34080 Montpellier (bat-3)', district: 'Quartier Malbosc' },
-  '4': { lat: 43.6335, lng: 3.8322, address: 'Rue de Malbosc, 34080 Montpellier (bat-4)', district: 'Quartier Malbosc' },
-  '5': { lat: 43.6338, lng: 3.8326, address: 'Rue de Malbosc, 34080 Montpellier (bat-5)', district: 'Quartier Malbosc' },
-  '6': { lat: 43.6341, lng: 3.8330, address: 'Rue de Malbosc, 34080 Montpellier (bat-6)', district: 'Quartier Malbosc' },
-  '7': { lat: 43.6344, lng: 3.8334, address: 'Rue de Malbosc, 34080 Montpellier (bat-7)', district: 'Quartier Malbosc' },
-  '8': { lat: 43.6347, lng: 3.8338, address: 'Rue de Malbosc, 34080 Montpellier (bat-8)', district: 'Quartier Malbosc' },
-  '9': { lat: 43.6350, lng: 3.8342, address: 'Rue de Malbosc, 34080 Montpellier (bat-9)', district: 'Quartier Malbosc' },
-  '10': { lat: 43.6353, lng: 3.8346, address: 'Rue de Malbosc, 34080 Montpellier (bat-10)', district: 'Quartier Malbosc' },
-  'BAT-01': { lat: 43.6326, lng: 3.8310, address: 'Rue de Malbosc, 34080 Montpellier (bat-1)', district: 'Quartier Malbosc' },
-  'BAT-02': { lat: 43.6329, lng: 3.8314, address: 'Rue de Malbosc, 34080 Montpellier (bat-2)', district: 'Quartier Malbosc' },
-  'BAT-03': { lat: 43.6332, lng: 3.8318, address: 'Rue de Malbosc, 34080 Montpellier (bat-3)', district: 'Quartier Malbosc' },
-  'BAT-04': { lat: 43.6335, lng: 3.8322, address: 'Rue de Malbosc, 34080 Montpellier (bat-4)', district: 'Quartier Malbosc' },
-  'BAT-05': { lat: 43.6338, lng: 3.8326, address: 'Rue de Malbosc, 34080 Montpellier (bat-5)', district: 'Quartier Malbosc' },
-  'BAT-06': { lat: 43.6341, lng: 3.8330, address: 'Rue de Malbosc, 34080 Montpellier (bat-6)', district: 'Quartier Malbosc' },
-  'BAT-07': { lat: 43.6344, lng: 3.8334, address: 'Rue de Malbosc, 34080 Montpellier (bat-7)', district: 'Quartier Malbosc' },
-  'BAT-08': { lat: 43.6347, lng: 3.8338, address: 'Rue de Malbosc, 34080 Montpellier (bat-8)', district: 'Quartier Malbosc' },
-  'BAT-09': { lat: 43.6350, lng: 3.8342, address: 'Rue de Malbosc, 34080 Montpellier (bat-9)', district: 'Quartier Malbosc' },
-  'BAT-10': { lat: 43.6353, lng: 3.8346, address: 'Rue de Malbosc, 34080 Montpellier (bat-10)', district: 'Quartier Malbosc' },
+  '1': { lat: 43.6326, lng: 3.8310, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 1)', district: 'Quartier Malbosc' },
+  '2': { lat: 43.6329, lng: 3.8314, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 2)', district: 'Quartier Malbosc' },
+  '3': { lat: 43.6332, lng: 3.8318, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 3)', district: 'Quartier Malbosc' },
+  '4': { lat: 43.6335, lng: 3.8322, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 4)', district: 'Quartier Malbosc' },
+  '5': { lat: 43.6338, lng: 3.8326, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 5)', district: 'Quartier Malbosc' },
+  '6': { lat: 43.6341, lng: 3.8330, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 6)', district: 'Quartier Malbosc' },
+  '7': { lat: 43.6344, lng: 3.8334, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 7)', district: 'Quartier Malbosc' },
+  '8': { lat: 43.6347, lng: 3.8338, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 8)', district: 'Quartier Malbosc' },
+  '9': { lat: 43.6350, lng: 3.8342, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 9)', district: 'Quartier Malbosc' },
+  '10': { lat: 43.6353, lng: 3.8346, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 10)', district: 'Quartier Malbosc' },
+  'BAT-01': { lat: 43.6326, lng: 3.8310, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 1)', district: 'Quartier Malbosc' },
+  'BAT-02': { lat: 43.6329, lng: 3.8314, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 2)', district: 'Quartier Malbosc' },
+  'BAT-03': { lat: 43.6332, lng: 3.8318, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 3)', district: 'Quartier Malbosc' },
+  'BAT-04': { lat: 43.6335, lng: 3.8322, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 4)', district: 'Quartier Malbosc' },
+  'BAT-05': { lat: 43.6338, lng: 3.8326, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 5)', district: 'Quartier Malbosc' },
+  'BAT-06': { lat: 43.6341, lng: 3.8330, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 6)', district: 'Quartier Malbosc' },
+  'BAT-07': { lat: 43.6344, lng: 3.8334, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 7)', district: 'Quartier Malbosc' },
+  'BAT-08': { lat: 43.6347, lng: 3.8338, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 8)', district: 'Quartier Malbosc' },
+  'BAT-09': { lat: 43.6350, lng: 3.8342, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 9)', district: 'Quartier Malbosc' },
+  'BAT-10': { lat: 43.6353, lng: 3.8346, address: 'Rue de Malbosc, 34080 Montpellier (Bâtiment 10)', district: 'Quartier Malbosc' },
 };
 
 const getBuildingMapCoords = (b: any, index: number): MontpellierBuildingCoords => {
@@ -1960,7 +1985,7 @@ const getBuildingMapCoords = (b: any, index: number): MontpellierBuildingCoords 
   return {
     lat: 43.6325 + latOffset,
     lng: 3.8308 + lngOffset,
-    address: b && b.location ? b.location : `Rue de Malbosc, 34080 Montpellier (bat-${idx})`,
+    address: b && b.location ? cleanBuildingLocation(b.location, idx) : `Rue de Malbosc, 34080 Montpellier (Bâtiment ${idx})`,
     district: 'Quartier Malbosc'
   };
 };
@@ -2500,9 +2525,9 @@ const DashboardView = ({
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4"
       >
         <MetricCard title={t.totalConsumption} value={consumption} subValue={t.vsLastMonth} trend={trend} icon={Zap} color="emerald" />
-        <MetricCard title={t.activityPeak} value={isGlobal ? (language === 'fr' ? 'Tous les sites' : 'All Sites') : selected?.name || "N/A"} subValue={isGlobal ? t.alertThreshold : (selected?.status || t.normal)} icon={Activity} color={isGlobal || selected?.status === 'ALERTE' ? "rose" : "emerald"} />
+        <MetricCard title={t.activityPeak} value={isGlobal ? (language === 'fr' ? 'Tous les sites' : 'All Sites') : formatBuildingName(selected?.name, selected?.id) || "N/A"} subValue={isGlobal ? t.alertThreshold : (selected?.status || t.normal)} icon={Activity} color={isGlobal || selected?.status === 'ALERTE' ? "rose" : "emerald"} />
         <MetricCard title={t.efficiency} value={isGlobal ? avgEfficiency + "%" : (parseFloat(String(selected?.economy || '0').replace(/[^0-9.]/g, '')) + 80).toFixed(1) + "%"} subValue={t.targetReached} icon={CheckCircle2} color="emerald" />
-        <MetricCard title={t.anomalies} value={String(anomaliesCount)} subValue={topConsumer?.name} icon={AlertTriangle} color={anomaliesCount > 0 ? "rose" : "emerald"} />
+        <MetricCard title={t.anomalies} value={String(anomaliesCount)} subValue={topConsumer ? formatBuildingName(topConsumer.name, topConsumer.id) : undefined} icon={AlertTriangle} color={anomaliesCount > 0 ? "rose" : "emerald"} />
       </motion.div>
 
       {/* Building Consumption Graph Card with Interactive Building Selector */}
@@ -2622,8 +2647,8 @@ const BuildingsView = ({
                 )}
               </div>
 
-              <h3 className="font-bold text-slate-800 mb-1">{b.name}</h3>
-              <p className="text-[11px] font-medium text-slate-400 mb-3 line-clamp-1">{b.location}</p>
+              <h3 className="font-bold text-slate-800 mb-1">{formatBuildingName(b.name, b.id)}</h3>
+              <p className="text-[11px] font-medium text-slate-400 mb-3 line-clamp-1">{cleanBuildingLocation(b.location, b.id)}</p>
 
               {(b.powerWinterKw !== undefined || b.powerSummerKw !== undefined) && (
                 <div className="bg-slate-50/80 rounded-xl p-2.5 mb-3 text-[11px] space-y-1 border border-slate-100">
@@ -2872,7 +2897,7 @@ const ReportsView = ({ language, buildingsList, currentDate }: { language: strin
                   >
                     <option value="all">{language === 'fr' ? 'Tous les Sites' : 'All Sites'}</option>
                     {buildingsList.map(b => (
-                      <option key={b.id} value={b.id.toString()}>{b.name}</option>
+                      <option key={b.id} value={b.id.toString()}>{formatBuildingName(b.name, b.id)}</option>
                     ))}
                   </select>
                 </div>
@@ -2976,138 +3001,53 @@ const GTBView = ({
 }: { 
   language: string; 
   buildingsList: any[]; 
-  selectedBuildingId: string;
+  selectedBuildingId?: string;
   onSelectBuilding?: (id: string) => void;
   gtbEquipments?: GTBEquipment[];
   isSyncing?: boolean;
   lastSyncTime?: string;
   onForceSync?: () => void;
 }) => {
-  const [selectedTarget, setSelectedTarget] = useState<string>(selectedBuildingId || 'all');
-  const [selectedLot, setSelectedLot] = useState<string>('ALL');
+  const [selectedLocation, setSelectedLocation] = useState<string>('Tous');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Synchroniser la sélection si le parent la modifie
-  useEffect(() => {
-    if (selectedBuildingId) {
-      setSelectedTarget(selectedBuildingId);
-    }
-  }, [selectedBuildingId]);
+  const locations = [
+    { key: 'Tous', label: language === 'fr' ? 'Tous les sites' : 'All Sites' },
+    { key: 'Bâtiments', label: language === 'fr' ? 'Bâtiments' : 'Buildings' },
+    { key: 'Sous-stations', label: language === 'fr' ? 'Sous-stations' : 'Substations' },
+    { key: 'Zone Technique', label: language === 'fr' ? 'Zone Technique' : 'Technical Area' },
+    { key: 'Centrale Énergie', label: language === 'fr' ? 'Centrale Énergie' : 'Power Plant' },
+    { key: 'Local GTC', label: language === 'fr' ? 'Local GTC' : 'BMS Control Room' }
+  ];
 
-  const handleTargetChange = (newTarget: string) => {
-    setSelectedTarget(newTarget);
-    if (onSelectBuilding && (newTarget === 'all' || buildingsList.some(b => b.id.toString() === newTarget))) {
-      onSelectBuilding(newTarget);
-    }
-  };
-
-  const selectedBuilding = buildingsList.find(b => b.id.toString() === selectedTarget) || null;
-  const isAllBuildings = selectedTarget === 'all';
-  const isTechnicalZone = selectedTarget === 'zone-tech';
-  const isCentrale = selectedTarget === 'centrale';
-  const isLocalGtc = selectedTarget === 'local-gtc';
-  const isSingleBuilding = !!selectedBuilding;
-
-  // Calcul du nombre de logements et des puissances réelles tirées du Google Sheet
-  const buildingUnits = selectedBuilding ? (selectedBuilding.unitsCount || 20) : 200;
-  const powerWinter = selectedBuilding 
-    ? (selectedBuilding.powerWinterKw ?? 16.4) 
-    : buildingsList.reduce((acc, b) => acc + (b.powerWinterKw ?? 16.4), 0);
-  const powerSummer = selectedBuilding 
-    ? (selectedBuilding.powerSummerKw ?? 4.1) 
-    : buildingsList.reduce((acc, b) => acc + (b.powerSummerKw ?? 4.1), 0);
-  const powerHeatwave = selectedBuilding 
-    ? (selectedBuilding.powerHeatwaveKw ?? 7.2) 
-    : buildingsList.reduce((acc, b) => acc + (b.powerHeatwaveKw ?? 7.2), 0);
-
-  // Normalisation et calcul des équipements filtrés sans "(x10)"
-  const processedEquipments = gtbEquipments.map(eq => {
-    const rawLoc = eq.location || '';
-    const cleanLoc = rawLoc.replace(/\s*\([xX]10\)/g, '').replace(/\s*[xX]10/g, '').trim() || 'Bâtiment';
-    const isBuildingEquip = cleanLoc.toLowerCase().includes('bâtiment') || cleanLoc.toLowerCase().includes('batiment') || cleanLoc.toLowerCase().includes('sous-station');
-    
-    // Calcul de la quantité adaptée selon la sélection
-    let displayQty: number | string = eq.quantity;
-    let displayLoc = cleanLoc;
-
-    if (isSingleBuilding && selectedBuilding) {
-      if (isBuildingEquip) {
-        displayLoc = cleanLoc.toLowerCase().includes('sous-station') 
-          ? `Sous-station ${selectedBuilding.name}` 
-          : selectedBuilding.name;
-        // Si l'équipement était réparti sur les 10 bâtiments, afficher la quantité du bâtiment sélectionné
-        const totalNum = typeof eq.quantity === 'number' ? eq.quantity : parseInt(String(eq.quantity), 10) || 1;
-        if (totalNum >= 10 && totalNum % 10 === 0) {
-          displayQty = totalNum / 10;
-        } else if (totalNum === 10) {
-          displayQty = 1;
-        } else {
-          displayQty = Math.max(1, Math.round(totalNum / 10));
-        }
-      } else {
-        displayLoc = cleanLoc;
-      }
-    } else if (isAllBuildings) {
-      displayLoc = isBuildingEquip ? 'Bâtiments (1 à 10)' : cleanLoc;
+  const filteredEquipments = gtbEquipments.filter(eq => {
+    // Filtre par localisation
+    if (selectedLocation !== 'Tous') {
+      const loc = (eq.location || '').toLowerCase();
+      const target = selectedLocation.toLowerCase();
+      if (!loc.includes(target)) return false;
     }
 
-    return {
-      ...eq,
-      cleanLoc,
-      displayLoc,
-      displayQty,
-      isBuildingEquip
-    };
-  });
-
-  // Filtrage selon le site/bâtiment, le lot, et la recherche
-  const filteredEquipments = processedEquipments.filter(item => {
-    // 1. Filtre par Bâtiment / Zone
-    if (isSingleBuilding) {
-      // Pour un bâtiment individuel, montrer les équipements de bâtiment + optionnellement ceux du site
-      if (!item.isBuildingEquip && selectedLot === 'ALL') {
-        // Optionnel : on inclut les équipements techniques avec note de site commun
-      }
-    } else if (isTechnicalZone) {
-      if (!item.cleanLoc.toLowerCase().includes('zone technique')) return false;
-    } else if (isCentrale) {
-      if (!item.cleanLoc.toLowerCase().includes('centrale')) return false;
-    } else if (isLocalGtc) {
-      if (!item.cleanLoc.toLowerCase().includes('local gtc') && !item.cleanLoc.toLowerCase().includes('supervision')) return false;
-    }
-
-    // 2. Filtre par Lot
-    if (selectedLot !== 'ALL') {
-      if (selectedLot === 'CVC') {
-        if (!item.category.toUpperCase().includes('CVC')) return false;
-      } else if (!item.category.toUpperCase().includes(selectedLot.toUpperCase())) {
-        return false;
-      }
-    }
-
-    // 3. Filtre par recherche textuelle
+    // Filtre par recherche textuelle
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const match = 
-        item.name.toLowerCase().includes(q) ||
-        item.brandModel.toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q) ||
-        item.protocol.toLowerCase().includes(q) ||
-        item.pointType.toLowerCase().includes(q) ||
-        item.displayLoc.toLowerCase().includes(q);
+        (eq.name || '').toLowerCase().includes(q) ||
+        (eq.brandModel || '').toLowerCase().includes(q) ||
+        (eq.category || '').toLowerCase().includes(q) ||
+        (eq.protocol || '').toLowerCase().includes(q) ||
+        (eq.pointType || '').toLowerCase().includes(q) ||
+        (eq.location || '').toLowerCase().includes(q);
       if (!match) return false;
     }
 
     return true;
   });
 
-  // Liste unique des lots disponibles pour les puces de filtrage
-  const availableLots = ['ALL', 'CVC', 'GTB - Comptage', 'Sécurité', 'Production ENR', 'Stockage ENR', 'Trigénération', 'Supervision'];
-
   return (
     <ViewContainer>
-      {/* En-tête principal & statut de liaison Google Sheets */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* En-tête principal */}
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase tracking-wider border border-emerald-200">
@@ -3117,248 +3057,104 @@ const GTBView = ({
               {language === 'fr' ? 'Écoquartier Malbosc' : 'Malbosc Eco-district'}
             </span>
           </div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">
-            {language === 'fr' ? 'Contrôle & Inventaire GTB' : 'BMS Control & Inventory'}
-          </h2>
-          <p className="text-xs md:text-sm text-slate-500 font-medium mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 tracking-tight">
+            {language === 'fr' ? 'Contrôles GTB' : 'BMS Controls'}
+          </h1>
+          <p className="text-sm text-slate-500 font-medium mt-1">
             {language === 'fr' 
-              ? 'Équipements réels, points de contrôle et protocoles synchronisés en direct depuis votre Google Sheets' 
-              : 'Real equipment, control points and protocols synchronized live from your Google Sheets'}
+              ? 'Supervision technique des équipements et points de contrôle du parc immobilier.' 
+              : 'Technical supervision of equipment and control points across the real estate portfolio.'}
           </p>
         </div>
 
-        {/* Badge Google Sheets & Bouton de synchronisation immédiate */}
-        <div className="flex items-center gap-2.5 bg-white border border-slate-200/90 rounded-2xl p-2 md:px-4 md:py-2.5 shadow-xs self-start md:self-auto">
-          <div className="flex items-center gap-2">
-            <span className={cn("w-2.5 h-2.5 rounded-full", isSyncing ? "bg-amber-500 animate-spin" : "bg-emerald-600 animate-pulse")} />
-            <div className="text-left">
-              <p className="text-[11px] font-bold text-slate-800 leading-tight">
-                {isSyncing 
-                  ? (language === 'fr' ? 'Synchronisation...' : 'Syncing...') 
-                  : (language === 'fr' ? 'Google Sheets Connecté' : 'Google Sheets Connected')}
-              </p>
-              <p className="text-[9px] font-semibold text-slate-400">
-                {lastSyncTime ? `${language === 'fr' ? 'Actualisé à' : 'Updated at'} ${lastSyncTime}` : 'En temps réel'}
-              </p>
-            </div>
-          </div>
+        {/* Badge Google Sheets & Bouton d'actualisation */}
+        <div className="flex items-center gap-2 text-[11px] text-slate-600 font-semibold bg-white px-3.5 py-1.5 rounded-full border border-slate-200 shadow-xs self-start sm:self-auto">
+          <span className={cn("w-2 h-2 rounded-full", isSyncing ? "bg-amber-500 animate-spin" : "bg-emerald-500 animate-pulse")} />
+          <span>{language === 'fr' ? 'Google Sheets en direct' : 'Live Google Sheets'}</span>
           {onForceSync && (
             <button
               onClick={onForceSync}
               disabled={isSyncing}
-              title={language === 'fr' ? 'Actualiser les données Google Sheets' : 'Refresh Google Sheets data'}
-              className="ml-2 p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 text-xs font-bold border border-emerald-200/60"
+              title={language === 'fr' ? 'Actualiser depuis Google Sheets' : 'Sync now with Google Sheets'}
+              className="ml-1 p-1 hover:bg-slate-100 rounded text-slate-500 hover:text-emerald-700 transition active:scale-95 disabled:opacity-50 cursor-pointer"
             >
-              <RefreshCw className={cn("w-3.5 h-3.5 text-emerald-700", isSyncing && "animate-spin")} />
-              <span className="hidden sm:inline text-[11px]">{language === 'fr' ? 'Synchroniser' : 'Sync'}</span>
+              <RefreshCw className={cn("w-3.5 h-3.5", isSyncing && "animate-spin text-emerald-600")} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Barre de contrôle : Liste Déroulante Bâtiment / Site + Recherche + Filtres */}
-      <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-200/90 shadow-xs mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 items-center">
-          
-          {/* LISTE DÉROULANTE (Demande explicite de l'utilisateur) */}
-          <div className="md:col-span-5 lg:col-span-4">
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-emerald-700" />
-              <span>{language === 'fr' ? 'Sélectionnez un Bâtiment ou Site' : 'Select Building or Site'}</span>
-            </label>
-            <div className="relative">
-              <select
-                id="gtb-building-select"
-                value={selectedTarget}
-                onChange={(e) => handleTargetChange(e.target.value)}
-                className="w-full appearance-none bg-slate-50 hover:bg-slate-100/80 text-slate-800 font-bold text-xs md:text-sm py-3 pl-3.5 pr-10 rounded-xl border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-all cursor-pointer shadow-2xs"
-              >
-                <optgroup label={language === 'fr' ? "Vue Globale du Parc" : "Portfolio Overview"}>
-                  <option value="all">
-                    {language === 'fr' ? '🏢 Tous les Bâtiments & Sites (Vue globale - bat-1 à bat-10)' : '🏢 All Buildings & Sites (bat-1 to bat-10)'}
-                  </option>
-                </optgroup>
-                
-                <optgroup label={language === 'fr' ? "Bâtiments Résidentiels (Montpellier)" : "Residential Buildings"}>
-                  {buildingsList.map((b) => (
-                    <option key={b.id} value={b.id.toString()}>
-                      🏢 {b.name} ({b.type || 'Bâtiment'} • {b.unitsCount || 20} log.)
-                    </option>
-                  ))}
-                </optgroup>
-
-                <optgroup label={language === 'fr' ? "Installations Techniques Communes" : "Central Technical Plants"}>
-                  <option value="zone-tech">⚡ Zone Technique (Photovoltaïque 1296 kWc & Batterie LFP)</option>
-                  <option value="centrale">🔥 Centrale Énergie (Cogénération Biométhane & Absorption)</option>
-                  <option value="local-gtc">🖥️ Local GTC (Serveur Central GTC Class B)</option>
-                </optgroup>
-              </select>
-              <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* CHAMP DE RECHERCHE D'ÉQUIPEMENT */}
-          <div className="md:col-span-7 lg:col-span-8">
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
-              <Search className="w-3.5 h-3.5 text-emerald-700" />
-              <span>{language === 'fr' ? 'Rechercher un équipement, modèle, marque ou protocole' : 'Search equipment, model, brand or protocol'}</span>
-            </label>
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={language === 'fr' ? 'Ex: DAIKIN, VRV, Modbus, Linky, VMC, Photovoltaïque...' : 'Ex: DAIKIN, VRV, Modbus, Linky, VMC...'}
-                className="w-full bg-slate-50 hover:bg-slate-100/80 text-slate-800 text-xs md:text-sm py-3 pl-10 pr-10 rounded-xl border border-slate-200/90 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 transition-all placeholder:text-slate-400 font-medium shadow-2xs"
-              />
-              {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-md"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Puces de filtrage par LOT (Catégorie Lot exacte du tableau Excel) */}
-        <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0 mr-1 flex items-center gap-1">
-            <Filter className="w-3 h-3 text-emerald-700" />
-            <span>{language === 'fr' ? 'Lot Excel :' : 'Excel Lot:'}</span>
-          </span>
-          {availableLots.map((lotKey) => {
-            const isActive = selectedLot === lotKey;
-            const label = lotKey === 'ALL' ? (language === 'fr' ? 'Tous les Lots' : 'All Lots') : lotKey;
+      {/* Barre de contrôle : Filtre par zone + Barre de recherche */}
+      <div className="bg-white rounded-2xl border border-slate-200/60 p-4 shadow-sm mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        {/* Puces de filtrage par zone / localisation */}
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none">
+          {locations.map((loc) => {
+            const isActive = selectedLocation === loc.key;
             return (
               <button
-                key={lotKey}
-                onClick={() => setSelectedLot(lotKey)}
+                key={loc.key}
+                onClick={() => setSelectedLocation(loc.key)}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all active:scale-95 border",
+                  "px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all active:scale-95",
                   isActive
-                    ? "bg-emerald-700 text-white border-emerald-700 shadow-xs"
-                    : "bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200/80"
+                    ? "bg-emerald-900 text-white shadow-sm"
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/60"
                 )}
               >
-                {label}
+                {loc.label}
               </button>
             );
           })}
         </div>
-      </div>
 
-      {/* Synthèse Métriques Clés basée sur le Google Sheet pour la sélection */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        
-        {/* 1. Équipements supervisés */}
-        <div className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
-            <Cpu className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              {language === 'fr' ? 'Équipements Visés' : 'Target Equipment'}
-            </p>
-            <p className="text-xl font-black text-slate-800">
-              {filteredEquipments.length} <span className="text-xs font-bold text-slate-500">lignes actives</span>
-            </p>
-            <p className="text-[10px] font-bold text-emerald-700 mt-0.5">
-              {isSingleBuilding ? `${selectedBuilding?.name} (20 log.)` : 'Parc complet 10 Bâtiments'}
-            </p>
-          </div>
-        </div>
-
-        {/* 2. Puissances Thermiques du Google Sheet */}
-        <div className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
-            <Thermometer className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              {language === 'fr' ? 'Puissance CVC Sheet' : 'HVAC Power Sheet'}
-            </p>
-            <p className="text-xl font-black text-slate-800">
-              {powerWinter.toFixed(1)} <span className="text-xs font-bold text-slate-500">kW Hiver</span>
-            </p>
-            <p className="text-[10px] font-semibold text-slate-500 mt-0.5">
-              Été: <span className="font-bold text-slate-700">{powerSummer.toFixed(1)} kW</span> • Canicule: <span className="font-bold text-rose-600">{powerHeatwave.toFixed(1)} kW</span>
-            </p>
-          </div>
-        </div>
-
-        {/* 3. Comptage & Télérelève */}
-        <div className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
-            <Zap className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              {language === 'fr' ? 'Comptage & Télérelève' : 'Submetering & AMR'}
-            </p>
-            <p className="text-xl font-black text-slate-800">
-              {isSingleBuilding ? '41' : '410'} <span className="text-xs font-bold text-slate-500">compteurs</span>
-            </p>
-            <p className="text-[10px] font-bold text-emerald-700 mt-0.5">
-              Linky • Eau • CET (Modbus/M-Bus)
-            </p>
-          </div>
-        </div>
-
-        {/* 4. Protocoles Réseau Actifs */}
-        <div className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
-            <SlidersHorizontal className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              {language === 'fr' ? 'Architecture Bus GTC' : 'BMS Bus Architecture'}
-            </p>
-            <p className="text-xl font-black text-slate-800">
-              91 <span className="text-xs font-bold text-slate-500">points GTB</span>
-            </p>
-            <p className="text-[10px] font-semibold text-slate-500 mt-0.5">
-              BACnet/IP • Modbus • KNX • OPC-UA
-            </p>
-          </div>
+        {/* Barre de recherche */}
+        <div className="relative w-full md:w-80">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={language === 'fr' ? 'Rechercher un équipement, modèle, protocole...' : 'Search equipment, model, protocol...'}
+            className="w-full bg-slate-50 hover:bg-slate-100/80 text-slate-800 text-xs py-2.5 pl-10 pr-9 rounded-xl border border-slate-200/80 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* TABLEAU DE L'INVENTAIRE GTB CONFORME AU GOOGLE SHEET */}
-      <div className="bg-white rounded-2xl md:rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
-        
-        {/* En-tête du tableau avec statistiques */}
-        <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/50">
+      {/* Tableau d'inventaire GTB conforme à la charte graphique */}
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="font-extrabold text-slate-800 text-sm md:text-base">
-              {language === 'fr' ? 'Inventaire Technique des Équipements' : 'Technical Equipment Inventory'}
+            <h3 className="font-bold text-slate-800 text-base">
+              {language === 'fr' ? 'Inventaire des Équipements GTB' : 'BMS Equipment Inventory'}
             </h3>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-bold text-[11px] border border-emerald-200/60">
-              {filteredEquipments.length} {language === 'fr' ? 'lignes' : 'rows'}
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-200/60">
+              {filteredEquipments.length} {language === 'fr' ? 'équipements' : 'items'}
             </span>
           </div>
-          <div className="text-[11px] font-medium text-slate-500">
-            {isSingleBuilding 
-              ? (language === 'fr' ? `Quantités ajustées pour le bâtiment : ${selectedBuilding?.name}` : `Quantities adjusted for building: ${selectedBuilding?.name}`) 
-              : (language === 'fr' ? 'Quantités globales sur les 10 bâtiments (sans mention x10)' : 'Total park quantities across 10 buildings')}
-          </div>
+          <span className="text-xs text-slate-400 font-medium hidden sm:inline">
+            {language === 'fr' ? '91 points de supervision GTB/GTC' : '91 BMS supervision points'}
+          </span>
         </div>
 
-        {/* Corps du tableau */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-black uppercase tracking-wider text-[10px]">
-                <th className="py-3.5 px-4 whitespace-nowrap">{language === 'fr' ? 'Localisation' : 'Location'}</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">{language === 'fr' ? 'Lot (Excel)' : 'Excel Lot'}</th>
-                <th className="py-3.5 px-4">{language === 'fr' ? 'Équipement GTB / GTC' : 'GTB Equipment'}</th>
-                <th className="py-3.5 px-4 text-center whitespace-nowrap">{language === 'fr' ? 'Quantité' : 'Quantity'}</th>
-                <th className="py-3.5 px-4 whitespace-nowrap">{language === 'fr' ? 'Protocole Bus' : 'Bus Protocol'}</th>
-                <th className="py-3.5 px-4">{language === 'fr' ? 'Point de Contrôle GTB' : 'Control Point'}</th>
-                <th className="py-3.5 px-4 text-center whitespace-nowrap">{language === 'fr' ? 'Supervision' : 'Status'}</th>
+              <tr className="border-b border-slate-100 bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                <th className="py-3.5 px-6 whitespace-nowrap">{language === 'fr' ? 'Localisation' : 'Location'}</th>
+                <th className="py-3.5 px-6 whitespace-nowrap">{language === 'fr' ? 'Lot' : 'Lot'}</th>
+                <th className="py-3.5 px-6">{language === 'fr' ? 'Équipement' : 'Equipment'}</th>
+                <th className="py-3.5 px-6 text-center whitespace-nowrap">{language === 'fr' ? 'Quantité' : 'Quantity'}</th>
+                <th className="py-3.5 px-6 whitespace-nowrap">{language === 'fr' ? 'Protocole Bus' : 'Bus Protocol'}</th>
+                <th className="py-3.5 px-6">{language === 'fr' ? 'Point de Contrôle' : 'Control Point'}</th>
+                <th className="py-3.5 px-6 text-center whitespace-nowrap">{language === 'fr' ? 'Statut' : 'Status'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -3367,63 +3163,60 @@ const GTBView = ({
                   <td colSpan={7} className="py-12 text-center text-slate-400">
                     <Cpu className="w-8 h-8 mx-auto mb-2 text-slate-300" />
                     <p className="font-bold text-slate-600">{language === 'fr' ? 'Aucun équipement trouvé' : 'No equipment found'}</p>
-                    <p className="text-xs text-slate-400 mt-1">{language === 'fr' ? 'Essayez de modifier votre recherche ou le filtre de lot.' : 'Try adjusting your search or lot filter.'}</p>
+                    <p className="text-xs text-slate-400 mt-1">{language === 'fr' ? 'Essayez de modifier votre recherche ou le filtre de zone.' : 'Try adjusting your search or area filter.'}</p>
                   </td>
                 </tr>
               ) : (
                 filteredEquipments.map((eq, idx) => (
-                  <tr 
-                    key={idx} 
-                    className="hover:bg-slate-50/80 transition-colors group"
-                  >
-                    {/* 1. Localisation (sans "x10") */}
-                    <td className="py-3.5 px-4 font-bold text-slate-800 whitespace-nowrap">
+                  <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                    {/* Localisation */}
+                    <td className="py-4 px-6 font-semibold text-slate-800 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                        <span>{eq.displayLoc}</span>
+                        <span>{eq.location}</span>
                       </div>
                     </td>
 
-                    {/* 2. Lot (Catégorie Lot exacte du tableau Excel) */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 font-bold text-[11px] border border-emerald-200/70">
+                    {/* Lot / Catégorie */}
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-bold text-[11px] border border-emerald-200/60">
                         {eq.category}
                       </span>
                     </td>
 
-                    {/* 3. Équipement & Marque / Modèle (exacts de la feuille Excel) */}
-                    <td className="py-3.5 px-4">
-                      <div className="font-extrabold text-slate-800 text-xs md:text-sm group-hover:text-emerald-800 transition-colors">
+                    {/* Équipement & Marque/Modèle */}
+                    <td className="py-4 px-6">
+                      <div className="font-bold text-slate-900 text-xs">
                         {eq.name}
                       </div>
-                      <div className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                      <div className="text-[11px] text-slate-400 font-medium mt-0.5">
                         {eq.brandModel}
                       </div>
                     </td>
 
-                    {/* 4. Quantité (propre, sans mention "(x10)", adaptée par bâtiment) */}
-                    <td className="py-3.5 px-4 text-center">
-                      <span className="inline-block px-2.5 py-0.5 rounded-lg bg-slate-100 font-black text-slate-800 text-xs md:text-sm tabular-nums border border-slate-200/80">
-                        {eq.displayQty}
+                    {/* Quantité */}
+                    <td className="py-4 px-6 text-center whitespace-nowrap">
+                      <span className="inline-block px-2.5 py-0.5 rounded-lg bg-slate-100 font-bold text-slate-800 text-xs tabular-nums border border-slate-200/60">
+                        {eq.quantity}
                       </span>
                     </td>
 
-                    {/* 5. Protocole de Communication */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-200">
+                    {/* Protocole Bus */}
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-200/80">
                         {eq.protocol}
                       </span>
                     </td>
 
-                    {/* 6. Point de Contrôle GTB */}
-                    <td className="py-3.5 px-4 text-slate-600 font-medium">
+                    {/* Point de Contrôle GTB */}
+                    <td className="py-4 px-6 text-slate-600 font-medium">
                       {eq.pointType}
                     </td>
 
-                    {/* 7. Statut Supervision */}
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black text-[10px] uppercase tracking-wider border border-emerald-200">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                    {/* Statut Supervision */}
+                    <td className="py-4 px-6 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200/60">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                         <span>{eq.status || 'Actif'}</span>
                       </span>
                     </td>
@@ -3434,14 +3227,14 @@ const GTBView = ({
           </table>
         </div>
 
-        {/* Pied de tableau récapitulatif */}
+        {/* Pied de tableau */}
         <div className="p-4 bg-slate-50/60 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-600" />
             <span>
               {language === 'fr' 
-                ? 'Données de supervision directement synchronisées depuis le Google Sheets officiel de la résidence.' 
-                : 'Supervision data directly synchronized from the official residence Google Sheet.'}
+                ? 'Supervision en direct synchronisée avec Google Sheets.' 
+                : 'Live supervision synchronized with Google Sheets.'}
             </span>
           </div>
           <div className="text-[11px] font-bold text-slate-600">
@@ -3575,10 +3368,15 @@ export default function App() {
 
     const buildingsRef = collection(db, 'users', user.uid, 'buildings');
     const unsubscribe = onSnapshot(buildingsRef, (snapshot) => {
-      const buildingsData = snapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id
-      })) as BuildingStats[];
+      const buildingsData = snapshot.docs.map(doc => {
+        const d = doc.data() as any;
+        return {
+          ...d,
+          id: doc.id,
+          name: formatBuildingName(d.name, doc.id),
+          location: cleanBuildingLocation(d.location, doc.id)
+        };
+      }) as BuildingStats[];
       
       if (buildingsData.length === 0 && !isGuest) {
         // First time user: seed with default data
@@ -4036,12 +3834,12 @@ export default function App() {
           if (rawId && (conso > 0 || powerWinter !== undefined || type)) {
             const cleanIdStr = rawId.replace(/^BAT-?/i, '');
             const buildingNum = parseInt(cleanIdStr, 10) || (parsedBuildings.length + 1);
-            const buildingName = `bat-${buildingNum}`;
+            const buildingName = `Bâtiment ${buildingNum}`;
 
             parsedBuildings.push({
               id: rawId,
               name: buildingName,
-              location: `Rue de Malbosc, 34080 Montpellier (bat-${buildingNum})`,
+              location: `Rue de Malbosc, 34080 Montpellier (Bâtiment ${buildingNum})`,
               status: conso > 200 ? 'ATTENTION' : 'OPTIMAL',
               consumption: `${conso.toLocaleString('fr-FR')} kWh`,
               economy: `${Math.round(14 + (parsedBuildings.length % 6))}%`,
@@ -4221,7 +4019,7 @@ export default function App() {
 
   const currentBuildingName = selectedBuilding === 'all' 
     ? 'Tous les sites' 
-    : buildings.find(b => b.id.toString() === selectedBuilding)?.name || 'Tous les sites';
+    : formatBuildingName(buildings.find(b => b.id.toString() === selectedBuilding)?.name, selectedBuilding) || 'Tous les sites';
 
   if (loading) {
     return (
@@ -4258,11 +4056,11 @@ export default function App() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{settings.language === 'fr' ? 'Nom du Bâtiment' : 'Building Name'}</label>
-                    <input id="modal-name" type="text" defaultValue={editingBuilding?.name || ''} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 mt-1.5 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/50 transition-all" placeholder="Ex: Tour Crystal" />
+                    <input id="modal-name" type="text" defaultValue={editingBuilding ? formatBuildingName(editingBuilding.name, editingBuilding.id) : ''} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 mt-1.5 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/50 transition-all" placeholder="Ex: Bâtiment 1" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{settings.language === 'fr' ? 'Localisation / Ville' : 'Location / City'}</label>
-                    <input id="modal-loc" type="text" defaultValue={editingBuilding?.location || ''} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 mt-1.5 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/50 transition-all" placeholder="Ex: Paris 15e" />
+                    <input id="modal-loc" type="text" defaultValue={editingBuilding ? cleanBuildingLocation(editingBuilding.location, editingBuilding.id) : ''} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 mt-1.5 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/50 transition-all" placeholder="Ex: Rue de Malbosc, Montpellier" />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -4278,8 +4076,10 @@ export default function App() {
                 <div className="pt-4">
                   <button 
                     onClick={() => {
-                      const name = (document.getElementById('modal-name') as HTMLInputElement).value;
-                      const loc = (document.getElementById('modal-loc') as HTMLInputElement).value;
+                      const rawName = (document.getElementById('modal-name') as HTMLInputElement).value;
+                      const rawLoc = (document.getElementById('modal-loc') as HTMLInputElement).value;
+                      const name = formatBuildingName(rawName);
+                      const loc = cleanBuildingLocation(rawLoc);
                       const cons = (document.getElementById('modal-cons') as HTMLInputElement).value;
                       const surf = (document.getElementById('modal-surf') as HTMLInputElement).value;
                       
@@ -4355,7 +4155,7 @@ export default function App() {
                         selectedBuilding === building.id.toString() ? "bg-emerald-50 text-emerald-700" : "text-slate-500 hover:bg-slate-50"
                       )}
                     >
-                      <span className="truncate mr-1.5">{building.name}</span>
+                      <span className="truncate mr-1.5">{formatBuildingName(building.name, building.id)}</span>
                       <Tag status={building.status} />
                     </div>
                   ))}
@@ -4488,7 +4288,7 @@ export default function App() {
                             selectedBuilding === building.id.toString() ? "bg-emerald-50 text-emerald-700" : "text-slate-500 hover:bg-slate-50"
                           )}
                         >
-                          <span className="truncate mr-2">{building.name}</span>
+                          <span className="truncate mr-2">{formatBuildingName(building.name, building.id)}</span>
                           <Tag status={building.status} />
                         </div>
                       ))}
