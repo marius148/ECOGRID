@@ -761,7 +761,7 @@ const EnergyMixCard = React.memo(({ language, buildingsList, isGlobal, selectedB
       <div className="flex justify-between items-start">
         <div className="min-w-0 pr-4">
           <h3 className="text-lg font-bold font-display text-slate-800 truncate">{language === 'fr' ? "Réseau Mixte" : 'Mix Network'}</h3>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1 truncate">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1 truncate">
             {language === 'fr' ? `Analyse : ${isGlobal ? 'Parc Global' : selectedBuilding?.name}` : `Analysis: ${isGlobal ? 'Global' : selectedBuilding?.name}`}
           </p>
         </div>
@@ -1842,15 +1842,26 @@ const BuildingConsumptionGraphCard = React.memo(({
                 dataKey="name" 
                 axisLine={{ stroke: '#cbd5e1' }} 
                 tickLine={false} 
-                tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }}
+                tick={{ fill: '#334155', fontSize: 10, fontWeight: 700 }}
                 interval={0}
                 dy={6}
+                tickFormatter={(val: string) => {
+                  if (typeof window !== 'undefined') {
+                    if (window.innerWidth < 640) {
+                      return val.replace(/^Bâtiment\s*/i, 'B');
+                    }
+                    if (window.innerWidth < 1024) {
+                      return val.replace(/^Bâtiment\s*/i, 'Bât. ');
+                    }
+                  }
+                  return val;
+                }}
               />
               <YAxis 
                 axisLine={false} 
                 tickLine={false} 
-                width={62}
-                tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
+                width={56}
+                tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 600 }}
                 tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(1)} MWh` : `${val} kWh`}
               />
               <Tooltip content={<ChartCustomTooltip />} cursor={{ fill: '#f8fafc', radius: 6 }} isAnimationActive={false} />
@@ -1886,15 +1897,21 @@ const BuildingConsumptionGraphCard = React.memo(({
                 dataKey="name" 
                 axisLine={{ stroke: '#cbd5e1' }} 
                 tickLine={false} 
-                tick={{ fill: '#334155', fontSize: 11, fontWeight: 700 }}
+                tick={{ fill: '#334155', fontSize: 10, fontWeight: 700 }}
                 interval={0}
                 dy={6}
+                tickFormatter={(val: string) => {
+                  if (typeof window !== 'undefined' && window.innerWidth < 640) {
+                    return val.slice(0, 3);
+                  }
+                  return val;
+                }}
               />
               <YAxis 
                 axisLine={false} 
                 tickLine={false} 
-                width={62}
-                tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
+                width={56}
+                tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 600 }}
                 tickFormatter={(val) => `${val} kWh`}
               />
               <Tooltip content={<ChartCustomTooltip />} cursor={{ fill: '#f8fafc', radius: 6 }} isAnimationActive={false} />
@@ -2253,7 +2270,7 @@ const MontpellierMapCard = React.memo(({
           onSubmit={(e) => { e.preventDefault(); handleAddressSearch(); }} 
           className="flex items-center gap-1.5 w-full sm:w-auto min-w-0"
         >
-          <div className="relative flex-1 sm:w-60 md:w-72">
+          <div className="relative flex-1 min-w-[130px] max-w-full sm:max-w-[220px]">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
@@ -2489,7 +2506,7 @@ const DashboardView = ({
     <ViewContainer>
       <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
         <div>
-          <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.4em] mb-1 drop-shadow-sm">{currentDate}</h2>
+          <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-wider sm:tracking-widest mb-1 drop-shadow-sm">{currentDate}</h2>
           <h1 className="text-xl sm:text-2xl font-bold font-display text-slate-900 tracking-tight">
             {language === 'fr' ? 'Tableau de Bord' : 'Energy Dashboard'}
           </h1>
@@ -2826,7 +2843,7 @@ const AnalyticsView = React.memo(({
     <ViewContainer>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.4em] mb-1.5">{currentDate}</h2>
+          <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-wider sm:tracking-widest mb-1.5">{currentDate}</h2>
           <h1 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 leading-tight">
             {language === 'fr' ? 'Analytique & Performance Énergétique' : 'Energy Analytics & Performance'}
           </h1>
@@ -3318,7 +3335,7 @@ const ReportsView = ({
     <ViewContainer>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.4em] mb-1.5">{currentDate}</h2>
+          <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-wider sm:tracking-widest mb-1.5">{currentDate}</h2>
           <h1 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 leading-tight">{language === 'fr' ? 'Centre de Rapports' : 'Reporting Center'}</h1>
           <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
             {language === 'fr' ? 'Génération et export consolidé des bilans énergétiques et contrôles GTB' : 'Consolidated energy audits and BMS telemetry reporting'}
@@ -3417,7 +3434,7 @@ const ReportsView = ({
 
       <div className="flex items-center gap-3 mb-6">
         <div className="h-px flex-1 bg-slate-200/50" />
-        <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">{language === 'fr' ? 'Aperçu du Rapport Synthétique' : 'Report Preview'}</span>
+        <span className="text-[10px] font-black text-slate-300 uppercase tracking-wider sm:tracking-widest">{language === 'fr' ? 'Aperçu du Rapport Synthétique' : 'Report Preview'}</span>
         <div className="h-px flex-1 bg-slate-200/50" />
       </div>
 
@@ -4397,11 +4414,11 @@ export default function App() {
       </AnimatePresence>
 
       {/* Mobile Header / Navigation */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-xl border-b border-slate-200 z-50 px-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-xl border-b border-slate-200 z-50 px-3 sm:px-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2.5 bg-slate-50 text-slate-600 rounded-xl border border-slate-200 active:scale-95 transition-all"
+            className="p-2.5 bg-slate-50 text-slate-600 rounded-xl border border-slate-200 active:scale-95 transition-all shrink-0"
           >
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -4409,13 +4426,13 @@ export default function App() {
         </div>
         
         {/* Mobile Building Dropdown Selector */}
-        <div className="relative">
+        <div className="relative shrink min-w-0 max-w-[130px] sm:max-w-[200px] md:max-w-[280px]">
           <div 
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-1.5 bg-slate-100/80 px-2.5 py-1.5 rounded-xl cursor-pointer hover:bg-slate-200 transition-all border border-slate-200/40 max-w-[120px] sm:max-w-[150px]"
+            className="flex items-center gap-1.5 bg-slate-100/80 px-2.5 py-1.5 rounded-xl cursor-pointer hover:bg-slate-200 transition-all border border-slate-200/40 w-full"
           >
             <span className="text-[9px] sm:text-[10px] font-bold text-slate-700 uppercase tracking-wider truncate">{currentBuildingName}</span>
-            <ChevronDown className={cn("w-3.5 h-3.5 text-slate-500 transition-transform ml-auto", isDropdownOpen && "rotate-180")} />
+            <ChevronDown className={cn("w-3.5 h-3.5 text-slate-500 transition-transform ml-auto shrink-0", isDropdownOpen && "rotate-180")} />
           </div>
 
           <AnimatePresence>
@@ -4424,7 +4441,7 @@ export default function App() {
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 5, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="absolute right-1/2 translate-x-1/2 top-full w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 overflow-hidden"
+                className="absolute right-0 top-full mt-1 w-56 sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 overflow-hidden"
               >
                 <div 
                   onClick={() => { setSelectedBuilding('all'); setIsDropdownOpen(false); }}
@@ -4609,7 +4626,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto scroll-smooth pt-16 lg:pt-0">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth pt-16 lg:pt-0">
           <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
         </div>
       </main>
