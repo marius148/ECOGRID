@@ -2534,6 +2534,51 @@ const AnalyticsView = React.memo(({
   const surfaceNum = selected ? (parseFloat(String(selected.surface || '').replace(/[^0-9.]/g, '')) || 1200) : 15000;
   const energyDensity = (buildingKwh / surfaceNum).toFixed(1);
 
+  // Calcul intelligent de la répartition des usages énergétiques selon la typologie et les charges thermiques réelles
+  const energyBreakdown = useMemo(() => {
+    if (!selected) return { cvc: 48, lighting: 26, motors: 16, standby: 10 };
+    
+    const kwh = parseEnergy(selected.consumption);
+    const isStudent = (selected.type || '').toLowerCase().includes('étudiant');
+    const winterKw = Number(selected.powerWinterKw) || 15;
+    const isHighCons = kwh > 180;
+    const isVeryLowCons = kwh < 50;
+
+    let cvc: number;
+    let lighting: number;
+    let motors: number;
+    let standby: number;
+
+    if (isVeryLowCons) {
+      // Bâtiment en veille ou occupation très basse (ex: BAT-04)
+      cvc = 22;
+      lighting = 28;
+      motors = 15;
+      standby = 35;
+    } else if (isHighCons) {
+      // Surconsommation CVC / Chauffage (ex: BAT-02, BAT-07)
+      const ratio = Math.min(66, 52 + Math.round((winterKw / 25) * 8));
+      cvc = ratio;
+      lighting = Math.round((100 - cvc) * 0.45);
+      motors = Math.round((100 - cvc) * 0.35);
+      standby = Math.max(5, 100 - cvc - lighting - motors);
+    } else if (isStudent) {
+      // Résidence étudiante (750 m², 20 logements T1bis, peu d'ascenseurs)
+      cvc = 44;
+      lighting = 32;
+      motors = 10;
+      standby = 14;
+    } else {
+      // Résidence familiale équilibrée (1300 m², T3 Familial, ascenseurs, VMC)
+      cvc = 49;
+      lighting = 24;
+      motors = 16;
+      standby = 11;
+    }
+
+    return { cvc, lighting, motors, standby };
+  }, [selected]);
+
   return (
     <ViewContainer>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -2689,37 +2734,37 @@ const AnalyticsView = React.memo(({
                 <div>
                   <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
                     <span>{language === 'fr' ? 'CVC, Chauffage & Climatisation' : 'HVAC & Climate Control'}</span>
-                    <span className="font-bold text-slate-800">48%</span>
+                    <span className="font-bold text-slate-800">{energyBreakdown.cvc}%</span>
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div className="bg-emerald-600 h-2 rounded-full" style={{ width: '48%' }} />
+                    <div className="bg-emerald-600 h-2 rounded-full transition-all duration-500" style={{ width: `${energyBreakdown.cvc}%` }} />
                   </div>
                 </div>
                 <div>
                   <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
                     <span>{language === 'fr' ? 'Éclairage & Bureautique' : 'Lighting & Plug loads'}</span>
-                    <span className="font-bold text-slate-800">26%</span>
+                    <span className="font-bold text-slate-800">{energyBreakdown.lighting}%</span>
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div className="bg-teal-500 h-2 rounded-full" style={{ width: '26%' }} />
+                    <div className="bg-teal-500 h-2 rounded-full transition-all duration-500" style={{ width: `${energyBreakdown.lighting}%` }} />
                   </div>
                 </div>
                 <div>
                   <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
                     <span>{language === 'fr' ? 'Force Motrice & Ascenseurs' : 'Elevators & Pumps'}</span>
-                    <span className="font-bold text-slate-800">16%</span>
+                    <span className="font-bold text-slate-800">{energyBreakdown.motors}%</span>
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div className="bg-amber-500 h-2 rounded-full" style={{ width: '16%' }} />
+                    <div className="bg-amber-500 h-2 rounded-full transition-all duration-500" style={{ width: `${energyBreakdown.motors}%` }} />
                   </div>
                 </div>
                 <div>
                   <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
                     <span>{language === 'fr' ? 'Veille & Informatique' : 'Standby & IT'}</span>
-                    <span className="font-bold text-slate-800">10%</span>
+                    <span className="font-bold text-slate-800">{energyBreakdown.standby}%</span>
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div className="bg-indigo-500 h-2 rounded-full" style={{ width: '10%' }} />
+                    <div className="bg-indigo-500 h-2 rounded-full transition-all duration-500" style={{ width: `${energyBreakdown.standby}%` }} />
                   </div>
                 </div>
               </div>
