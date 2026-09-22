@@ -29,7 +29,10 @@ import {
   AlertTriangle,
   Play,
   RotateCcw,
-  Check
+  Check,
+  TrendingUp,
+  TrendingDown,
+  Wrench
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -274,6 +277,121 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
     });
   }, [sanitizedEquipments, selectedZone, selectedCategory, searchQuery]);
 
+  // Calcul en direct des anomalies et dérives GTB
+  const gtbAnomalies = useMemo(() => {
+    const list: Array<{
+      id: string;
+      titleFr: string;
+      titleEn: string;
+      descFr: string;
+      descEn: string;
+      severity: 'critical' | 'warning';
+      type: 'temp_high' | 'temp_low' | 'conflict' | 'equipment';
+      actionType?: 'setpoint' | 'rearm';
+    }> = [];
+
+    // 1. Dérive consigne Chauffage (trop haute ou trop basse)
+    if (heatingSetpoint > 22.5) {
+      const excess = (heatingSetpoint - 20).toFixed(1);
+      const wastePct = Math.round((heatingSetpoint - 20) * 7);
+      list.push({
+        id: 'anom-heat-high',
+        titleFr: 'Surchauffe GTB : Consigne Chauffage Excessive',
+        titleEn: 'BMS Overheating: High Heating Setpoint',
+        descFr: `Consigne fixée à ${heatingSetpoint.toFixed(1)}°C (recommandation : 19.0°C - 21.0°C). Engendre ~+${wastePct}% de surconsommation CVC continue (+${excess}°C au-dessus de 20°C).`,
+        descEn: `Setpoint at ${heatingSetpoint.toFixed(1)}°C (target: 19-21°C). Causes ~+${wastePct}% unnecessary HVAC continuous drain.`,
+        severity: heatingSetpoint >= 24 ? 'critical' : 'warning',
+        type: 'temp_high',
+        actionType: 'setpoint'
+      });
+    } else if (heatingSetpoint < 17.0 && globalMode !== 'GEL') {
+      list.push({
+        id: 'anom-heat-low',
+        titleFr: 'Sous-chauffe GTB : Risque d\'Inconfort Thermique',
+        titleEn: 'BMS Under-heating: Resident Discomfort Hazard',
+        descFr: `Consigne à ${heatingSetpoint.toFixed(1)}°C en période d'occupation. Risque élevé d'inconfort pour les résidents.`,
+        descEn: `Heating setpoint at ${heatingSetpoint.toFixed(1)}°C during occupied schedule. Severe discomfort risk.`,
+        severity: 'warning',
+        type: 'temp_low',
+        actionType: 'setpoint'
+      });
+    }
+
+    // 2. Dérive consigne Climatisation (trop basse)
+    if (coolingSetpoint < 23.0) {
+      list.push({
+        id: 'anom-cool-low',
+        titleFr: 'Sur-Climatisation : Consigne Froid Trop Basse',
+        titleEn: 'Excessive Chilling: Low Cooling Setpoint',
+        descFr: `Consigne froid à ${coolingSetpoint.toFixed(1)}°C (seuil mini recommandé : 24.0°C). Surcharge du compresseur et risque de condensation.`,
+        descEn: `Cooling setpoint at ${coolingSetpoint.toFixed(1)}°C. Compressor stress and condensation hazard.`,
+        severity: 'warning',
+        type: 'temp_low',
+        actionType: 'setpoint'
+      });
+    }
+
+    // 3. Conflit Chaud/Froid simultanés
+    if (heatingSetpoint >= coolingSetpoint) {
+      list.push({
+        id: 'anom-conflict',
+        titleFr: 'Conflit Thermique Majeur : Chauffage >= Climatisation',
+        titleEn: 'Major Thermal Conflict: Heating >= Cooling',
+        descFr: `Consigne chauffage (${heatingSetpoint.toFixed(1)}°C) supérieure ou égale à la consigne froid (${coolingSetpoint.toFixed(1)}°C). Fonctionnement simultané destructeur !`,
+        descEn: `Heating setpoint (${heatingSetpoint.toFixed(1)}°C) overlaps cooling (${coolingSetpoint.toFixed(1)}°C). Energy destructive!`,
+        severity: 'critical',
+        type: 'conflict',
+        actionType: 'setpoint'
+      });
+    }
+
+    // 4. Équipements en alarme ou perte de communication
+    sanitizedEquipments.forEach((eq, idx) => {
+      const s = String(eq.status).toLowerCase();
+      if (s.includes('alarme') || s.includes('défaut') || s.includes('panne') || s.includes('perte')) {
+        list.push({
+          id: `anom-eq-${idx}`,
+          titleFr: `Défaut Automate / Capteur : ${eq.name}`,
+          titleEn: `Hardware / Sensor Alert: ${eq.name}`,
+          descFr: `${eq.location} (${eq.category}) : état « ${eq.status} » sur protocole ${eq.protocol}.`,
+          descEn: `${eq.location} (${eq.category}): state "${eq.status}" over protocol ${eq.protocol}.`,
+          severity: s.includes('alarme') || s.includes('défaut') ? 'critical' : 'warning',
+          type: 'equipment',
+          actionType: 'rearm'
+        });
+      }
+    });
+
+    return list;
+  }, [heatingSetpoint, coolingSetpoint, globalMode, sanitizedEquipments]);
+
+  // Réarmer tous les équipements en défaut
+  const handleRearmAllEquipments = () => {
+    setEquipmentStates(prev => {
+      const next = { ...prev };
+      sanitizedEquipments.forEach(eq => {
+        const s = String(eq.status).toLowerCase();
+        if (s.includes('alarme') || s.includes('défaut') || s.includes('panne') || s.includes('perte')) {
+          next[eq.id] = {
+            ...(next[eq.id] || {}),
+            status: 'Actif',
+            override: true
+          };
+        }
+      });
+      return next;
+    });
+    showFeedback(language === 'fr' ? 'Tous les automates ont été réarmés (statut: Actif)' : 'All BMS controllers acknowledged and reset (status: Active)');
+  };
+
+  // Corriger automatiquement les consignes GTB
+  const handleAutoFixSetpoints = () => {
+    setHeatingSetpoint(20.5);
+    setCoolingSetpoint(25.0);
+    setGlobalMode('AUTO');
+    showFeedback(language === 'fr' ? 'Consignes GTB recalibrées sur 20.5°C / 25.0°C (Zone neutre: 4.5°C)' : 'BMS setpoints re-aligned to 20.5°C / 25.0°C');
+  };
+
   // Date formatée
   const formattedDate = useMemo(() => {
     const d = new Date();
@@ -345,6 +463,154 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
             )}
           </button>
         </div>
+      </div>
+
+      {/* 1.5. Centre de Diagnostic des Anomalies & Alertes GTB */}
+      <div className={cn(
+        "rounded-2xl p-4 sm:p-5 border transition-all space-y-3.5 shadow-xs",
+        gtbAnomalies.length > 0
+          ? "bg-rose-50/40 border-rose-200/90"
+          : "bg-emerald-50/30 border-emerald-200/60"
+      )}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={cn(
+              "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border shadow-2xs",
+              gtbAnomalies.length > 0 
+                ? "bg-rose-100 border-rose-200 text-rose-700" 
+                : "bg-emerald-100 border-emerald-200 text-emerald-700"
+            )}>
+              {gtbAnomalies.length > 0 ? (
+                <AlertTriangle className="w-5 h-5 animate-pulse" />
+              ) : (
+                <CheckCircle2 className="w-5 h-5" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 font-display break-words">
+                  {language === 'fr' ? 'Diagnostic & Anomalies GTB en Temps Réel' : 'Live BMS Anomaly & Drift Diagnostics'}
+                </h3>
+                {gtbAnomalies.length > 0 ? (
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-600 text-white uppercase tracking-wider shadow-2xs shrink-0">
+                    {gtbAnomalies.length} {language === 'fr' ? 'dérive(s) détectée(s)' : 'drift(s)'}
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider shrink-0">
+                    {language === 'fr' ? '100% Nominal' : '100% Nominal'}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5 leading-relaxed">
+                {language === 'fr'
+                  ? 'Audit continu des consignes thermiques, conflits chaud/froid et trames d\'automates.'
+                  : 'Continuous audit of thermal setpoints, heat/cool overlaps and fieldbus frames.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            {gtbAnomalies.some(a => a.actionType === 'setpoint' || a.type === 'temp_high' || a.type === 'temp_low' || a.type === 'conflict') && (
+              <button
+                onClick={handleAutoFixSetpoints}
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              >
+                <Wrench className="w-3.5 h-3.5" />
+                <span>{language === 'fr' ? 'Corriger Consignes (20.5°C)' : 'Align Setpoints (20.5°C)'}</span>
+              </button>
+            )}
+
+            {gtbAnomalies.some(a => a.actionType === 'rearm' || a.type === 'equipment') && (
+              <button
+                onClick={handleRearmAllEquipments}
+                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>{language === 'fr' ? 'Réarmer Automates' : 'Reset Hardware'}</span>
+              </button>
+            )}
+
+            {/* Test Simulation Trigger */}
+            <button
+              onClick={() => {
+                if (heatingSetpoint >= 23.5) {
+                  handleAutoFixSetpoints();
+                } else {
+                  setHeatingSetpoint(24.5);
+                  showFeedback(language === 'fr' ? 'Consigne test injectée : 24.5°C (Surchauffe GTB)' : 'Test setpoint injected: 24.5°C (Overheating)');
+                }
+              }}
+              className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-xl text-xs font-semibold transition cursor-pointer"
+            >
+              <span>{heatingSetpoint >= 23.5 ? (language === 'fr' ? 'Rétablir consigne' : 'Reset setpoint') : (language === 'fr' ? 'Tester surchauffe (24.5°C)' : 'Test high drift (24.5°C)')}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Detailed Anomaly Cards */}
+        {gtbAnomalies.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            {gtbAnomalies.map((anom) => (
+              <div 
+                key={anom.id}
+                className={cn(
+                  "p-3 rounded-xl border bg-white flex flex-col justify-between gap-2 shadow-2xs transition-all",
+                  anom.severity === 'critical' ? "border-rose-300" : "border-amber-300"
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <AlertTriangle className={cn("w-4 h-4 shrink-0", anom.severity === 'critical' ? "text-rose-600" : "text-amber-600")} />
+                    <span className="text-xs font-bold text-slate-900 truncate">
+                      {language === 'fr' ? anom.titleFr : anom.titleEn}
+                    </span>
+                  </div>
+                  <span className={cn(
+                    "text-[9px] font-black uppercase px-2 py-0.5 rounded shrink-0",
+                    anom.severity === 'critical' ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
+                  )}>
+                    {anom.severity === 'critical' ? (language === 'fr' ? "CRITIQUE" : "CRITICAL") : (language === 'fr' ? "ALERTE" : "WARNING")}
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-600 font-normal leading-relaxed">
+                  {language === 'fr' ? anom.descFr : anom.descEn}
+                </p>
+
+                <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] font-bold text-slate-500">
+                  <span>{language === 'fr' ? 'Résolution recommandée :' : 'Remedy:'}</span>
+                  {anom.actionType === 'setpoint' ? (
+                    <button
+                      onClick={handleAutoFixSetpoints}
+                      className="text-indigo-600 hover:text-indigo-800 hover:underline uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                    >
+                      <Wrench className="w-3 h-3" />
+                      {language === 'fr' ? 'Réguler à 20.5°C' : 'Align setpoint'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleRearmAllEquipments}
+                      className="text-slate-800 hover:underline uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      {language === 'fr' ? 'Acquitter l\'alarme' : 'Acknowledge'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 py-1">
+            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>
+              {language === 'fr'
+                ? 'Tous les régulateurs CVC, automates BACnet/Modbus et compteurs d\'énergie fonctionnent dans les plages thermiques optimales.'
+                : 'All HVAC loop controllers, BACnet/Modbus hardware and energy meters operate within optimal parameters.'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* 2. Centre de Commande Interactif : Modes de Marche & Consignes */}

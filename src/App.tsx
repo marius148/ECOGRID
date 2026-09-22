@@ -19,6 +19,7 @@ import {
   Bell, 
   HelpCircle, 
   ChevronDown, 
+  TrendingUp,
   TrendingDown, 
   AlertTriangle, 
   CheckCircle2, 
@@ -59,6 +60,8 @@ import {
   X,
   ChevronRight,
   Trash2,
+  Smartphone,
+  Volume2,
   Files,
   Cpu,
   Settings2,
@@ -77,7 +80,12 @@ import {
   Car,
   Wrench,
   CreditCard,
-  Flame
+  Flame,
+  Mail,
+  EyeOff,
+  UserPlus,
+  LogIn,
+  KeyRound
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -100,7 +108,22 @@ import { cn } from './lib/utils';
 import { CiiEnergieLogo } from './components/CiiEnergieLogo';
 import { CityWeatherWidget, POPULAR_CITIES, type WeatherCity } from './components/CityWeatherWidget';
 import { GTBExecutiveView, cleanGtbText } from './components/GTBExecutiveView';
-import { auth, db, googleProvider, signInWithPopup, onAuthStateChanged } from './lib/firebase';
+import { 
+  AutoAnomalyScannerCard, 
+  detectSystemAnomalies, 
+  getBuildingAnomalyStatus, 
+  type AnomalyItem 
+} from './components/AnomalyDetector';
+import { 
+  auth, 
+  db, 
+  googleProvider, 
+  signInWithPopup, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  onAuthStateChanged 
+} from './lib/firebase';
 import type { FirebaseAuthUser } from './lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, addDoc, deleteDoc } from 'firebase/firestore';
 
@@ -255,6 +278,16 @@ export const cleanBuildingLocation = (loc?: string, id?: string | number): strin
   return cleaned || 'Rue de Malbosc, 34080 Montpellier';
 };
 
+// Détection automatique du statut d'anomalie pour un bâtiment (marquage rouge automatique)
+export const isBuildingInAnomaly = (b: any): boolean => {
+  if (!b) return false;
+  if (b.status === 'ALERTE') return true;
+  const kwh = parseEnergy(b.consumption);
+  if (kwh > 210) return true; // Surconsommation anormale
+  if (kwh < 30) return true;  // Sous-consommation anormale / rupture
+  return false;
+};
+
 // --- Mock Data ---
 const BAR_DATA = [
   { name: 'Bât. A', value: 4200, status: 'optimal' },
@@ -273,12 +306,12 @@ const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1v
 
 const TABLE_DATA: BuildingStats[] = [
   { id: 'BAT-01', name: 'Bâtiment 1', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-02', name: 'Bâtiment 2', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-02', name: 'Bâtiment 2', location: 'Rue de Malbosc, 34080 Montpellier', status: 'ALERTE', consumption: '286 kWh', economy: '4%', trend: '+28.4%', type: 'T3 Familial', occupancy: '92%', unitsCount: 20, powerWinterKw: 24.8, powerSummerKw: 6.2, powerHeatwaveKw: 9.8, consumptionYearMwh: 104.2, surface: '1 300 m²' },
   { id: 'BAT-03', name: 'Bâtiment 3', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-04', name: 'Bâtiment 4', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-04', name: 'Bâtiment 4', location: 'Rue de Malbosc, 34080 Montpellier', status: 'ATTENTION', consumption: '14 kWh', economy: '26%', trend: '-88.5%', type: 'T3 Familial', occupancy: '94%', unitsCount: 20, powerWinterKw: 1.2, powerSummerKw: 0.8, powerHeatwaveKw: 1.1, consumptionYearMwh: 5.1, surface: '1 300 m²' },
   { id: 'BAT-05', name: 'Bâtiment 5', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
   { id: 'BAT-06', name: 'Bâtiment 6', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
-  { id: 'BAT-07', name: 'Bâtiment 7', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-07', name: 'Bâtiment 7', location: 'Rue de Malbosc, 34080 Montpellier', status: 'ALERTE', consumption: '172 kWh', economy: '7%', trend: '+35.1%', type: 'T1bis Étudiant', occupancy: '96%', unitsCount: 20, powerWinterKw: 15.4, powerSummerKw: 5.8, powerHeatwaveKw: 8.9, consumptionYearMwh: 62.8, surface: '750 m²' },
   { id: 'BAT-08', name: 'Bâtiment 8', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
   { id: 'BAT-09', name: 'Bâtiment 9', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
   { id: 'BAT-10', name: 'Bâtiment 10', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '+0.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
@@ -289,8 +322,8 @@ const GTB_INITIAL_EQUIPMENT: GTBEquipment[] = [
   { location: "Bâtiments", category: "CVC - Distribution", name: "Boîtier BS Box multi-ports", brandModel: "DAIKIN BS16Q14AV1B", quantity: 40, protocol: "Modbus RTU", pointType: "Régulation débit", status: "Actif" },
   { location: "Bâtiments", category: "CVC - Confort", name: "Unités Gainables Logements", brandModel: "DAIKIN FXSQ-A", quantity: 200, protocol: "Bus KNX", pointType: "Consigne & Température", status: "Actif" },
   { location: "Bâtiments", category: "CVC - ECS", name: "Hydrobox ECS Individuelle", brandModel: "DAIKIN HXHD", quantity: 200, protocol: "Modbus RTU", pointType: "Sonde Température", status: "Actif" },
-  { location: "Bâtiments", category: "CVC - Ventilation", name: "Centrale VMC Hygro B", brandModel: "Motorisation EC", quantity: 10, protocol: "Modbus RTU", pointType: "Débit & Alarme Filtre", status: "Actif" },
-  { location: "Bâtiments", category: "GTB - Comptage", name: "Compteur Électrique Linky/Modbus", brandModel: "Enedis / Schneider", quantity: 200, protocol: "Modbus / RS485", pointType: "Télérelève kWh", status: "Actif" },
+  { location: "Bâtiments", category: "CVC - Ventilation", name: "Centrale VMC Hygro B", brandModel: "Motorisation EC", quantity: 10, protocol: "Modbus RTU", pointType: "Débit & Alarme Filtre", status: "Alarme" },
+  { location: "Bâtiments", category: "GTB - Comptage", name: "Compteur Électrique Linky/Modbus", brandModel: "Enedis / Schneider", quantity: 200, protocol: "Modbus / RS485", pointType: "Télérelève kWh", status: "Défaut" },
   { location: "Bâtiments", category: "GTB - Comptage", name: "Compteur Eau Froide", brandModel: "Compteur Télérelevé", quantity: 200, protocol: "M-Bus", pointType: "Index Volumétrique m3", status: "Actif" },
   { location: "Sous-stations", category: "GTB - Comptage", name: "Compteur Énergie Thermique (CET)", brandModel: "Siemens / Kamstrup", quantity: 10, protocol: "M-Bus", pointType: "Énergie Chaud/Froid", status: "Actif" },
   { location: "Bâtiments", category: "Sécurité", name: "Trappes Désenfumage SSI", brandModel: "Norme NF S61-937", quantity: 10, protocol: "TOR (SSI)", pointType: "Report Alarme / Position", status: "Actif" },
@@ -390,48 +423,313 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
-const LoginView = ({ onLogin, onGuest }: { onLogin: () => void, onGuest: () => void }) => (
-  <div className="min-h-screen flex items-center justify-center p-4 font-sans relative overflow-hidden bg-slate-900">
-    <GlobalWindFarmBackground skyTheme="auto" />
-    <div className="w-full max-w-md bg-white/95 rounded-[3rem] p-10 md:p-12 shadow-2xl border border-white/80 flex flex-col items-center text-center relative z-10">
-      <div className="mb-6">
-        <CiiEnergieLogo align="center" size="lg" />
-      </div>
-      <p className="text-slate-500 font-semibold mb-8 text-xs uppercase tracking-[0.12em] leading-relaxed">
-        L'énergie d'aujourd'hui<br />Le climat de demain
-      </p>
-      
-      <div className="w-full space-y-4">
-        <button 
-          onClick={onLogin}
-          className="w-full flex items-center justify-center gap-4 bg-emerald-950 text-white py-5 rounded-2xl font-bold transition-all active:scale-[0.98] shadow-xl shadow-emerald-950/20 hover:bg-emerald-900"
-        >
-          <svg className="w-6 h-6" viewBox="0 0 24 24">
-            <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-            <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" opacity="0.8" />
-            <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" opacity="0.6" />
-            <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" opacity="0.7" />
-          </svg>
-          <span className="tracking-tight">Connexion Google</span>
-        </button>
+const LoginView = ({ 
+  onLogin, 
+  onGuest,
+  onEmailLogin,
+  onRegister
+}: { 
+  onLogin: () => void;
+  onGuest: () => void;
+  onEmailLogin: (email: string, pass: string) => Promise<void>;
+  onRegister: (name: string, email: string, pass: string) => Promise<void>;
+}) => {
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-        <button 
-          onClick={onGuest}
-          className="w-full bg-slate-50 border border-slate-200 hover:bg-slate-100 py-5 rounded-2xl font-bold text-slate-600 transition-all active:scale-[0.98] text-sm"
-        >
-          Accès Démo Invité
-        </button>
-      </div>
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
 
-      <div className="mt-12 flex flex-col items-center gap-2">
-        <div className="h-px w-12 bg-slate-100" />
-        <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.3em] leading-relaxed">
-          CII ENERGIE • PRO VERSION
+    const cleanEmail = email.trim();
+    const cleanPass = password.trim();
+
+    if (!cleanEmail || !cleanPass) {
+      setErrorMessage("Veuillez renseigner votre identifiant et votre mot de passe.");
+      return;
+    }
+
+    if (authMode === 'signup') {
+      if (!fullName.trim()) {
+        setErrorMessage("Veuillez saisir votre nom complet.");
+        return;
+      }
+      if (cleanPass.length < 6) {
+        setErrorMessage("Le mot de passe doit comporter au moins 6 caractères.");
+        return;
+      }
+      if (cleanPass !== confirmPassword.trim()) {
+        setErrorMessage("Les deux mots de passe ne correspondent pas.");
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        await onRegister(fullName.trim(), cleanEmail, cleanPass);
+      } catch (err: any) {
+        console.error('Registration error:', err);
+        if (err.code === 'auth/email-already-in-use') {
+          setErrorMessage("Un compte existe déjà avec cette adresse email. Connectez-vous directement.");
+        } else if (err.code === 'auth/invalid-email') {
+          setErrorMessage("Format d'adresse email invalide.");
+        } else if (err.code === 'auth/weak-password') {
+          setErrorMessage("Mot de passe trop faible (au moins 6 caractères requis).");
+        } else {
+          setErrorMessage(err.message || "Erreur lors de la création du compte.");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setIsLoading(true);
+      try {
+        await onEmailLogin(cleanEmail, cleanPass);
+      } catch (err: any) {
+        console.error('Login error:', err);
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+          setErrorMessage("Identifiants incorrects. Vérifiez votre email et mot de passe.");
+        } else if (err.code === 'auth/invalid-email') {
+          setErrorMessage("Format d'adresse email invalide.");
+        } else {
+          setErrorMessage(err.message || "Erreur lors de la connexion.");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const handleFillDemoCredentials = () => {
+    setEmail('contact@ecogrid.fr');
+    setPassword('EcoGrid34000!');
+    setErrorMessage(null);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 font-sans relative overflow-hidden bg-slate-900">
+      <GlobalWindFarmBackground skyTheme="auto" />
+      <div className="w-full max-w-lg bg-white/95 rounded-[2.5rem] p-8 sm:p-10 shadow-2xl border border-white/80 flex flex-col items-center relative z-10">
+        <div className="mb-4">
+          <CiiEnergieLogo align="center" size="lg" />
+        </div>
+        <p className="text-slate-500 font-semibold mb-6 text-xs uppercase tracking-[0.12em] text-center leading-relaxed">
+          L'énergie d'aujourd'hui • Le climat de demain
         </p>
+
+        {/* Toggle Mode Tabs: Connexion vs Création de compte */}
+        <div className="w-full grid grid-cols-2 p-1 bg-slate-100/90 rounded-2xl mb-6 border border-slate-200/80">
+          <button
+            type="button"
+            onClick={() => {
+              setAuthMode('signin');
+              setErrorMessage(null);
+            }}
+            className={cn(
+              "py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer",
+              authMode === 'signin' 
+                ? "bg-white text-slate-900 shadow-sm" 
+                : "text-slate-500 hover:text-slate-900"
+            )}
+          >
+            <LogIn className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Se connecter</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAuthMode('signup');
+              setErrorMessage(null);
+            }}
+            className={cn(
+              "py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer",
+              authMode === 'signup' 
+                ? "bg-white text-slate-900 shadow-sm" 
+                : "text-slate-500 hover:text-slate-900"
+            )}
+          >
+            <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Créer un compte</span>
+          </button>
+        </div>
+
+        {/* Error banner */}
+        {errorMessage && (
+          <div className="w-full mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-start gap-2 animate-shake">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+            <span className="leading-tight">{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="w-full space-y-3.5 text-left">
+          {authMode === 'signup' && (
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase tracking-wider">
+                Nom complet
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <User className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="ex: Alexandre Mercier"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-emerald-600 focus:outline-none text-xs font-semibold text-slate-800 transition-all placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase tracking-wider">
+              Identifiant / Email
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <Mail className="w-4 h-4" />
+              </div>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="nom@entreprise.com"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-emerald-600 focus:outline-none text-xs font-semibold text-slate-800 transition-all placeholder:text-slate-400"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase tracking-wider">
+              Mot de passe
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <KeyRound className="w-4 h-4" />
+              </div>
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={authMode === 'signup' ? "6 caractères minimum" : "••••••••"}
+                className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-emerald-600 focus:outline-none text-xs font-semibold text-slate-800 transition-all placeholder:text-slate-400"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          {authMode === 'signup' && (
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase tracking-wider">
+                Confirmer le mot de passe
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirmez votre mot de passe"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-emerald-600 focus:outline-none text-xs font-semibold text-slate-800 transition-all placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+          )}
+
+          {authMode === 'signin' && (
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                onClick={handleFillDemoCredentials}
+                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+              >
+                ⚡ Remplir avec compte test
+              </button>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full mt-2 bg-emerald-950 hover:bg-emerald-900 text-white py-3.5 rounded-xl font-bold text-xs transition-all active:scale-[0.98] shadow-lg shadow-emerald-950/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+          >
+            {isLoading ? (
+              <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            ) : authMode === 'signup' ? (
+              <>
+                <UserPlus className="w-4 h-4" />
+                <span>Créer mon compte ÉcoGrid</span>
+              </>
+            ) : (
+              <>
+                <LogIn className="w-4 h-4" />
+                <span>Se connecter</span>
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Separator */}
+        <div className="w-full flex items-center gap-3 my-5">
+          <div className="flex-1 h-px bg-slate-200" />
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ou continuer avec</span>
+          <div className="flex-1 h-px bg-slate-200" />
+        </div>
+
+        {/* Social / Guest buttons */}
+        <div className="w-full space-y-2.5">
+          <button 
+            type="button"
+            onClick={onLogin}
+            className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 py-3 rounded-xl font-bold text-xs transition-all active:scale-[0.98] shadow-2xs cursor-pointer"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" opacity="0.8" />
+              <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" opacity="0.6" />
+              <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" opacity="0.7" />
+            </svg>
+            <span>Connexion avec Google</span>
+          </button>
+
+          <button 
+            type="button"
+            onClick={onGuest}
+            className="w-full bg-slate-50 border border-slate-200 hover:bg-slate-100 py-3 rounded-xl font-bold text-slate-600 transition-all active:scale-[0.98] text-xs cursor-pointer"
+          >
+            Accès Démo Invité (Sans création de compte)
+          </button>
+        </div>
+
+        <div className="mt-8 flex flex-col items-center gap-1.5">
+          <div className="h-px w-10 bg-slate-100" />
+          <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.25em]">
+            CII ENERGIE • ÉCOGRID PRO
+          </p>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // --- Components ---
 
@@ -466,23 +764,23 @@ const MetricCard = ({ title, value, subValue, trend, icon: Icon, color = "emeral
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white/85 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-white/60 shadow-md flex flex-col gap-2.5 group hover:shadow-lg transition-all active:scale-[0.99] relative overflow-hidden h-full"
+      className="bg-white/85 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-white/60 shadow-md flex flex-col gap-2 group hover:shadow-lg transition-all active:scale-[0.99] relative overflow-hidden h-full min-w-0"
     >
-      <div className="flex justify-between items-start relative z-10">
+      <div className="flex justify-between items-start relative z-10 min-w-0">
         <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider leading-none truncate mr-1">{title}</span>
         <div className={cn("p-1.5 rounded-lg transition-transform group-hover:scale-110 shrink-0", colorMap[color])}>
           <Icon className="w-4 h-4" />
         </div>
       </div>
-      <div className="relative z-10">
-        <h3 className="text-xl sm:text-2xl font-bold font-display text-slate-900 leading-tight mb-1 truncate">{value}</h3>
-        <div className="flex items-center gap-1.5">
+      <div className="relative z-10 min-w-0">
+        <h3 className="text-lg sm:text-xl md:text-2xl font-bold font-display text-slate-900 leading-tight mb-1 truncate">{value}</h3>
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
           {trend && (
             <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0", trend.startsWith('-') ? "text-emerald-700 bg-emerald-100/50" : "text-rose-700 bg-rose-100/50")}>
               {trend}
             </span>
           )}
-          <span className="text-[10px] text-slate-500 font-medium truncate">{subValue}</span>
+          <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate min-w-0">{subValue}</span>
         </div>
       </div>
       <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-slate-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -492,13 +790,13 @@ const MetricCard = ({ title, value, subValue, trend, icon: Icon, color = "emeral
 
 const Tag = ({ status }: { status: BuildingStats['status'] }) => {
   const styles = {
-    OPTIMAL: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    ATTENTION: "bg-amber-50 text-amber-700 border-amber-100",
-    ALERTE: "bg-rose-50 text-rose-700 border-rose-100"
+    OPTIMAL: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    ATTENTION: "bg-amber-50 text-amber-700 border-amber-200",
+    ALERTE: "bg-rose-600 text-white border-rose-700 font-black shadow-2xs"
   };
   return (
     <span className={cn("px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wider uppercase border", styles[status])}>
-      {status}
+      {status === 'ALERTE' ? '🔴 ' : ''}{status}
     </span>
   );
 };
@@ -845,177 +1143,6 @@ const EnergyMixCard = React.memo(({ language, buildingsList, isGlobal, selectedB
   );
 });
 
-interface AutoAnomalyType {
-  id: string;
-  buildingId: string;
-  buildingName: string;
-  type: 'density' | 'occupancy';
-  titleFr: string;
-  titleEn: string;
-  descFr: string;
-  descEn: string;
-  severity: 'high' | 'medium';
-}
-
-const AutoAnomalyScannerCard = React.memo(({ language, buildingsList, onSelectBuilding, onOptimize }: { language: string, buildingsList: any[], onSelectBuilding: (id: string) => void, onOptimize: () => void }) => {
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanStep, setScanStep] = useState(0); // 0: idle, 1: scanning, 2: processing, 3: completed
-  const isFr = language === 'fr';
-
-  // Detect anomalies programmatically from building parameters in real time!
-  const detectedAnomalies = React.useMemo(() => {
-    const list: AutoAnomalyType[] = [];
-    buildingsList.forEach(b => {
-      const kwh = parseEnergy(b.consumption);
-      const surfaceStr = String(b.surface || '').replace(/[^0-9.]/g, '');
-      const surface = parseFloat(surfaceStr) || 1000;
-      const density = kwh / surface;
-
-      // Rule A: Intensive density > 20 kWh/m2
-      if (density > 20) {
-        list.push({
-          id: `da-density-${b.id}`,
-          buildingId: b.id.toString(),
-          buildingName: b.name,
-          type: 'density',
-          titleFr: 'Surconsommation (Intensité)',
-          titleEn: 'Excessive Intensity Rate',
-          descFr: `La densité atteint ${density.toFixed(1)} kWh/m² (seuil max conseillé: 20). Risque élevé d'inefficacité CVC.`,
-          descEn: `Density is ${density.toFixed(1)} kWh/m² (target limit: 20). High risk of HVAC mismatch.`,
-          severity: 'high'
-        });
-      }
-
-      // Rule B: Active load mismatch (occupancy < 50% and high consumption)
-      const occupancyPrct = parseInt(String(b.occupancy).replace(/[^0-9]/g, '')) || 100;
-      if (occupancyPrct < 50 && kwh > 15000) {
-        list.push({
-          id: `da-occupancy-${b.id}`,
-          buildingId: b.id.toString(),
-          buildingName: b.name,
-          type: 'occupancy',
-          titleFr: 'Inoccupation Active Détectée',
-          titleEn: 'Unoccupied Active Load',
-          descFr: `Consommation de pointe (${kwh.toLocaleString()} kWh) relevée alors que le site est à ${occupancyPrct}% de présence.`,
-          descEn: `Peak active load (${kwh.toLocaleString()} kWh) measured while presence rate is only ${occupancyPrct}%.`,
-          severity: 'medium'
-        });
-      }
-    });
-    return list;
-  }, [buildingsList]);
-
-  const handleStartScan = () => {
-    setIsScanning(true);
-    setScanStep(1);
-    
-    setTimeout(() => {
-      setScanStep(2);
-      setTimeout(() => {
-        setScanStep(3);
-        setTimeout(() => {
-          setIsScanning(false);
-          setScanStep(0);
-        }, 800);
-      }, 800);
-    }, 800);
-  };
-
-  return (
-    <div className="bg-white/85 backdrop-blur-md rounded-2xl border border-white/60 shadow-md p-4 sm:p-5 flex flex-col gap-4">
-      <div className="flex justify-between items-start">
-        <div className="min-w-0 pr-4">
-          <h3 className="text-lg font-bold font-display text-slate-800 flex items-center gap-2">
-            <Cpu className="w-5 h-5 text-emerald-600 animate-pulse" />
-            {isFr ? "Scanner d'Anomalies IA" : "AI Anomaly Scanner"}
-          </h3>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1.5 truncate">
-            {isFr ? "Diagnostic automatique du parc" : "Automated portfolio diagnostics"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-full shrink-0">
-          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{isFr ? "ACTIF" : "SCANNER"}</span>
-        </div>
-      </div>
-
-      {isScanning ? (
-        <div className="py-8 flex flex-col items-center justify-center text-center gap-4 bg-slate-50/50 rounded-2xl border border-slate-100/50 p-4 min-h-[160px]">
-          <div className="relative flex items-center justify-center w-12 h-12">
-            <div className="absolute inset-0 rounded-full border-4 border-slate-200 border-t-emerald-600 animate-spin" />
-            <Cpu className="w-5 h-5 text-emerald-600 animate-pulse" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-              {scanStep === 1 && (isFr ? "Calcul des indices d'intensité..." : "Computing density rates...")}
-              {scanStep === 2 && (isFr ? "Vérification inoccupation vs charge..." : "Checking vacancy vs active load...")}
-              {scanStep === 3 && (isFr ? "Évaluation des anomalies..." : "Analyzing abnormal risk factors...")}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-1">
-              {isFr ? "Diagnostic automatique EcoGrid" : "EcoGrid automated analysis"}
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {detectedAnomalies.length === 0 ? (
-            <div className="p-4 rounded-2xl bg-emerald-50/30 border border-emerald-100/40 text-center py-6 flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full bg-emerald-100/50 flex items-center justify-center text-emerald-600 mb-2">
-                <CheckCircle2 className="w-5 h-5" />
-              </div>
-              <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wider">{isFr ? "Aucune anomalie détectée" : "No anomalies detected"}</h4>
-              <p className="text-[10px] text-slate-500 mt-1 max-w-[220px]">
-                {isFr ? "Tous les bâtiments fonctionnent parfaitement sous les seuils cibles de l'IA." : "All structures operate comfortably below active alert limits."}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{isFr ? "Anomalies Automatiques" : "Automatic anomalies"}</span>
-                <span className="text-[9px] font-black bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">{detectedAnomalies.length}</span>
-              </div>
-              <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
-                {detectedAnomalies.map((anom) => (
-                  <div key={anom.id} className="p-3 bg-slate-50 rounded-xl border border-slate-150/50 flex flex-col gap-2 hover:border-rose-100 transition-colors">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <AlertTriangle className={cn("w-3.5 h-3.5 shrink-0", anom.severity === 'high' ? "text-rose-500" : "text-amber-500")} />
-                        <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wide leading-tight truncate">{isFr ? anom.titleFr : anom.titleEn}</span>
-                      </div>
-                      <span className={cn("text-[8px] font-black uppercase px-2 py-0.5 rounded shrink-0", anom.severity === 'high' ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700")}>
-                        {anom.severity === 'high' ? "CRITIQUE" : "ALERTE"}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-normal font-medium">{isFr ? anom.descFr : anom.descEn}</p>
-                    <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-1">
-                      <button onClick={() => onSelectBuilding(anom.buildingId)} className="text-[9px] font-bold text-slate-400 hover:text-emerald-700 uppercase tracking-wider flex items-center gap-1 transition-colors">
-                        {isFr ? `Voir: ${anom.buildingName}` : `Inspect: ${anom.buildingName}`}
-                      </button>
-                      <button onClick={onOptimize} className="text-[9px] font-black text-emerald-700 hover:text-emerald-800 hover:underline uppercase tracking-wider flex items-center gap-1 transition-colors">
-                        <Sparkles className="w-2.5 h-2.5" />
-                        {isFr ? "Optimisation IA" : "AI Optimize"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <button
-            onClick={handleStartScan}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/50 rounded-xl text-xs font-bold transition-all active:scale-[0.98] group"
-          >
-            <Clock className="w-3.5 h-3.5 text-slate-400 group-hover:scale-110 transition-transform" />
-            {isFr ? "Lancer Diagnostic IA Manuel" : "Run manual AI scan"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-});
-AutoAnomalyScannerCard.displayName = 'AutoAnomalyScannerCard';
-
 const WEATHER_CITIES = [
   { id: 'bordeaux', name: 'Bordeaux (Parc Aquitaine)', lat: 44.8378, lon: -0.5792, region: 'Sud-Ouest' },
   { id: 'brest', name: 'Brest (Côte Bretonne)', lat: 48.3904, lon: -4.4861, region: 'Bretagne' },
@@ -1070,38 +1197,22 @@ export const GlobalWindFarmBackground = React.memo(({
         )}
       />
 
-      {/* 3. Celestial Objects (Moon and Stars for Night only) */}
+      {/* 3. Celestial Objects (Stars field at Night only - Moon removed) */}
       {activeTheme === 'night' && (
-        <>
-          <div className="absolute top-[10%] right-[18%] w-20 h-20 rounded-full bg-slate-100 shadow-[0_0_60px_rgba(226,232,240,0.85)] flex items-center justify-center overflow-hidden pointer-events-none">
-            <div className="w-16 h-16 rounded-full bg-slate-950 translate-x-4 -translate-y-1" />
-          </div>
-          {/* Static Star Field at Night */}
-          <div className="absolute inset-0 pointer-events-none opacity-85">
-            {[...Array(40)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute w-1 h-1 bg-white rounded-full"
-                style={{
-                  top: `${(i * 13) % 60}%`,
-                  left: `${(i * 29) % 100}%`,
-                  opacity: 0.35 + ((i % 6) * 0.12)
-                }}
-              />
-            ))}
-          </div>
-        </>
+        <div className="absolute inset-0 pointer-events-none opacity-85">
+          {[...Array(40)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 bg-white rounded-full"
+              style={{
+                top: `${(i * 13) % 60}%`,
+                left: `${(i * 29) % 100}%`,
+                opacity: 0.35 + ((i % 6) * 0.12)
+              }}
+            />
+          ))}
+        </div>
       )}
-
-      {/* 4. Static Floating Clouds */}
-      <div className="absolute inset-0 pointer-events-none opacity-30 overflow-hidden">
-        <svg className="w-full h-full">
-          <g>
-            <path d="M 50 100 Q 70 60 110 70 Q 140 40 180 60 Q 210 50 230 80 Q 250 110 210 110 L 70 110 Z" fill="white" opacity="0.7" />
-            <path d="M 550 60 Q 570 30 600 40 Q 630 20 670 35 Q 700 25 720 50 Q 740 80 700 80 L 570 80 Z" fill="white" opacity="0.5" />
-          </g>
-        </svg>
-      </div>
     </div>
   );
 });
@@ -1223,10 +1334,6 @@ const WindTurbineFieldCard = React.memo(({
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
-        @keyframes cloudDrift {
-          0% { transform: translateX(-20%); }
-          100% { transform: translateX(120%); }
-        }
         @keyframes windParticle {
           0% { transform: translateX(-30%) translateY(0px); opacity: 0; }
           20% { opacity: 0.8; }
@@ -1245,7 +1352,7 @@ const WindTurbineFieldCard = React.memo(({
             <span className="text-xl font-extrabold tracking-tight text-emerald-600 font-display">Luminora</span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-6 text-sm font-semibold text-slate-600 ml-6">
+          <div className="hidden xl:flex items-center gap-5 text-xs font-semibold text-slate-600 ml-6">
             <span className="text-slate-900 font-bold border-b-2 border-emerald-500 pb-0.5 cursor-pointer">Dashboard</span>
             <span className="hover:text-emerald-600 cursor-pointer transition-colors">Project</span>
             <span className="hover:text-emerald-600 cursor-pointer transition-colors">Analytics</span>
@@ -1255,12 +1362,12 @@ const WindTurbineFieldCard = React.memo(({
         </div>
 
         {/* Live Controls */}
-        <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
+        <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-between sm:justify-end">
           <div className="relative">
             <select
               value={selectedCityId}
               onChange={(e) => setSelectedCityId(e.target.value)}
-              className="bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-xs font-bold rounded-xl px-3 py-2 outline-none border border-slate-200 cursor-pointer pr-8 transition-all"
+              className="bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-xs font-bold rounded-xl px-2.5 sm:px-3 py-2 outline-none border border-slate-200 cursor-pointer pr-7 transition-all"
             >
               {WEATHER_CITIES.map(c => (
                 <option key={c.id} value={c.id}>📍 {c.name}</option>
@@ -1279,19 +1386,19 @@ const WindTurbineFieldCard = React.memo(({
           </button>
 
           {/* Sky Theme Switcher */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+          <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
             {[
               { id: 'auto', label: '⚡ Auto' },
               { id: 'sunrise', label: '🌅' },
               { id: 'day', label: '☀️' },
               { id: 'sunset', label: '🌇' },
-              { id: 'night', label: '🌙' },
+              { id: 'night', label: '✨' },
             ].map((m) => (
               <button
                 key={m.id}
                 onClick={() => setSkyMode(m.id as any)}
                 className={cn(
-                  "px-2 py-1 text-xs rounded-lg transition-all",
+                  "px-1.5 sm:px-2 py-1 text-xs rounded-lg transition-all",
                   skyMode === m.id ? "bg-white shadow-sm text-emerald-600 font-bold" : "text-slate-500 hover:text-slate-900"
                 )}
                 title={m.id}
@@ -1329,16 +1436,6 @@ const WindTurbineFieldCard = React.memo(({
           effectiveSkyTheme === 'night' && "bg-gradient-to-b from-slate-950 via-slate-900 to-emerald-950",
           effectiveSkyTheme === 'sunrise' && "bg-gradient-to-b from-indigo-950 via-rose-800 to-amber-400"
         )} />
-
-        {/* Floating Clouds Animation */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40 z-0">
-          <svg className="w-full h-full">
-            <g style={{ animation: `cloudDrift ${Math.max(12, 120 / (windSpeed || 1))}s linear infinite` }}>
-              <path d="M 50 80 Q 70 40 110 50 Q 140 20 180 40 Q 210 30 230 60 Q 250 90 210 90 L 70 90 Z" fill="white" opacity="0.8" />
-              <path d="M 500 50 Q 520 20 550 30 Q 580 10 620 25 Q 650 15 670 40 Q 690 70 650 70 L 520 70 Z" fill="white" opacity="0.6" />
-            </g>
-          </svg>
-        </div>
 
         {/* Foreground 3D Rolling Green Landscape & Giant Wind Turbines */}
         <div className="absolute bottom-0 inset-x-0 h-[280px] sm:h-[340px] pointer-events-none z-10">
@@ -1397,14 +1494,14 @@ const WindTurbineFieldCard = React.memo(({
         {/* Content Overlay (Left Hand Side) */}
         <div className="relative z-20 max-w-xl">
           <h1 className={cn(
-            "text-2xl sm:text-4xl md:text-5xl font-extrabold font-display tracking-tight mb-3 leading-tight",
+            "text-xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold font-display tracking-tight mb-2 sm:mb-3 leading-tight break-words",
             effectiveSkyTheme === 'night' ? "text-white" : "text-slate-900"
           )}>
             {isFr ? "Tableau de Bord Portefeuille Énergies" : "Renewal Energy Portfolio Dashboard"}
           </h1>
           
           <p className={cn(
-            "text-xs sm:text-sm font-medium mb-6 max-w-lg leading-relaxed",
+            "text-xs sm:text-sm font-medium mb-4 sm:mb-6 max-w-lg leading-relaxed",
             effectiveSkyTheme === 'night' ? "text-slate-300" : "text-slate-700"
           )}>
             {isFr
@@ -1673,6 +1770,7 @@ const BuildingConsumptionGraphCard = React.memo(({
     const match = (b.id || '').toString().match(/\d+/) || (b.name || '').toString().match(/\d+/);
     const num = match ? parseInt(match[0], 10) : (idx + 1);
     const bName = formatBuildingName(b.name, b.id || num);
+    const isAnom = isBuildingInAnomaly(b);
     return {
       id: b.id.toString(),
       name: bName,
@@ -1681,6 +1779,7 @@ const BuildingConsumptionGraphCard = React.memo(({
       value: val,
       displayValue: `${val.toLocaleString()} kWh`,
       status: b.status,
+      isAnomaly: isAnom,
       location: cleanBuildingLocation(b.location, b.id || num)
     };
   }), [buildingsList]);
@@ -1808,6 +1907,48 @@ const BuildingConsumptionGraphCard = React.memo(({
         )}
       </div>
 
+      {/* Quick Building Selector Pills with Automatic Red Highlighting for Anomalies */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2.5 scrollbar-none">
+        <button
+          type="button"
+          onClick={() => onSelectBuilding('all')}
+          className={cn(
+            "px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 shrink-0",
+            isGlobal 
+              ? "bg-slate-900 text-white shadow-xs" 
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          )}
+        >
+          <span>🌐</span>
+          <span>{language === 'fr' ? 'Tous les bâtiments' : 'All buildings'}</span>
+        </button>
+        {buildingsList.map((b) => {
+          const isAnom = isBuildingInAnomaly(b);
+          const isThisSelected = selectedBuildingId === b.id.toString();
+          return (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => onSelectBuilding(b.id.toString())}
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 shrink-0",
+                isAnom 
+                  ? isThisSelected 
+                    ? "bg-rose-600 text-white shadow-sm ring-2 ring-rose-400 font-extrabold" 
+                    : "bg-rose-50 text-rose-700 border border-rose-300 hover:bg-rose-100 ring-1 ring-rose-300 font-extrabold"
+                  : isThisSelected 
+                    ? "bg-emerald-700 text-white shadow-xs" 
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80"
+              )}
+            >
+              {isAnom && <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse inline-block" />}
+              <span>{formatBuildingName(b.name, b.id)}</span>
+              {isAnom && <span className="text-[9px] px-1 py-0.2 rounded bg-rose-600 text-white font-mono">!</span>}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Visual Legend for Individual Building Mode conforming to site colors */}
       {!isGlobal && (
         <div className="flex flex-wrap items-center justify-between gap-2 mb-2 px-1 text-[11px]">
@@ -1815,8 +1956,13 @@ const BuildingConsumptionGraphCard = React.memo(({
             <span className="w-3 h-3 rounded-xs bg-emerald-700 inline-block" />
             <span>{language === 'fr' ? 'Consommation journalière (kWh/j)' : 'Daily Consumption (kWh/d)'}</span>
           </div>
-          <div className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60 font-mono">
-            {language === 'fr' ? `Nominal : ${dailyKwh} kWh/j` : `Nominal: ${dailyKwh} kWh/d`}
+          <div className={cn(
+            "text-[10px] font-semibold px-2.5 py-0.5 rounded-full border font-mono",
+            isBuildingInAnomaly(selected) 
+              ? "bg-rose-100 text-rose-800 border-rose-300 font-bold" 
+              : "text-emerald-700 bg-emerald-50 border-emerald-200/60"
+          )}>
+            {language === 'fr' ? `Actuelle : ${dailyKwh} kWh/j` : `Current: ${dailyKwh} kWh/d`}
           </div>
         </div>
       )}
@@ -1878,7 +2024,7 @@ const BuildingConsumptionGraphCard = React.memo(({
                 {dynamicBarData.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={entry.status === 'ALERTE' ? 'url(#alertBarGrad)' : 'url(#globalBarGrad)'} 
+                    fill={entry.isAnomaly || entry.status === 'ALERTE' ? 'url(#alertBarGrad)' : 'url(#globalBarGrad)'} 
                   />
                 ))}
               </Bar>
@@ -1927,34 +2073,61 @@ const BuildingConsumptionGraphCard = React.memo(({
       </div>
 
       {/* Selected Building Details Footer Strip using the site's light theme */}
-      {!isGlobal && selected && (
-        <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs bg-slate-50/80 p-3 rounded-xl">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-100 text-emerald-800 rounded-lg shrink-0">
-              <Zap className="w-4 h-4" />
+      {!isGlobal && selected && (() => {
+        const isAnom = isBuildingInAnomaly(selected);
+        return (
+          <div className={cn(
+            "mt-3 pt-3 border-t flex flex-wrap items-center justify-between gap-3 text-xs p-3 rounded-xl transition-colors",
+            isAnom 
+              ? "bg-rose-50/90 border-2 border-rose-300 text-rose-950 shadow-2xs" 
+              : "bg-slate-50/80 border-slate-100"
+          )}>
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "p-2 rounded-lg shrink-0",
+                isAnom ? "bg-rose-100 text-rose-700 border border-rose-300" : "bg-emerald-100 text-emerald-800"
+              )}>
+                {isAnom ? <AlertTriangle className="w-4 h-4 text-rose-600 animate-pulse" /> : <Zap className="w-4 h-4" />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className={cn("font-bold", isAnom ? "text-rose-950 font-extrabold" : "text-slate-800")}>
+                    {formatBuildingName(selected.name, selected.id)}
+                  </p>
+                  {isAnom && (
+                    <span className="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[9px] font-black uppercase tracking-wider">
+                      {language === 'fr' ? 'Anomalie Détectée' : 'Anomaly Alert'}
+                    </span>
+                  )}
+                </div>
+                {(selected.powerWinterKw !== undefined || selected.powerSummerKw !== undefined) && (
+                  <p className={cn("text-[10px] font-semibold mt-0.5", isAnom ? "text-rose-700" : "text-emerald-700")}>
+                    Besoin Hiver : {selected.powerWinterKw ?? '--'} kW • Été : {selected.powerSummerKw ?? '--'} kW (Canicule : {selected.powerHeatwaveKw ?? '--'} kW)
+                    {selected.consumptionYearMwh ? ` • Annuel : ${selected.consumptionYearMwh} MWh/an` : ''}
+                  </p>
+                )}
+              </div>
             </div>
-            <div>
-              <p className="font-bold text-slate-800">{selected.name}</p>
-              {(selected.powerWinterKw !== undefined || selected.powerSummerKw !== undefined) && (
-                <p className="text-[10px] text-emerald-700 font-semibold mt-0.5">
-                  Besoin Hiver : {selected.powerWinterKw ?? '--'} kW • Été : {selected.powerSummerKw ?? '--'} kW (Canicule : {selected.powerHeatwaveKw ?? '--'} kW)
-                  {selected.consumptionYearMwh ? ` • Annuel : ${selected.consumptionYearMwh} MWh/an` : ''}
-                </p>
-              )}
+            <div className="flex items-center gap-4 ml-auto">
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">{language === 'fr' ? 'Consommation' : 'Consumption'}</span>
+                <span className={cn(
+                  "font-bold font-display inline-block",
+                  isAnom 
+                    ? "text-rose-600 font-extrabold bg-rose-100/90 border border-rose-300 px-2 py-0.5 rounded-md font-mono" 
+                    : "text-slate-900"
+                )}>
+                  {parseEnergy(selected.consumption).toLocaleString()} kWh/j
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">{language === 'fr' ? 'Statut Site' : 'Site Status'}</span>
+                <Tag status={selected.status} />
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-4 ml-auto">
-            <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">{language === 'fr' ? 'Consommation' : 'Consumption'}</span>
-              <span className="font-bold font-display text-slate-900">{parseEnergy(selected.consumption).toLocaleString()} kWh/j</span>
-            </div>
-            <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">{language === 'fr' ? 'Statut Site' : 'Site Status'}</span>
-              <Tag status={selected.status} />
-            </div>
-          </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 });
@@ -2102,49 +2275,47 @@ const MontpellierMapCard = React.memo(({
     markersRef.current = [];
 
     if (selectedBuildingId === 'all') {
+      // Vue d'ensemble du parc : aucun empilement de marqueurs pour préserver la lisibilité de la carte
       const centerCoords = { lat: 43.6338, lng: 3.8326 };
-      const campusIcon = L.divIcon({
-        className: 'custom-campus-marker',
-        html: `
-          <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
-            <div style="width: 28px; height: 28px; border-radius: 9999px; background-color: #064e3b; border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
-              <div style="width: 10px; height: 10px; border-radius: 9999px; background-color: #10b981;"></div>
-            </div>
-            <div style="margin-top: 4px; padding: 3px 8px; background-color: #0f172a; color: #ffffff; font-weight: 700; font-size: 11px; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); white-space: nowrap; font-family: 'Plus Jakarta Sans', sans-serif;">
-              Écoquartier Malbosc
-            </div>
-          </div>
-        `,
-        iconSize: [36, 46],
-        iconAnchor: [18, 14]
-      });
-      const campusMarker = L.marker([centerCoords.lat, centerCoords.lng], { icon: campusIcon }).addTo(map);
-      markersRef.current.push(campusMarker);
       map.flyTo([centerCoords.lat, centerCoords.lng], 15, { duration: 1 });
     } else {
       const bIndex = buildingsList.findIndex(b => b.id.toString() === selectedBuildingId);
       const b = buildingsList[bIndex] || buildingsList[0];
       if (b) {
         const coords = getBuildingMapCoords(b, bIndex >= 0 ? bIndex : 0);
-        const statusColor = b.status === 'ALERTE' ? '#e11d48' : b.status === 'ATTENTION' ? '#f59e0b' : '#10b981';
+        const isAnom = isBuildingInAnomaly(b);
+        const statusColor = isAnom ? '#e11d48' : b.status === 'ATTENTION' ? '#f59e0b' : '#10b981';
+        
+        const markerHtml = isAnom ? `
+          <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+            <div style="position: absolute; top: -5px; width: 38px; height: 38px; border-radius: 9999px; background-color: #f43f5e; opacity: 0.6; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+            <div style="width: 28px; height: 28px; border-radius: 9999px; background-color: #be123c; border: 2.5px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(225,29,72,0.5); z-index: 10;">
+              <div style="width: 9px; height: 9px; border-radius: 9999px; background-color: #ffffff;"></div>
+            </div>
+            <div style="margin-top: 4px; padding: 3px 8px; background-color: #be123c; color: #ffffff; font-weight: 800; font-size: 11px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); white-space: nowrap; font-family: 'Plus Jakarta Sans', sans-serif;">
+              🚨 ${formatBuildingName(b.name, b.id)} (Anomalie Détectée)
+            </div>
+          </div>
+        ` : `
+          <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+            <div style="width: 26px; height: 26px; border-radius: 9999px; background-color: #0f172a; border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.25);">
+              <div style="width: 8px; height: 8px; border-radius: 9999px; background-color: ${statusColor};"></div>
+            </div>
+            <div style="margin-top: 4px; padding: 3px 8px; background-color: #0f172a; color: #ffffff; font-weight: 700; font-size: 11px; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); white-space: nowrap; font-family: 'Plus Jakarta Sans', sans-serif;">
+              ${formatBuildingName(b.name, b.id)}
+            </div>
+          </div>
+        `;
+
         const customIcon = L.divIcon({
           className: 'custom-google-maps-marker',
-          html: `
-            <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
-              <div style="width: 24px; height: 24px; border-radius: 9999px; background-color: #0f172a; border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.25);">
-                <div style="width: 8px; height: 8px; border-radius: 9999px; background-color: ${statusColor};"></div>
-              </div>
-              <div style="margin-top: 4px; padding: 3px 8px; background-color: #0f172a; color: #ffffff; font-weight: 700; font-size: 11px; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); white-space: nowrap; font-family: 'Plus Jakarta Sans', sans-serif;">
-                ${b.name}
-              </div>
-            </div>
-          `,
-          iconSize: [32, 42],
-          iconAnchor: [16, 12]
+          html: markerHtml,
+          iconSize: [36, 48],
+          iconAnchor: [18, 14]
         });
         const marker = L.marker([coords.lat, coords.lng], { icon: customIcon }).addTo(map);
         markersRef.current.push(marker);
-        map.flyTo([coords.lat, coords.lng], 15, { duration: 1 });
+        map.flyTo([coords.lat, coords.lng], 16, { duration: 1 });
       }
     }
   }, [buildingsList, selectedBuildingId, onSelectBuilding, mapTileType]);
@@ -2453,7 +2624,12 @@ const DashboardView = ({
   currentDate,
   isSyncing,
   lastSyncTime,
-  onForceSync
+  onForceSync,
+  onNavigateView,
+  gtbEquipments,
+  gtbControls,
+  onFixGtbSetpoint,
+  onSimulateScenario
 }: { 
   selectedBuildingId: string; 
   onSelectBuilding: (id: string) => void; 
@@ -2465,6 +2641,15 @@ const DashboardView = ({
   isSyncing?: boolean;
   lastSyncTime?: string;
   onForceSync?: () => void;
+  onNavigateView?: (view: ViewType) => void;
+  gtbEquipments?: any[];
+  gtbControls?: {
+    heatingSetpoint?: number;
+    coolingSetpoint?: number;
+    globalMode?: string;
+  };
+  onFixGtbSetpoint?: (heating: number, cooling: number) => void;
+  onSimulateScenario?: (scenario: 'high' | 'low' | 'gtb' | 'reset') => void;
 }) => {
   const { width: windowWidth } = useWindowSize();
   const t = translations[language as keyof typeof translations] || translations.fr;
@@ -2589,11 +2774,25 @@ const BuildingsView = ({
   lastSyncTime?: string;
   onForceSync?: () => void;
 }) => {
-  const filteredBuildings = buildingsList;
+  const [anomalyFilter, setAnomalyFilter] = useState<'ALL' | 'HIGH' | 'LOW' | 'OPTIMAL'>('ALL');
+
+  const overCount = buildingsList.filter(b => parseEnergy(b.consumption) > 200 || b.status === 'ALERTE').length;
+  const underCount = buildingsList.filter(b => parseEnergy(b.consumption) < 50).length;
+  const optimalCount = buildingsList.filter(b => parseEnergy(b.consumption) >= 50 && parseEnergy(b.consumption) <= 200 && b.status !== 'ALERTE').length;
+
+  const filteredBuildings = React.useMemo(() => {
+    return buildingsList.filter(b => {
+      const kwh = parseEnergy(b.consumption);
+      if (anomalyFilter === 'HIGH') return kwh > 200 || b.status === 'ALERTE';
+      if (anomalyFilter === 'LOW') return kwh < 50;
+      if (anomalyFilter === 'OPTIMAL') return kwh >= 50 && kwh <= 200 && b.status !== 'ALERTE';
+      return true;
+    });
+  }, [buildingsList, anomalyFilter]);
 
   return (
     <ViewContainer>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl md:text-3xl font-bold text-slate-900 font-display">{language === 'fr' ? 'Parc Immobilier' : 'Real Estate Portfolio'}</h2>
@@ -2634,42 +2833,114 @@ const BuildingsView = ({
         </div>
       </div>
 
+      {/* Quick Filter Tabs for Anomalies */}
+      <div className="flex items-center gap-1.5 sm:gap-2 mb-6 overflow-x-auto pb-1.5 sm:flex-wrap no-scrollbar">
+        <button
+          onClick={() => setAnomalyFilter('ALL')}
+          className={cn(
+            "px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
+            anomalyFilter === 'ALL' 
+              ? "bg-slate-900 text-white shadow-xs" 
+              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          )}
+        >
+          <span>{language === 'fr' ? 'Tous les bâtiments' : 'All buildings'}</span>
+          <span className={cn("px-1.5 py-0.5 rounded-full text-[10px]", anomalyFilter === 'ALL' ? "bg-slate-700 text-white" : "bg-slate-100 text-slate-600")}>
+            {buildingsList.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setAnomalyFilter('HIGH')}
+          className={cn(
+            "px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
+            anomalyFilter === 'HIGH' 
+              ? "bg-rose-600 text-white shadow-xs" 
+              : "bg-white text-rose-700 border border-rose-200 hover:bg-rose-50"
+          )}
+        >
+          <TrendingUp className="w-3.5 h-3.5" />
+          <span>{language === 'fr' ? 'Surconsommation' : 'High consumption'}</span>
+          <span className={cn("px-1.5 py-0.5 rounded-full text-[10px]", anomalyFilter === 'HIGH' ? "bg-rose-800 text-white" : "bg-rose-100 text-rose-700")}>
+            {overCount}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setAnomalyFilter('LOW')}
+          className={cn(
+            "px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
+            anomalyFilter === 'LOW' 
+              ? "bg-amber-600 text-white shadow-xs" 
+              : "bg-white text-amber-700 border border-amber-200 hover:bg-amber-50"
+          )}
+        >
+          <TrendingDown className="w-3.5 h-3.5" />
+          <span>{language === 'fr' ? 'Sous-consommation' : 'Abnormal low'}</span>
+          <span className={cn("px-1.5 py-0.5 rounded-full text-[10px]", anomalyFilter === 'LOW' ? "bg-amber-800 text-white" : "bg-amber-100 text-amber-800")}>
+            {underCount}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setAnomalyFilter('OPTIMAL')}
+          className={cn(
+            "px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
+            anomalyFilter === 'OPTIMAL' 
+              ? "bg-emerald-700 text-white shadow-xs" 
+              : "bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50"
+          )}
+        >
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          <span>{language === 'fr' ? 'Nominale / Optimale' : 'Nominal / Optimal'}</span>
+          <span className={cn("px-1.5 py-0.5 rounded-full text-[10px]", anomalyFilter === 'OPTIMAL' ? "bg-emerald-900 text-white" : "bg-emerald-100 text-emerald-800")}>
+            {optimalCount}
+          </span>
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         {filteredBuildings.map((b) => {
           const isSelected = selectedBuildingId === b.id.toString();
+          const isAnom = isBuildingInAnomaly(b);
 
           return (
             <div 
               key={b.id} 
               onClick={() => onSelectBuilding?.(b.id.toString())}
               className={cn(
-                "bg-white rounded-2xl border p-4 md:p-5 shadow-sm hover:shadow-md transition-all group relative overflow-hidden flex flex-col justify-between cursor-pointer",
-                isSelected 
-                  ? "border-emerald-600 ring-2 ring-emerald-500/30 bg-emerald-50/15" 
-                  : "border-slate-200/60 hover:border-emerald-300"
+                "rounded-2xl border p-4 md:p-5 shadow-sm transition-all group relative overflow-hidden flex flex-col justify-between cursor-pointer",
+                isAnom 
+                  ? "border-2 border-rose-500 ring-2 ring-rose-500/40 bg-rose-50/40 shadow-md shadow-rose-100/70 hover:border-rose-600 hover:shadow-lg hover:shadow-rose-200/80" 
+                  : isSelected 
+                    ? "border-emerald-600 ring-2 ring-emerald-500/30 bg-emerald-50/15 shadow-md" 
+                    : "bg-white border-slate-200/60 hover:border-emerald-300 hover:shadow-md"
               )}
             >
               <div>
                 <div className="flex justify-between items-start mb-3">
                   <div className={cn(
                     "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
-                    isSelected ? "bg-emerald-600 text-white shadow-xs" : "bg-slate-50 text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600"
+                    isAnom 
+                      ? "bg-rose-600 text-white shadow-xs" 
+                      : isSelected 
+                        ? "bg-emerald-600 text-white shadow-xs" 
+                        : "bg-slate-50 text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600"
                   )}>
-                    <Building2 className="w-5 h-5" />
+                    {isAnom ? <AlertTriangle className="w-5 h-5 animate-pulse" /> : <Building2 className="w-5 h-5" />}
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {isSelected && (
+                    {isAnom ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-2xs flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                        {language === 'fr' ? 'Anomalie' : 'Anomaly'}
+                      </span>
+                    ) : isSelected && (
                       <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-2xs">
                         Actif
                       </span>
                     )}
-                    <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider", 
-                      b.status === "OPTIMAL" ? "bg-emerald-50 text-emerald-600" : 
-                      b.status === "ATTENTION" ? "bg-amber-50 text-amber-600" : 
-                      "bg-rose-50 text-rose-600"
-                    )}>
-                      {b.status}
-                    </span>
+                    <Tag status={b.status} />
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -2695,16 +2966,67 @@ const BuildingsView = ({
 
                 {b.type && (
                   <div className="flex flex-wrap gap-1.5 mb-2.5">
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 text-[10px] font-bold">
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-md text-[10px] font-bold",
+                      isAnom ? "bg-rose-100 text-rose-800 border border-rose-200" : "bg-emerald-50 text-emerald-800"
+                    )}>
                       {b.type}
                     </span>
                   </div>
                 )}
 
-                <h3 className="font-bold text-slate-900 mb-3 group-hover:text-emerald-800 transition-colors">{formatBuildingName(b.name, b.id)}</h3>
+                <h3 className={cn(
+                  "font-bold mb-3 transition-colors",
+                  isAnom ? "text-rose-950 font-extrabold" : "text-slate-900 group-hover:text-emerald-800"
+                )}>
+                  {formatBuildingName(b.name, b.id)}
+                </h3>
+
+                {/* Anomaly Detection Status Banner */}
+                {(() => {
+                  const kwh = parseEnergy(b.consumption);
+                  if (isAnom || kwh > 200 || b.status === 'ALERTE') {
+                    return (
+                      <div className="mb-3 px-2.5 py-1.5 rounded-xl bg-rose-100 border-2 border-rose-300 text-rose-950 flex items-center justify-between gap-1.5 text-[11px] font-extrabold shadow-2xs">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <TrendingUp className="w-3.5 h-3.5 shrink-0 text-rose-600 animate-bounce" />
+                          <span className="truncate">{language === 'fr' ? '🔴 Dérive en surconsommation' : '🔴 Overconsumption drift'}</span>
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-600 text-white shrink-0">
+                          {b.trend || '+28.4%'}
+                        </span>
+                      </div>
+                    );
+                  }
+                  if (kwh < 50) {
+                    return (
+                      <div className="mb-3 px-2.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-800 flex items-center justify-between gap-1.5 text-[11px] font-bold">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <TrendingDown className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                          <span className="truncate">{language === 'fr' ? 'Sous-conso suspecte' : 'Suspicious low intake'}</span>
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-200/80 text-amber-900 shrink-0">
+                          Télérelève
+                        </span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="mb-3 px-2.5 py-1 rounded-xl bg-emerald-50/70 border border-emerald-100 text-emerald-800 flex items-center justify-between gap-1.5 text-[11px] font-medium">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-600" />
+                        <span className="truncate">{language === 'fr' ? 'Conso nominale' : 'Nominal usage'}</span>
+                      </div>
+                      <span className="text-[9px] font-bold text-emerald-700 font-mono shrink-0">{b.economy || '15% éco'}</span>
+                    </div>
+                  );
+                })()}
 
                 {(b.powerWinterKw !== undefined || b.powerSummerKw !== undefined) && (
-                  <div className="bg-slate-50/80 rounded-xl p-2.5 mb-3 text-xs space-y-1 border border-slate-100">
+                  <div className={cn(
+                    "rounded-xl p-2.5 mb-3 text-xs space-y-1 border",
+                    isAnom ? "bg-rose-100/60 border-rose-200" : "bg-slate-50/80 border-slate-100"
+                  )}>
                     <div className="flex justify-between text-slate-600">
                       <span>Besoin Hiver :</span>
                       <span className="font-bold text-sky-700 font-mono">{b.powerWinterKw ?? '--'} kW</span>
@@ -2722,35 +3044,75 @@ const BuildingsView = ({
               </div>
               
               <div>
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 mb-3">
+                <div className={cn(
+                  "grid grid-cols-2 gap-3 pt-3 border-t mb-3",
+                  isAnom ? "border-rose-200" : "border-slate-100"
+                )}>
                   <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'CONSO ÉLEC' : 'ELEC CONS'}</p>
-                    <p className="text-xs font-bold text-slate-900 font-mono">{parseEnergy(b.consumption).toLocaleString()} kWh/j</p>
+                    <p className={cn(
+                      "text-[9px] font-bold uppercase tracking-wider",
+                      isAnom ? "text-rose-700 font-extrabold" : "text-slate-400"
+                    )}>
+                      {isAnom 
+                        ? (language === 'fr' ? 'CONSO ÉLEC (ANOMALIE)' : 'ELEC CONS (ANOMALY)') 
+                        : (language === 'fr' ? 'CONSO ÉLEC' : 'ELEC CONS')}
+                    </p>
+                    <p className={cn(
+                      "text-xs font-mono inline-block mt-0.5",
+                      isAnom 
+                        ? "text-rose-700 bg-rose-200/90 border border-rose-300 px-2 py-0.5 rounded-md font-extrabold shadow-2xs" 
+                        : "font-bold text-slate-900"
+                    )}>
+                      {parseEnergy(b.consumption).toLocaleString()} kWh/j
+                    </p>
                     {b.consumptionYearMwh && (
-                      <p className="text-[10px] text-emerald-700 font-semibold font-mono">{b.consumptionYearMwh} MWh/an</p>
+                      <p className={cn(
+                        "text-[10px] font-semibold font-mono",
+                        isAnom ? "text-rose-700" : "text-emerald-700"
+                      )}>
+                        {b.consumptionYearMwh} MWh/an
+                      </p>
                     )}
                   </div>
                   <div>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'ÉCONOMIE' : 'SAVINGS'}</p>
-                    <p className="text-xs font-bold text-emerald-700 font-mono">{b.economy || '15%'}</p>
-                    <p className="text-[10px] text-slate-500 font-medium font-mono">{b.trend || '-1.2%'}</p>
+                    <p className={cn(
+                      "text-xs font-mono",
+                      isAnom ? "text-rose-600 font-bold" : "text-emerald-700 font-bold"
+                    )}>
+                      {b.economy || '15%'}
+                    </p>
+                    <p className={cn(
+                      "text-[10px] font-mono",
+                      isAnom ? "text-rose-600 font-bold" : "text-slate-500 font-medium"
+                    )}>
+                      {b.trend || '-1.2%'}
+                    </p>
                   </div>
                 </div>
 
                 {/* Boutons d'Action & Communication Croisée */}
                 {onNavigateView && (
-                  <div className="pt-2 border-t border-slate-100/70 grid grid-cols-3 gap-1.5">
+                  <div className={cn(
+                    "pt-2 border-t grid grid-cols-3 gap-1.5",
+                    isAnom ? "border-rose-200" : "border-slate-100/70"
+                  )}>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectBuilding?.(b.id.toString());
                         onNavigateView('dashboard');
                       }}
-                      className="py-1.5 px-2 bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1 border border-slate-200/60 cursor-pointer"
+                      className={cn(
+                        "py-1.5 px-2 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1 cursor-pointer",
+                        isAnom 
+                          ? "bg-rose-600 hover:bg-rose-700 text-white shadow-xs" 
+                          : "bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200/60"
+                      )}
                       title="Voir au Tableau de Bord"
                     >
-                      <LayoutDashboard className="w-3 h-3 text-emerald-600" />
-                      <span>Bord</span>
+                      <LayoutDashboard className={cn("w-3 h-3", isAnom ? "text-white" : "text-emerald-600")} />
+                      <span>{isAnom ? (language === 'fr' ? 'Alerte' : 'Alert') : (language === 'fr' ? 'Bord' : 'Dash')}</span>
                     </button>
                     <button
                       onClick={(e) => {
@@ -2888,18 +3250,25 @@ const AnalyticsView = React.memo(({
           </button>
           {buildingsList.map(b => {
             const isCurrent = selectedBuildingId === b.id.toString();
+            const isAnom = isBuildingInAnomaly(b);
             return (
               <button
                 key={b.id}
                 onClick={() => onSelectBuilding?.(b.id.toString())}
                 className={cn(
-                  "px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer",
-                  isCurrent
-                    ? "bg-slate-900 text-white font-bold shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  "px-3 py-1.5 rounded-xl text-xs whitespace-nowrap transition cursor-pointer flex items-center gap-1.5",
+                  isAnom
+                    ? isCurrent
+                      ? "bg-rose-600 text-white font-extrabold shadow-xs"
+                      : "bg-rose-50 text-rose-700 border border-rose-300 font-bold hover:bg-rose-100"
+                    : isCurrent
+                      ? "bg-slate-900 text-white font-bold shadow-2xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                 )}
               >
+                {isAnom && <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />}
                 <span>{b.name}</span>
+                {isAnom && <span className="text-[9px] px-1 py-0.2 rounded bg-rose-600 text-white font-mono">!</span>}
               </button>
             );
           })}
@@ -3111,7 +3480,7 @@ const AnalyticsView = React.memo(({
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs min-w-[640px]">
               <thead>
                 <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   <th className="pb-3 pl-2">Bâtiment</th>
@@ -3125,28 +3494,53 @@ const AnalyticsView = React.memo(({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100/70">
-                {buildingsList.map(b => (
-                  <tr key={b.id} className="hover:bg-slate-50/70 transition">
-                    <td className="py-3 pl-2 font-bold text-slate-800">
-                      {formatBuildingName(b.name, b.id)}
-                      <span className="block text-[10px] font-normal text-slate-400">{cleanBuildingLocation(b.location, b.id)}</span>
-                    </td>
-                    <td className="py-3 font-medium text-slate-600">{b.type || 'Tertiaire'}</td>
-                    <td className="py-3 font-bold text-sky-700">{b.powerWinterKw ?? '--'}</td>
-                    <td className="py-3 font-bold text-amber-600">{b.powerSummerKw ?? '--'}</td>
-                    <td className="py-3 font-bold text-rose-600">{b.powerHeatwaveKw ?? '--'}</td>
-                    <td className="py-3 font-semibold text-slate-800">{parseEnergy(b.consumption).toLocaleString()}</td>
-                    <td className="py-3"><Tag status={b.status} /></td>
-                    <td className="py-3 text-right pr-2">
-                      <button
-                        onClick={() => onSelectBuilding?.(b.id.toString())}
-                        className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg font-bold text-[11px] transition cursor-pointer"
-                      >
-                        {language === 'fr' ? 'Analyser' : 'Analyze'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {buildingsList.map(b => {
+                  const isAnom = isBuildingInAnomaly(b);
+                  return (
+                    <tr key={b.id} className={cn(
+                      "transition",
+                      isAnom ? "bg-rose-50/70 hover:bg-rose-100/70 border-l-4 border-rose-600" : "hover:bg-slate-50/70"
+                    )}>
+                      <td className="py-3 pl-2 font-bold text-slate-800">
+                        <div className="flex items-center gap-1.5">
+                          {isAnom && <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse shrink-0" />}
+                          <span className={cn(isAnom ? "text-rose-950 font-extrabold" : "text-slate-800")}>
+                            {formatBuildingName(b.name, b.id)}
+                          </span>
+                        </div>
+                        <span className="block text-[10px] font-normal text-slate-400">{cleanBuildingLocation(b.location, b.id)}</span>
+                      </td>
+                      <td className="py-3 font-medium text-slate-600">{b.type || 'Tertiaire'}</td>
+                      <td className="py-3 font-bold text-sky-700">{b.powerWinterKw ?? '--'}</td>
+                      <td className="py-3 font-bold text-amber-600">{b.powerSummerKw ?? '--'}</td>
+                      <td className="py-3 font-bold text-rose-600">{b.powerHeatwaveKw ?? '--'}</td>
+                      <td className="py-3">
+                        <span className={cn(
+                          "font-mono inline-block",
+                          isAnom 
+                            ? "px-2 py-0.5 rounded-md bg-rose-200 text-rose-950 font-extrabold border border-rose-300 shadow-2xs" 
+                            : "font-semibold text-slate-800"
+                        )}>
+                          {parseEnergy(b.consumption).toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="py-3"><Tag status={b.status} /></td>
+                      <td className="py-3 text-right pr-2">
+                        <button
+                          onClick={() => onSelectBuilding?.(b.id.toString())}
+                          className={cn(
+                            "px-2.5 py-1 rounded-lg font-bold text-[11px] transition cursor-pointer",
+                            isAnom 
+                              ? "bg-rose-600 hover:bg-rose-700 text-white shadow-xs" 
+                              : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800"
+                          )}
+                        >
+                          {isAnom ? (language === 'fr' ? 'Inspecter' : 'Inspect') : (language === 'fr' ? 'Analyser' : 'Analyze')}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -3535,7 +3929,32 @@ export default function App() {
   const [isSyncingSheet, setIsSyncingSheet] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
   const [gtbEquipments, setGtbEquipments] = useState<GTBEquipment[]>(GTB_INITIAL_EQUIPMENT);
+  const [gtbHeatingSetpoint, setGtbHeatingSetpoint] = useState<number>(21.5);
+  const [gtbCoolingSetpoint, setGtbCoolingSetpoint] = useState<number>(25.0);
+  const [gtbGlobalMode, setGtbGlobalMode] = useState<string>('AUTO');
   const hasGoogleSheetsSyncRef = React.useRef(false);
+
+  const handleFixGtbSetpoint = React.useCallback((heating: number, cooling: number) => {
+    setGtbHeatingSetpoint(heating);
+    setGtbCoolingSetpoint(cooling);
+  }, []);
+
+  const handleSimulateScenario = React.useCallback((scenario: 'high' | 'low' | 'gtb' | 'reset') => {
+    if (scenario === 'high') {
+      setBuildings(prev => prev.map(b => b.id === 'BAT-02' ? { ...b, consumption: '320 kWh', status: 'ALERTE' as const, trend: '+63.2%' } : b));
+    } else if (scenario === 'low') {
+      setBuildings(prev => prev.map(b => b.id === 'BAT-04' ? { ...b, consumption: '12 kWh', status: 'ATTENTION' as const, trend: '-93.8%' } : b));
+    } else if (scenario === 'gtb') {
+      setGtbHeatingSetpoint(24.5);
+      setGtbCoolingSetpoint(22.0);
+      setGtbEquipments(prev => prev.map(eq => eq.category.includes("Ventilation") ? { ...eq, status: "Alarme" } : eq));
+    } else if (scenario === 'reset') {
+      setBuildings(TABLE_DATA);
+      setGtbHeatingSetpoint(21.0);
+      setGtbCoolingSetpoint(25.0);
+      setGtbEquipments(GTB_INITIAL_EQUIPMENT);
+    }
+  }, []);
 
   // Synchronize city if selected building specifies a known city location
   useEffect(() => {
@@ -3696,6 +4115,40 @@ export default function App() {
     }
   };
 
+  const handleEmailLogin = async (emailToLogin: string, pass: string) => {
+    await signInWithEmailAndPassword(auth, emailToLogin, pass);
+  };
+
+  const handleRegister = async (name: string, emailToRegister: string, pass: string) => {
+    const cred = await createUserWithEmailAndPassword(auth, emailToRegister, pass);
+    if (cred.user) {
+      if (name.trim()) {
+        try {
+          await updateProfile(cred.user, { displayName: name.trim() });
+        } catch (e) {
+          console.warn('Could not update profile displayName:', e);
+        }
+      }
+      // Initialize profile in Firestore
+      const userRef = doc(db, 'users', cred.user.uid);
+      const newProfile = {
+        name: name.trim() || 'Gestionnaire Énergie',
+        email: cred.user.email || emailToRegister,
+        photo: `https://api.dicebear.com/7.x/avataaars/svg?seed=${cred.user.uid}`,
+        role: 'Gestionnaire Énergie',
+        settings: {
+          notificationsEmail: true,
+          notificationsPush: true,
+          twoFactorAuth: false,
+          darkMode: false,
+          language: 'fr'
+        },
+        updatedAt: serverTimestamp()
+      };
+      await setDoc(userRef, newProfile).catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${cred.user.uid}`));
+    }
+  };
+
   const handleLogout = async () => {
     try {
       if (isGuest) {
@@ -3709,6 +4162,179 @@ export default function App() {
   };
 
   const memoizedBuildings = React.useMemo(() => buildings, [buildings]);
+
+  // --- Automated Daily Notification System ---
+  const dispatchDailyNotification = React.useCallback((force: boolean = false) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const lastDate = typeof window !== 'undefined' ? localStorage.getItem('ecogrid_last_daily_notification_date') : null;
+    
+    if (!force && lastDate === todayStr) {
+      return false;
+    }
+
+    const isFr = settings.language === 'fr';
+    const todayFormatted = new Date().toLocaleDateString(isFr ? 'fr-FR' : 'en-US', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    });
+
+    const totalKwh = memoizedBuildings.reduce((acc, b) => acc + parseEnergy(b.consumption), 0);
+    const anomBuilding = memoizedBuildings.find(b => isBuildingInAnomaly(b));
+
+    const notificationTitle = isFr 
+      ? `📅 Bilan Journalier Automatique (${todayFormatted})`
+      : `📅 Automated Daily Summary (${todayFormatted})`;
+
+    const notificationBody = isFr
+      ? `Consommation consolidée du parc : ${totalKwh.toLocaleString()} kWh. ${anomBuilding ? `Alerte dérive : ${anomBuilding.name} surconsomme à 286 kWh/j (+28.4%). Bâtiment surligné en rouge.` : 'Tous les bâtiments fonctionnent en mode nominal.'}`
+      : `Fleet aggregate consumption: ${totalKwh.toLocaleString()} kWh. ${anomBuilding ? `Active drift alert: ${anomBuilding.name} at 286 kWh/d (+28.4%). Highlighted in red.` : 'All buildings operating nominally.'}`;
+
+    // 1. Browser Native Web Notification
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        try {
+          new Notification(notificationTitle, {
+            body: notificationBody,
+            icon: '/icon.png'
+          });
+        } catch (e) {
+          console.warn('Native notification dispatch error:', e);
+        }
+      } else if (force && Notification.permission === 'default') {
+        Notification.requestPermission().then(p => {
+          if (p === 'granted') {
+            new Notification(notificationTitle, { body: notificationBody, icon: '/icon.png' });
+          }
+        });
+      }
+    }
+
+    // 2. In-App Notification Toast Event
+    if (typeof window !== 'undefined') {
+      const event = new CustomEvent('app-notification', {
+        detail: {
+          title: notificationTitle,
+          message: notificationBody
+        }
+      });
+      window.dispatchEvent(event);
+    }
+
+    // 3. Persist today's execution
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ecogrid_last_daily_notification_date', todayStr);
+    }
+    return true;
+  }, [settings.language, memoizedBuildings]);
+
+  // Automated daily check on mount and periodic interval
+  React.useEffect(() => {
+    // Check & dispatch on mount
+    dispatchDailyNotification(false);
+
+    // Periodic check every 30 seconds
+    const interval = setInterval(() => {
+      dispatchDailyNotification(false);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [dispatchDailyNotification]);
+
+  // --- Real Smartphone Push Notifications & "Look & Clear" Engine ---
+  const [activePushBanner, setActivePushBanner] = React.useState<{
+    id: string;
+    title: string;
+    message: string;
+    type?: 'alert' | 'success' | 'info' | 'daily' | 'daily-alert';
+    buildingId?: string;
+    timestamp: string;
+  } | null>(null);
+
+  const [hasViewedNotifications, setHasViewedNotifications] = React.useState(false);
+  const [dismissedNotificationIds, setDismissedNotificationIds] = React.useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('ecogrid_dismissed_notifications');
+        return saved ? JSON.parse(saved) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  // Realistic Smartphone Chime Synthesizer (dual harmonic tone)
+  const playPhoneChime = React.useCallback(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      
+      // Tone 1: E5 (659Hz)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(659.25, now);
+      gain1.gain.setValueAtTime(0.08, now);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.22);
+
+      // Tone 2: A5 (880Hz)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(880, now + 0.08);
+      gain2.gain.setValueAtTime(0.1, now + 0.08);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.08);
+      osc2.stop(now + 0.42);
+    } catch {
+      // Audio autoplay policy guard
+    }
+  }, []);
+
+  // "Une fois qu'on regarde tout disparaît" : Auto-dismiss banner after 4.5s like on iOS / Android
+  React.useEffect(() => {
+    if (activePushBanner) {
+      const timer = setTimeout(() => {
+        setActivePushBanner(null);
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [activePushBanner]);
+
+  // Listen to in-app notification events & trigger phone banner + audio chime
+  React.useEffect(() => {
+    const handleAppNotification = (e: any) => {
+      const detail = e.detail;
+      if (detail) {
+        const isAlert = detail.title?.includes('🚨') || detail.title?.includes('🔴') || detail.title?.includes('Alerte') || detail.type === 'alert';
+        const isBld2 = detail.message?.includes('Bâtiment 2') || detail.title?.includes('Bâtiment 2');
+        
+        setActivePushBanner({
+          id: 'push-' + Date.now(),
+          title: detail.title || (settings.language === 'fr' ? 'Notification ÉcoGrid' : 'EcoGrid Notification'),
+          message: detail.message || '',
+          type: detail.type || (isAlert ? 'alert' : 'info'),
+          buildingId: detail.buildingId || (isBld2 ? 'BAT-02' : undefined),
+          timestamp: settings.language === 'fr' ? 'MAINTENANT' : 'NOW'
+        });
+        setHasViewedNotifications(false);
+        playPhoneChime();
+      }
+    };
+
+    window.addEventListener('app-notification', handleAppNotification);
+    return () => window.removeEventListener('app-notification', handleAppNotification);
+  }, [settings.language, playPhoneChime]);
 
   const metrics = React.useMemo(() => {
     const totalConsumptionValue = memoizedBuildings.reduce((acc, b) => acc + parseEnergy(b.consumption), 0);
@@ -3732,7 +4358,14 @@ export default function App() {
       ? [...memoizedBuildings].sort((a, b) => parseEnergy(b.consumption) - parseEnergy(a.consumption))[0]
       : null;
 
-    const anomaliesCount = memoizedBuildings.filter(b => b.status === 'ALERTE').length;
+    const systemAnomalies = detectSystemAnomalies(
+      memoizedBuildings, 
+      gtbEquipments, 
+      { heatingSetpoint: gtbHeatingSetpoint, coolingSetpoint: gtbCoolingSetpoint, globalMode: gtbGlobalMode }
+    );
+    const anomaliesCount = isGlobal 
+      ? systemAnomalies.length 
+      : systemAnomalies.filter(a => a.targetId === selectedBuilding).length;
 
     return {
       totalConsumptionValue,
@@ -3744,7 +4377,7 @@ export default function App() {
       anomaliesCount,
       trend: isGlobal ? "-12%" : selected?.trend || "0%"
     };
-  }, [memoizedBuildings, selectedBuilding]);
+  }, [memoizedBuildings, selectedBuilding, gtbEquipments, gtbHeatingSetpoint, gtbCoolingSetpoint, gtbGlobalMode]);
 
   const handleUpdateBuilding = React.useCallback(async (id: string | number, data: { name: string, location: string, consumption: string, surface: string }) => {
     const baseValue = parseEnergy(data.consumption);
@@ -3992,6 +4625,42 @@ export default function App() {
       }
     });
 
+    // 3. Inject GTB and Energy Drift System Anomalies
+    const detected = detectSystemAnomalies(
+      memoizedBuildings, 
+      gtbEquipments, 
+      { heatingSetpoint: gtbHeatingSetpoint, coolingSetpoint: gtbCoolingSetpoint, globalMode: gtbGlobalMode }
+    );
+    detected.forEach((item, idx) => {
+      list.unshift({
+        id: `sys-anomaly-${item.id}-${idx}`,
+        title: `${item.severity === 'critical' ? '🔴' : '🟠'} ${isFr ? item.titleFr : item.titleEn}`,
+        message: isFr ? item.descriptionFr : item.descriptionEn,
+        type: item.severity === 'critical' ? 'alert' : 'info',
+        time: isFr ? 'Temps réel' : 'Real-time'
+      });
+    });
+
+    // 4. Inject Automated Daily Summary Digest
+    const todayFormatted = currentDate.toLocaleDateString(isFr ? 'fr-FR' : 'en-US', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    });
+    const totalParkCons = memoizedBuildings.reduce((acc, b) => acc + parseEnergy(b.consumption), 0);
+    const anomBuilding = memoizedBuildings.find(b => isBuildingInAnomaly(b));
+
+    list.unshift({
+      id: "automated-daily-report",
+      title: isFr ? `📅 Bilan Journalier Automatique (${todayFormatted})` : `📅 Automated Daily Summary (${todayFormatted})`,
+      message: isFr 
+        ? `Consommation consolidée du parc : ${totalParkCons.toLocaleString()} kWh. ${anomBuilding ? `Alerte active : ${anomBuilding.name} surconsomme à 286 kWh/j (+28.4%). Bâtiment surligné en rouge.` : 'Tous les bâtiments fonctionnent en mode nominal.'}`
+        : `Fleet aggregate consumption: ${totalParkCons.toLocaleString()} kWh. ${anomBuilding ? `Active drift: ${anomBuilding.name} at 286 kWh/d (+28.4%). Highlighted in red.` : 'All buildings operating nominally.'}`,
+      type: anomBuilding ? "daily-alert" : "daily",
+      time: isFr ? "Quotidien • Automatique" : "Daily • Automated",
+      isDaily: true
+    });
+
     // Fallback if list is too short or to maintain parity with prior default mocks
     if (list.length < 3) {
       list.push({
@@ -4011,7 +4680,51 @@ export default function App() {
     }
 
     return list;
-  }, [currentDate, memoizedBuildings, settings.language]);
+  }, [currentDate, memoizedBuildings, gtbEquipments, gtbHeatingSetpoint, gtbCoolingSetpoint, gtbGlobalMode, settings.language]);
+
+  // Notifications filtered by user dismissal ("une fois qu'on regarde tout disparaît")
+  const visibleNotifications = React.useMemo(() => {
+    return notifications.filter(n => !dismissedNotificationIds.includes(n.id));
+  }, [notifications, dismissedNotificationIds]);
+
+  const unreadAlertsCount = hasViewedNotifications 
+    ? 0 
+    : visibleNotifications.filter(n => n.type === 'alert' || n.type === 'daily-alert').length || (hasViewedNotifications ? 0 : visibleNotifications.length);
+
+  const dismissSingleNotification = React.useCallback((id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setDismissedNotificationIds(prev => {
+      const next = [...prev, id];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ecogrid_dismissed_notifications', JSON.stringify(next));
+      }
+      return next;
+    });
+  }, []);
+
+  const clearAllNotifications = React.useCallback(() => {
+    const allIds = notifications.map(n => n.id);
+    setDismissedNotificationIds(allIds);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ecogrid_dismissed_notifications', JSON.stringify(allIds));
+    }
+    setHasViewedNotifications(true);
+  }, [notifications]);
+
+  const triggerTestPushNotification = React.useCallback(() => {
+    const isFr = settings.language === 'fr';
+    const event = new CustomEvent('app-notification', {
+      detail: {
+        title: isFr ? '🚨 Alerte Dérive Bâtiment 2' : '🚨 Building 2 Drift Alert',
+        message: isFr 
+          ? 'Consommation anormale 286 kWh/j détectée (+28.4%). Bâtiment surligné en rouge sur la carte.' 
+          : 'Abnormal consumption 286 kWh/d detected (+28.4%). Building highlighted in red on map.',
+        type: 'alert',
+        buildingId: 'BAT-02'
+      }
+    });
+    window.dispatchEvent(event);
+  }, [settings.language]);
 
   const onProfileChange = (field: string, value: string) => {
     const newProfile = { ...userProfile, [field]: value };
@@ -4311,6 +5024,15 @@ export default function App() {
           isSyncing={isSyncingSheet}
           lastSyncTime={lastSyncTime}
           onForceSync={forceSyncGoogleSheets}
+          onNavigateView={setActiveView}
+          gtbEquipments={gtbEquipments}
+          gtbControls={{
+            heatingSetpoint: gtbHeatingSetpoint,
+            coolingSetpoint: gtbCoolingSetpoint,
+            globalMode: gtbGlobalMode
+          }}
+          onFixGtbSetpoint={handleFixGtbSetpoint}
+          onSimulateScenario={handleSimulateScenario}
         />
       );
     }
@@ -4341,7 +5063,14 @@ export default function App() {
   }
 
   if (!user && !isGuest) {
-    return <LoginView onLogin={handleLogin} onGuest={() => setIsGuest(true)} />;
+    return (
+      <LoginView 
+        onLogin={handleLogin} 
+        onGuest={() => setIsGuest(true)} 
+        onEmailLogin={handleEmailLogin}
+        onRegister={handleRegister}
+      />
+    );
   }
 
   return (
@@ -4475,12 +5204,18 @@ export default function App() {
 
         <div className="flex items-center gap-1.5">
            <button 
-            onClick={() => setIsNotificationsOpen(true)}
-            className="p-2 text-slate-400 active:scale-95 transition-all relative"
+            onClick={() => {
+              setIsNotificationsOpen(true);
+              setHasViewedNotifications(true);
+            }}
+            className="p-2 text-slate-700 active:scale-95 transition-all relative cursor-pointer"
+            title="Notifications"
           >
             <Bell className="w-5 h-5" />
-            {settings.notificationsPush && (
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
+            {unreadAlertsCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 bg-rose-600 text-white rounded-full text-[9px] font-black border-2 border-white shadow-2xs animate-pulse">
+                {unreadAlertsCount}
+              </span>
             )}
           </button>
         </div>
@@ -4598,14 +5333,20 @@ export default function App() {
               </AnimatePresence>
             </div>
             
-            <div className="flex items-center gap-3">
+             <div className="flex items-center gap-3">
                <button 
-                onClick={() => setIsNotificationsOpen(true)}
-                className="flex p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all relative outline-none"
+                onClick={() => {
+                  setIsNotificationsOpen(true);
+                  setHasViewedNotifications(true);
+                }}
+                className="flex p-2.5 text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all relative outline-none cursor-pointer"
+                title={settings.language === 'fr' ? 'Notifications et alertes' : 'Notifications & alerts'}
               >
                 <Bell className="w-5 h-5" />
-                {settings.notificationsPush && (
-                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
+                {unreadAlertsCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 bg-rose-600 text-white rounded-full text-[9px] font-black border-2 border-white shadow-2xs animate-pulse">
+                    {unreadAlertsCount}
+                  </span>
                 )}
               </button>
               <button 
@@ -4631,6 +5372,100 @@ export default function App() {
         </div>
       </main>
 
+      {/* Realistic Smartphone Push Notification Banner (Top Lockscreen / Dynamic Island Style) */}
+      <AnimatePresence>
+        {activePushBanner && (
+          <motion.div
+            initial={{ y: -90, opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -90, opacity: 0, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 450, damping: 30 }}
+            drag="y"
+            dragConstraints={{ top: -120, bottom: 0 }}
+            dragElastic={0.2}
+            onDragEnd={(_, info) => {
+              if (info.offset.y < -25 || info.velocity.y < -300) {
+                setActivePushBanner(null);
+              }
+            }}
+            onClick={() => {
+              if (activePushBanner.buildingId) {
+                setSelectedBuilding(activePushBanner.buildingId);
+                setActiveView('buildings');
+              } else {
+                setIsNotificationsOpen(true);
+                setHasViewedNotifications(true);
+              }
+              setActivePushBanner(null);
+            }}
+            className="fixed top-3 sm:top-5 left-1/2 -translate-x-1/2 z-[150] w-[94%] max-w-[430px] cursor-pointer select-none group"
+          >
+            <div className="relative overflow-hidden bg-slate-950/94 backdrop-blur-2xl border border-white/20 text-white rounded-3xl p-4 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.65)] flex flex-col gap-2 ring-1 ring-white/10 active:scale-[0.98] transition-transform">
+              {/* Header inside phone banner */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-xl bg-emerald-500/90 flex items-center justify-center text-slate-950 font-black shadow-2xs">
+                    <Zap className="w-3.5 h-3.5 fill-current" />
+                  </div>
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-200">
+                    ÉCOGRID
+                  </span>
+                  <span className="text-slate-500 text-xs">•</span>
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    {activePushBanner.timestamp}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActivePushBanner(null);
+                    }}
+                    className="p-1 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    title={settings.language === 'fr' ? 'Fermer' : 'Dismiss'}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Title & Message */}
+              <div className="pr-1">
+                <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 leading-snug">
+                  {activePushBanner.type === 'alert' || activePushBanner.type === 'daily-alert' ? (
+                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                    </span>
+                  ) : (
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
+                  )}
+                  <span>{activePushBanner.title}</span>
+                </h4>
+                <p className="text-[11px] text-slate-300 mt-1 line-clamp-2 leading-relaxed font-medium">
+                  {activePushBanner.message}
+                </p>
+              </div>
+
+              {/* Action hint & bottom swipe handle */}
+              <div className="flex items-center justify-between pt-1 border-t border-white/10 text-[10px] text-slate-400 font-medium">
+                <span className="text-emerald-400 font-bold flex items-center gap-1">
+                  <span>👉</span>
+                  <span>{settings.language === 'fr' ? 'Toucher pour ouvrir' : 'Tap to open'}</span>
+                </span>
+                <span className="text-slate-500 text-[9px]">
+                  {settings.language === 'fr' ? 'Glisser vers le haut pour effacer' : 'Swipe up to dismiss'}
+                </span>
+              </div>
+              <div className="flex justify-center -mb-1">
+                <div className="w-10 h-1 rounded-full bg-white/30" />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Notifications Drawer */}
       <AnimatePresence>
         {isNotificationsOpen && (
@@ -4639,7 +5474,10 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsNotificationsOpen(false)}
+              onClick={() => {
+                setIsNotificationsOpen(false);
+                setHasViewedNotifications(true);
+              }}
               className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[60]"
             />
             <motion.div 
@@ -4649,41 +5487,203 @@ export default function App() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed inset-y-0 right-0 w-full sm:w-96 bg-white z-[70] shadow-2xl flex flex-col"
             >
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <div>
-                  <h3 className="font-bold text-slate-800">Notifications</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Alertes & Annonces</p>
+                  <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-emerald-600" />
+                    <span>Notifications</span>
+                    {visibleNotifications.filter(n => n.type === 'alert' || n.type === 'daily-alert').length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-black">
+                        {visibleNotifications.filter(n => n.type === 'alert' || n.type === 'daily-alert').length} alertes
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                    {settings.language === 'fr' ? 'Centre de notifications smartphone' : 'Smartphone notification center'}
+                  </p>
                 </div>
-                <button 
-                  onClick={() => setIsNotificationsOpen(false)}
-                  className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-500" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  {visibleNotifications.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={clearAllNotifications}
+                      className="px-2 py-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                      title={settings.language === 'fr' ? 'Tout effacer comme sur un téléphone' : 'Clear all like on a phone'}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{settings.language === 'fr' ? 'Effacer tout' : 'Clear all'}</span>
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => {
+                      setIsNotificationsOpen(false);
+                      setHasViewedNotifications(true);
+                    }}
+                    className="p-2 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5 text-slate-500" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Automated Daily Dispatch Status Banner */}
+              <div className="mx-4 mt-3.5 p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200 shadow-2xs">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
+                    </span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-950">
+                      {settings.language === 'fr' ? 'Notifications journalières automatiques' : 'Automated daily notifications'}
+                    </span>
+                  </div>
+                  <span className="text-[9px] font-extrabold text-emerald-800 bg-emerald-200/80 px-2 py-0.5 rounded-full">
+                    {settings.language === 'fr' ? 'Actif 24/7' : 'Active 24/7'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-800 font-medium leading-relaxed">
+                  {settings.language === 'fr'
+                    ? 'Chaque jour, un récapitulatif automatisé compile la consommation globale et alerte instantanément de toute dérive ou anomalie.'
+                    : 'Each day, an automated digest compiles aggregate power use and immediately alerts of any detected drift.'}
+                </p>
+                <div className="mt-2.5">
+                  <button
+                    type="button"
+                    onClick={() => dispatchDailyNotification(true)}
+                    className="w-full py-1.5 px-3 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
+                    <span>{settings.language === 'fr' ? 'Déclencher le bilan du jour maintenant' : 'Trigger daily report now'}</span>
+                  </button>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {notifications.map((n) => (
-                  <div key={n.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-emerald-200 transition-all cursor-pointer group">
-                    <div className="flex justify-between items-start mb-2">
-                       <span className={cn(
-                         "text-[9px] font-black uppercase tracking-[0.15em] px-2 py-0.5 rounded",
-                         n.type === 'alert' ? "bg-rose-100 text-rose-600" : 
-                         n.type === 'success' ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
-                       )}>
-                         {n.type}
-                       </span>
-                       <span className="text-[9px] font-bold text-slate-400">{n.time}</span>
+                {visibleNotifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center mb-3 text-emerald-600 shadow-2xs">
+                      <CheckCircle2 className="w-7 h-7" />
                     </div>
-                    <h4 className="font-bold text-slate-800 text-sm mb-1 group-hover:text-emerald-700 transition-colors">{n.title}</h4>
-                    <p className="text-xs text-slate-500 leading-relaxed font-medium">{n.message}</p>
+                    <h4 className="font-bold text-slate-800 text-sm mb-1">
+                      {settings.language === 'fr' ? 'Toutes les alertes ont disparu' : 'All notifications cleared'}
+                    </h4>
+                    <p className="text-xs text-slate-500 max-w-xs leading-relaxed font-medium">
+                      {settings.language === 'fr' 
+                        ? 'Comme sur un vrai téléphone, une fois que vous avez regardé vos notifications, tout disparaît.' 
+                        : 'Just like on a real phone, once you look at notifications, they all clear away.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDismissedNotificationIds([]);
+                        if (typeof window !== 'undefined') {
+                          localStorage.removeItem('ecogrid_dismissed_notifications');
+                        }
+                        triggerTestPushNotification();
+                      }}
+                      className="mt-5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-2xs cursor-pointer"
+                    >
+                      <Bell className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{settings.language === 'fr' ? 'Tester une notification smartphone' : 'Simulate phone notification'}</span>
+                    </button>
                   </div>
-                ))}
+                ) : (
+                  visibleNotifications.map((n) => {
+                    const isAnomAlert = n.type === 'alert' || n.type === 'daily-alert';
+                    const isDaily = n.isDaily;
+                    return (
+                      <div 
+                        key={n.id} 
+                        onClick={() => {
+                          // Dismiss upon looking/inspecting ("une fois qu'on regarde tout disparait")
+                          dismissSingleNotification(n.id);
+                          if (n.title.includes('Bâtiment 2') || n.message.includes('Bâtiment 2') || isAnomAlert) {
+                            setSelectedBuilding('BAT-02');
+                            setActiveView('buildings');
+                            setIsNotificationsOpen(false);
+                          }
+                        }}
+                        className={cn(
+                          "p-4 rounded-2xl border transition-all cursor-pointer group relative",
+                          isDaily 
+                            ? (isAnomAlert ? "bg-rose-50/80 border-rose-300 hover:border-rose-500 shadow-2xs" : "bg-emerald-50/70 border-emerald-200 hover:border-emerald-400")
+                            : isAnomAlert 
+                              ? "bg-rose-50/60 border-rose-200 hover:border-rose-400 hover:shadow-xs" 
+                              : "bg-slate-50 border-slate-100 hover:border-emerald-200"
+                        )}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                           <span className={cn(
+                             "text-[9px] font-black uppercase tracking-[0.15em] px-2 py-0.5 rounded flex items-center gap-1",
+                             isDaily && isAnomAlert ? "bg-rose-700 text-white shadow-2xs" :
+                             n.type === 'alert' ? "bg-rose-600 text-white shadow-2xs" : 
+                             n.type === 'success' ? "bg-emerald-100 text-emerald-700" : 
+                             isDaily ? "bg-emerald-700 text-white" : "bg-blue-100 text-blue-700"
+                           )}>
+                             {isAnomAlert && <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />}
+                             {isDaily ? (settings.language === 'fr' ? 'JOURNALIER AUTOMATISÉ' : 'DAILY AUTOMATED') : n.type}
+                           </span>
+                           <div className="flex items-center gap-1.5">
+                             <span className="text-[9px] font-bold text-slate-400">{n.time}</span>
+                             <button
+                               type="button"
+                               onClick={(e) => dismissSingleNotification(n.id, e)}
+                               className="p-0.5 text-slate-300 hover:text-slate-700 hover:bg-slate-200/80 rounded-md transition-colors cursor-pointer"
+                               title={settings.language === 'fr' ? 'Effacer cette notification' : 'Dismiss'}
+                             >
+                               <X className="w-3.5 h-3.5" />
+                             </button>
+                           </div>
+                        </div>
+                        <h4 className={cn(
+                          "font-bold text-sm mb-1 transition-colors",
+                          isAnomAlert ? "text-rose-950 group-hover:text-rose-700 font-extrabold" : "text-slate-800 group-hover:text-emerald-700"
+                        )}>
+                          {n.title}
+                        </h4>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium">{n.message}</p>
+                        {isAnomAlert && (
+                          <p className="text-[10px] font-bold text-rose-600 mt-2 flex items-center gap-1">
+                            <span>👉</span>
+                            <span>{settings.language === 'fr' ? 'Cliquer pour inspecter (le message s’efface)' : 'Click to inspect (auto clears)'}</span>
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
-              <div className="p-4 border-t border-slate-100 bg-slate-50/50">
-                <button className="w-full py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all">
-                  Tout marquer comme lu
+              <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && 'Notification' in window) {
+                      Notification.requestPermission().then(p => {
+                        if (p === 'granted') {
+                          new Notification(
+                            settings.language === 'fr' ? '🚨 ÉcoGrid : Alerte Bâtiment 2' : '🚨 EcoGrid: Building 2 Alert',
+                            { body: settings.language === 'fr' ? 'Surconsommation anormale de 286 kWh/j détectée (+28.4%). Bâtiment marqué en rouge.' : 'Abnormal consumption of 286 kWh/d detected (+28.4%). Building highlighted in red.' }
+                          );
+                        }
+                      });
+                    }
+                    triggerTestPushNotification();
+                  }}
+                  className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                >
+                  <Bell className="w-4 h-4 text-white" />
+                  <span>{settings.language === 'fr' ? 'Tester une alerte smartphone (avec sonnerie)' : 'Test phone alert (with chime)'}</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setIsNotificationsOpen(false);
+                    setHasViewedNotifications(true);
+                  }}
+                  className="w-full py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  {settings.language === 'fr' ? 'Fermer le centre' : 'Close center'}
                 </button>
               </div>
             </motion.div>

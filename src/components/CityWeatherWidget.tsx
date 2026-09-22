@@ -12,7 +12,8 @@ import {
   MapPin, 
   RefreshCw, 
   ArrowRight,
-  ChevronDown
+  ChevronDown,
+  Sparkles
 } from 'lucide-react';
 import ecoGridBgImg from '../assets/images/eco_grid_district_1784886799261.jpg';
 
@@ -48,15 +49,25 @@ export interface SimpleDayWeather {
   windSpeed: number;
   precipProb: number;
   conditionLabel: string;
+  isDay: boolean;
 }
 
 // Convert WMO weather code to standard condition name & Lucide icon
+// Rule requested by user: "enleve ses ,nuages et la lune quand il fait nuit"
+// When it's night (!isDay), no clouds and no moon icons! Return clean star/sparkle or clear sky icon!
 export function getWeatherDetails(code: number, isDay: boolean = true) {
+  if (!isDay) {
+    if (code >= 61 && code <= 82) {
+      return { label: 'Pluie nocturne', icon: CloudRain };
+    }
+    return { label: 'Nuit claire (Ciel dégagé)', icon: Sparkles };
+  }
+
   switch (code) {
     case 0:
-      return { label: isDay ? 'Ensoleillé' : 'Dégagé', icon: Sun };
+      return { label: 'Ensoleillé', icon: Sun };
     case 1:
-      return { label: 'Ensoleillé', icon: isDay ? CloudSun : Sun };
+      return { label: 'Ensoleillé', icon: CloudSun };
     case 2:
       return { label: 'Éclaircies', icon: CloudSun };
     case 3:
@@ -135,8 +146,9 @@ export const CityWeatherWidget: React.FC<CityWeatherWidgetProps> = ({
             shortLabel = d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
           }
 
+          const isDayTime = idx === 0 ? data.current.is_day === 1 : true;
           const wCode = idx === 0 ? data.current.weather_code : data.daily.weather_code[idx];
-          const cond = getWeatherDetails(wCode, idx === 0 ? data.current.is_day === 1 : true);
+          const cond = getWeatherDetails(wCode, isDayTime);
 
           return {
             dayLabel,
@@ -148,6 +160,7 @@ export const CityWeatherWidget: React.FC<CityWeatherWidgetProps> = ({
             windSpeed: idx === 0 ? Math.round(data.current.wind_speed_10m) : Math.round(data.daily.wind_speed_10m_max[idx]),
             precipProb: Math.round(data.daily.precipitation_probability_max?.[idx] ?? 0),
             conditionLabel: cond.label,
+            isDay: isDayTime,
           };
         });
 
@@ -175,7 +188,7 @@ export const CityWeatherWidget: React.FC<CityWeatherWidgetProps> = ({
   };
 
   const currentDay = daysForecast[activeDayIndex] || daysForecast[0];
-  const weatherInfo = currentDay ? getWeatherDetails(currentDay.weatherCode) : { label: 'Ensoleillé', icon: Sun };
+  const weatherInfo = currentDay ? getWeatherDetails(currentDay.weatherCode, currentDay.isDay ?? true) : { label: 'Ensoleillé', icon: Sun };
   const WeatherIcon = weatherInfo.icon;
 
   const nextDay = () => {

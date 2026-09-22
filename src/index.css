@@ -54,11 +54,6 @@
   to { transform: rotate(360deg); }
 }
 
-@keyframes cloudDrift {
-  from { transform: translateX(-100px); }
-  to { transform: translateX(100vw); }
-}
-
 @keyframes windParticle {
   0% { transform: translateX(-10%); opacity: 0; }
   20% { opacity: 0.8; }
