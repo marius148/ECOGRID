@@ -46,17 +46,5 @@
 }
 
 .glass-card {
-  @apply bg-white/80 backdrop-blur-md border border-white shadow-xl shadow-slate-200/50;
-}
-
-@keyframes turbineSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes windParticle {
-  0% { transform: translateX(-10%); opacity: 0; }
-  20% { opacity: 0.8; }
-  80% { opacity: 0.8; }
-  100% { transform: translateX(110vw); opacity: 0; }
+  @apply bg-white border border-slate-100 shadow-xl shadow-slate-200/50;
 }

@@ -19,7 +19,7 @@ import {
   Power,
   Sliders,
   Thermometer,
-  Wind,
+  Fan,
   Sun,
   Shield,
   Clock,
@@ -748,7 +748,7 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
           <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200/60 flex items-center justify-between">
             <div>
               <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold">
-                <Wind className="w-3.5 h-3.5 text-teal-600" />
+                <Fan className="w-3.5 h-3.5 text-teal-600 animate-spin" style={{ animationDuration: '4s' }} />
                 <span>{language === 'fr' ? 'Débit VMC / CTA' : 'Ventilation Rate'}</span>
               </div>
               <div className="text-lg font-bold font-mono text-slate-900 mt-0.5">

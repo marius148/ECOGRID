@@ -33,7 +33,6 @@ import {
   Clock,
   Battery,
   Activity,
-  Wind,
   Sun,
   Globe,
   Thermometer,
@@ -513,7 +512,7 @@ const LoginView = ({
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 font-sans relative overflow-hidden bg-slate-900">
-      <GlobalWindFarmBackground skyTheme="auto" />
+      <GlobalDistrictBackground skyTheme="auto" />
       <div className="w-full max-w-lg bg-white/95 rounded-[2.5rem] p-8 sm:p-10 shadow-2xl border border-white/80 flex flex-col items-center relative z-10">
         <div className="mb-4">
           <CiiEnergieLogo align="center" size="lg" />
@@ -1041,21 +1040,19 @@ const EnergyMixCard = React.memo(({ language, buildingsList, isGlobal, selectedB
       ? (buildingsList.filter(b => b.status === "OPTIMAL").length / buildingsCount)
       : (selectedBuilding?.status === "OPTIMAL" ? 1 : 0.5);
 
-    const solarPct = Math.min(50, 20 + (greenScore * 25));
-    const windPct = Math.min(30, 10 + (greenScore * 15));
-    const gridPct = 100 - solarPct - windPct - 5;
-    const cogenerationPct = 5;
+    const solarPct = Math.min(65, 30 + (greenScore * 30));
+    const cogenerationPct = 8;
+    const gridPct = Math.max(10, 100 - solarPct - cogenerationPct);
 
     return [
       { name: language === 'fr' ? 'Solaire' : 'Solar', value: solarPct, color: '#10b981', gradient: 'url(#solarGradient)' },
-      { name: language === 'fr' ? 'Éolien' : 'Wind', value: windPct, color: '#7ec22a', gradient: 'url(#windGradient)' },
       { name: language === 'fr' ? 'Réseau' : 'Grid', value: gridPct, color: '#334155', gradient: 'url(#gridGradient)' },
-      { name: 'Cogénération', value: cogenerationPct, color: '#f59e0b', gradient: 'url(#cogenGradient)' }
+      { name: language === 'fr' ? 'Cogénération' : 'Cogeneration', value: cogenerationPct, color: '#f59e0b', gradient: 'url(#cogenGradient)' }
     ];
   }, [language, buildingsList, isGlobal, selectedBuilding]);
 
   return (
-    <div className="bg-white/85 backdrop-blur-md rounded-2xl border border-white/60 shadow-md p-4 sm:p-5 flex flex-col gap-4">
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md p-4 sm:p-5 flex flex-col gap-4">
       <div className="flex justify-between items-start">
         <div className="min-w-0 pr-4">
           <h3 className="text-lg font-bold font-display text-slate-800 truncate">{language === 'fr' ? "Réseau Mixte" : 'Mix Network'}</h3>
@@ -1077,10 +1074,6 @@ const EnergyMixCard = React.memo(({ language, buildingsList, isGlobal, selectedB
                 <linearGradient id="solarGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
                   <stop offset="100%" stopColor="#059669" stopOpacity={1} />
-                </linearGradient>
-                <linearGradient id="windGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#7ec22a" stopOpacity={1} />
-                  <stop offset="100%" stopColor="#65a30d" stopOpacity={1} />
                 </linearGradient>
                 <linearGradient id="gridGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#475569" stopOpacity={1} />
@@ -1151,14 +1144,10 @@ const WEATHER_CITIES = [
   { id: 'lyon', name: 'Lyon (Rhône-Alpes)', lat: 45.7640, lon: 4.8357, region: 'Rhône-Alpes' },
 ];
 
-export const GlobalWindFarmBackground = React.memo(({
-  windSpeed = 28,
+export const GlobalDistrictBackground = React.memo(({
   skyTheme = 'auto',
 }: {
-  windSpeed?: number;
   skyTheme?: 'auto' | 'sunrise' | 'day' | 'sunset' | 'night';
-  rotationDuration?: number;
-  cloudCover?: number;
 }) => {
   // Real-time hour calculation that updates automatically
   const [currentHour, setCurrentHour] = useState(() => new Date().getHours());
@@ -1216,540 +1205,8 @@ export const GlobalWindFarmBackground = React.memo(({
     </div>
   );
 });
-GlobalWindFarmBackground.displayName = 'GlobalWindFarmBackground';
+GlobalDistrictBackground.displayName = 'GlobalDistrictBackground';
 
-const WindTurbineFieldCard = React.memo(({ 
-  language,
-  isBgActive,
-  setIsBgActive
-}: { 
-  language: string;
-  isBgActive?: boolean;
-  setIsBgActive?: (val: boolean) => void;
-}) => {
-  const isFr = language === 'fr';
-
-  const [selectedCityId, setSelectedCityId] = useState<string>('bordeaux');
-  const [windSpeed, setWindSpeed] = useState<number>(34);
-  const [temp, setTemp] = useState<number>(22);
-  const [cloudCover, setCloudCover] = useState<number>(25);
-  const [windDir, setWindDir] = useState<number>(180);
-  const [humidity, setHumidity] = useState<number>(55);
-  const [isDayApi, setIsDayApi] = useState<boolean>(true);
-  
-  const [skyMode, setSkyMode] = useState<'auto' | 'sunrise' | 'day' | 'sunset' | 'night'>('auto');
-  const [isLiveWind, setIsLiveWind] = useState<boolean>(true);
-  const [isApiLoading, setIsApiLoading] = useState<boolean>(false);
-  const [lastUpdated, setLastUpdated] = useState<string>('');
-
-  // Fetch real live weather from Open-Meteo
-  const fetchCityWeather = React.useCallback(async (cityId: string) => {
-    const city = WEATHER_CITIES.find(c => c.id === cityId) || WEATHER_CITIES[0];
-    setIsApiLoading(true);
-    try {
-      const res = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,relative_humidity_2m,is_day,cloud_cover,wind_speed_10m,wind_direction_10m`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.current) {
-          setWindSpeed(Math.round(data.current.wind_speed_10m || 28));
-          setTemp(Math.round(data.current.temperature_2m || 20));
-          setCloudCover(data.current.cloud_cover ?? 30);
-          setWindDir(data.current.wind_direction_10m ?? 180);
-          setHumidity(data.current.relative_humidity_2m ?? 50);
-          setIsDayApi(data.current.is_day === 1);
-          setLastUpdated(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
-        }
-      }
-    } catch (e) {
-      console.warn("Weather API fallback used");
-    } finally {
-      setIsApiLoading(false);
-    }
-  }, []);
-
-  // Fetch on mount or city change
-  useEffect(() => {
-    fetchCityWeather(selectedCityId);
-  }, [selectedCityId, fetchCityWeather]);
-
-  // Periodic ambient fluctuation if Live Mode ON
-  useEffect(() => {
-    if (!isLiveWind) return;
-    const interval = setInterval(() => {
-      setWindSpeed(prev => {
-        const delta = (Math.random() - 0.48) * 2.8;
-        const next = Math.max(0, Math.min(95, prev + delta));
-        return parseFloat(next.toFixed(1));
-      });
-    }, 2800);
-    return () => clearInterval(interval);
-  }, [isLiveWind]);
-
-  // Calculate effective sky theme
-  const effectiveSkyTheme = React.useMemo<'sunrise' | 'day' | 'sunset' | 'night'>(() => {
-    if (skyMode !== 'auto') return skyMode;
-    const hour = new Date().getHours();
-    if (hour >= 6 && hour < 9) return 'sunrise';
-    if (hour >= 9 && hour < 18) return 'day';
-    if (hour >= 18 && hour < 22) return 'sunset';
-    return 'night';
-  }, [skyMode]);
-
-  // Power output calculations
-  const powerMw = React.useMemo(() => {
-    if (windSpeed < 3 || windSpeed > 90) return 0;
-    if (windSpeed >= 45) return 7.5;
-    const ratio = windSpeed / 45;
-    return parseFloat((7.5 * Math.pow(ratio, 2.7)).toFixed(2));
-  }, [windSpeed]);
-
-  const co2SavedPerHour = Math.round(powerMw * 1000 * 0.42);
-  const capacityFactor = Math.min(100, Math.round((powerMw / 7.5) * 100));
-
-  // Blade rotation duration in seconds per turn
-  const rotationDuration = React.useMemo(() => {
-    if (windSpeed < 2 || windSpeed > 90) return 0;
-    const sec = 14 / (windSpeed / 5);
-    return Math.max(0.35, parseFloat(sec.toFixed(2)));
-  }, [windSpeed]);
-
-  // Wind speed label status
-  const windStatusLabel = React.useMemo(() => {
-    if (windSpeed < 3) return isFr ? "Calme plat" : "Calm";
-    if (windSpeed < 15) return isFr ? "Vent doux" : "Light breeze";
-    if (windSpeed < 35) return isFr ? "Brise optimale" : "Optimal wind";
-    if (windSpeed < 65) return isFr ? "Vent fort" : "Strong wind";
-    if (windSpeed <= 90) return isFr ? "Bourrasques" : "High gusts";
-    return isFr ? "Mise en sécurité" : "Storm shutdown";
-  }, [windSpeed, isFr]);
-
-  const activeCity = WEATHER_CITIES.find(c => c.id === selectedCityId) || WEATHER_CITIES[0];
-
-  return (
-    <div className="mb-10 text-slate-900 font-sans">
-      <style>{`
-        @keyframes turbineSpin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes windParticle {
-          0% { transform: translateX(-30%) translateY(0px); opacity: 0; }
-          20% { opacity: 0.8; }
-          80% { opacity: 0.8; }
-          100% { transform: translateX(130%) translateY(10px); opacity: 0; }
-        }
-      `}</style>
-
-      {/* Luminora Sub-Header Bar with Navigation & Live Weather Selectors */}
-      <div className="bg-white rounded-2xl p-3 sm:p-4 mb-4 border border-slate-200/80 shadow-sm flex flex-col md:flex-row justify-between items-center gap-3">
-        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
-              <Zap className="w-5 h-5 fill-current" />
-            </div>
-            <span className="text-xl font-extrabold tracking-tight text-emerald-600 font-display">Luminora</span>
-          </div>
-
-          <div className="hidden xl:flex items-center gap-5 text-xs font-semibold text-slate-600 ml-6">
-            <span className="text-slate-900 font-bold border-b-2 border-emerald-500 pb-0.5 cursor-pointer">Dashboard</span>
-            <span className="hover:text-emerald-600 cursor-pointer transition-colors">Project</span>
-            <span className="hover:text-emerald-600 cursor-pointer transition-colors">Analytics</span>
-            <span className="hover:text-emerald-600 cursor-pointer transition-colors flex items-center gap-1">Reports <ChevronDown className="w-3.5 h-3.5" /></span>
-            <span className="hover:text-emerald-600 cursor-pointer transition-colors flex items-center gap-1">Asset <ChevronDown className="w-3.5 h-3.5" /></span>
-          </div>
-        </div>
-
-        {/* Live Controls */}
-        <div className="flex items-center gap-2 flex-wrap w-full md:w-auto justify-between sm:justify-end">
-          <div className="relative">
-            <select
-              value={selectedCityId}
-              onChange={(e) => setSelectedCityId(e.target.value)}
-              className="bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-xs font-bold rounded-xl px-2.5 sm:px-3 py-2 outline-none border border-slate-200 cursor-pointer pr-7 transition-all"
-            >
-              {WEATHER_CITIES.map(c => (
-                <option key={c.id} value={c.id}>📍 {c.name}</option>
-              ))}
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
-
-          <button
-            onClick={() => fetchCityWeather(selectedCityId)}
-            disabled={isApiLoading}
-            className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200 active:scale-95 transition-all"
-            title={isFr ? "Actualiser météo" : "Refresh weather"}
-          >
-            <RefreshCw className={cn("w-4 h-4", isApiLoading && "animate-spin text-emerald-600")} />
-          </button>
-
-          {/* Sky Theme Switcher */}
-          <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-            {[
-              { id: 'auto', label: '⚡ Auto' },
-              { id: 'sunrise', label: '🌅' },
-              { id: 'day', label: '☀️' },
-              { id: 'sunset', label: '🌇' },
-              { id: 'night', label: '✨' },
-            ].map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setSkyMode(m.id as any)}
-                className={cn(
-                  "px-1.5 sm:px-2 py-1 text-xs rounded-lg transition-all",
-                  skyMode === m.id ? "bg-white shadow-sm text-emerald-600 font-bold" : "text-slate-500 hover:text-slate-900"
-                )}
-                title={m.id}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-
-          {setIsBgActive && (
-            <button
-              onClick={() => setIsBgActive(!isBgActive)}
-              className={cn(
-                "text-xs font-bold px-3 py-2 rounded-xl transition-all flex items-center gap-1.5 border",
-                isBgActive 
-                  ? "bg-emerald-600 text-white border-emerald-500 shadow-sm" 
-                  : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
-              )}
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-              {isFr ? (isBgActive ? "Plein écran : ON" : "Fond : Inactif") : (isBgActive ? "Full Sky: ON" : "Sky: Off")}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main Luminora Hero Card (Sky + Landscape + Giant Wind Turbine) */}
-      <div className="relative rounded-[2.5rem] overflow-hidden shadow-xl border border-slate-200/80 bg-gradient-to-b from-sky-400 via-sky-300 to-emerald-100 min-h-[380px] sm:min-h-[420px] p-6 sm:p-10 flex flex-col justify-between text-slate-900">
-        
-        {/* Dynamic Sky Ambient Layer */}
-        <div className={cn(
-          "absolute inset-0 transition-all duration-1000 pointer-events-none z-0",
-          effectiveSkyTheme === 'day' && "bg-gradient-to-b from-sky-400 via-sky-200 to-emerald-200/90",
-          effectiveSkyTheme === 'sunset' && "bg-gradient-to-b from-indigo-900 via-rose-700 to-amber-500",
-          effectiveSkyTheme === 'night' && "bg-gradient-to-b from-slate-950 via-slate-900 to-emerald-950",
-          effectiveSkyTheme === 'sunrise' && "bg-gradient-to-b from-indigo-950 via-rose-800 to-amber-400"
-        )} />
-
-        {/* Foreground 3D Rolling Green Landscape & Giant Wind Turbines */}
-        <div className="absolute bottom-0 inset-x-0 h-[280px] sm:h-[340px] pointer-events-none z-10">
-          <svg className="w-full h-full" viewBox="0 0 1000 350" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="lumHill1" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={effectiveSkyTheme === 'night' ? '#047857' : '#34d399'} />
-                <stop offset="100%" stopColor={effectiveSkyTheme === 'night' ? '#022c22' : '#10b981'} />
-              </linearGradient>
-              <linearGradient id="lumHill2" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={effectiveSkyTheme === 'night' ? '#065f46' : '#10b981'} />
-                <stop offset="100%" stopColor={effectiveSkyTheme === 'night' ? '#011612' : '#047857'} />
-              </linearGradient>
-              <linearGradient id="lumTower" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#f8fafc" />
-                <stop offset="50%" stopColor="#ffffff" />
-                <stop offset="100%" stopColor="#cbd5e1" />
-              </linearGradient>
-            </defs>
-
-            {/* Back Hills */}
-            <path d="M 0 240 Q 250 180 550 210 T 1000 190 L 1000 350 L 0 350 Z" fill="url(#lumHill1)" opacity="0.85" />
-            
-            {/* Front Hills */}
-            <path d="M 0 270 Q 300 200 650 250 T 1000 220 L 1000 350 L 0 350 Z" fill="url(#lumHill2)" />
-
-            {/* Background Small Turbines */}
-            <g transform="translate(180, 210) scale(0.65)">
-              <polygon points="-4,0 4,0 6,100 -6,100" fill="url(#lumTower)" />
-              <ellipse cx="0" cy="0" rx="5" ry="3" fill="#ffffff" />
-              <g style={{ transformOrigin: '0px 0px', animation: rotationDuration > 0 ? `turbineSpin ${rotationDuration * 1.1}s linear infinite` : 'none' }}>
-                {[0, 120, 240].map((deg) => (
-                  <path key={deg} d="M 0 0 L -2 -50 Q 0 -58 2 -50 Z" fill="#ffffff" transform={`rotate(${deg})`} />
-                ))}
-              </g>
-            </g>
-
-            {/* MAIN GIANT TURBINE ON THE RIGHT (Matching Luminora reference photo) */}
-            <g transform="translate(730, 220)">
-              {/* Tower */}
-              <polygon points="-9,0 9,0 14,240 -14,240" fill="url(#lumTower)" />
-              <ellipse cx="0" cy="0" rx="12" ry="7" fill="#ffffff" />
-              <circle cx="0" cy="-5" r="3" fill="#ef4444" className="animate-pulse" />
-              
-              {/* Spinning Blades */}
-              <g style={{ transformOrigin: '0px 0px', animation: rotationDuration > 0 ? `turbineSpin ${rotationDuration}s linear infinite` : 'none' }}>
-                {[0, 120, 240].map((deg) => (
-                  <path key={deg} d="M 0 0 L -5 -160 Q 0 -180 5 -160 Z" fill="#ffffff" transform={`rotate(${deg})`} filter="drop-shadow(0px 2px 4px rgba(0,0,0,0.15))" />
-                ))}
-                <circle cx="0" cy="0" r="7" fill="#0f172a" />
-              </g>
-            </g>
-          </svg>
-        </div>
-
-        {/* Content Overlay (Left Hand Side) */}
-        <div className="relative z-20 max-w-xl">
-          <h1 className={cn(
-            "text-xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold font-display tracking-tight mb-2 sm:mb-3 leading-tight break-words",
-            effectiveSkyTheme === 'night' ? "text-white" : "text-slate-900"
-          )}>
-            {isFr ? "Tableau de Bord Portefeuille Énergies" : "Renewal Energy Portfolio Dashboard"}
-          </h1>
-          
-          <p className={cn(
-            "text-xs sm:text-sm font-medium mb-4 sm:mb-6 max-w-lg leading-relaxed",
-            effectiveSkyTheme === 'night' ? "text-slate-300" : "text-slate-700"
-          )}>
-            {isFr
-              ? "Obtenez des analyses en temps réel sur l'ensemble de vos actifs renouvelables, pour des décisions optimisées et une performance accrue."
-              : "Gain real-time insights across global renewable energy investments, enabling smarter decisions, optimized performance"}
-          </p>
-
-          {/* Segmented Generation Progress Bar (Pills style from Luminora design) */}
-          <div className="mb-6">
-            <div className="flex items-center gap-1 sm:gap-1.5 mb-2">
-              {[...Array(20)].map((_, idx) => {
-                const isActive = idx < Math.round((capacityFactor / 100) * 20);
-                return (
-                  <div 
-                    key={idx} 
-                    className={cn(
-                      "h-6 sm:h-7 flex-1 rounded-md transition-all duration-500",
-                      isActive 
-                        ? "bg-emerald-500 shadow-sm shadow-emerald-500/50" 
-                        : "bg-white/40 backdrop-blur-sm"
-                    )} 
-                  />
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Hero Metrics Row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-2">
-            <div>
-              <p className={cn("text-[10px] font-bold uppercase tracking-wider", effectiveSkyTheme === 'night' ? "text-slate-400" : "text-slate-600")}>
-                {isFr ? "Production Actuelle" : "Current Generation"}
-              </p>
-              <p className={cn("text-lg sm:text-xl font-extrabold font-mono mt-0.5", effectiveSkyTheme === 'night' ? "text-emerald-400" : "text-slate-900")}>
-                {Math.round(powerMw * 3640 || 27300)} <span className="text-xs font-semibold">KW</span>
-              </p>
-            </div>
-
-            <div>
-              <p className={cn("text-[10px] font-bold uppercase tracking-wider", effectiveSkyTheme === 'night' ? "text-slate-400" : "text-slate-600")}>
-                {isFr ? "Fréquence Réseau" : "Grid Frequency"}
-              </p>
-              <p className={cn("text-lg sm:text-xl font-extrabold font-mono mt-0.5", effectiveSkyTheme === 'night' ? "text-emerald-400" : "text-slate-900")}>
-                50.02 <span className="text-xs font-semibold">HZ</span>
-              </p>
-            </div>
-
-            <div>
-              <p className={cn("text-[10px] font-bold uppercase tracking-wider", effectiveSkyTheme === 'night' ? "text-slate-400" : "text-slate-600")}>
-                {isFr ? "Facteur de Charge" : "Load Factor"}
-              </p>
-              <p className={cn("text-lg sm:text-xl font-extrabold font-mono mt-0.5", effectiveSkyTheme === 'night' ? "text-emerald-400" : "text-slate-900")}>
-                {capacityFactor > 0 ? capacityFactor : 87.3}%
-              </p>
-            </div>
-
-            <div>
-              <p className={cn("text-[10px] font-bold uppercase tracking-wider", effectiveSkyTheme === 'night' ? "text-slate-400" : "text-slate-600")}>
-                {isFr ? "Rendement Système" : "System Efficiency"}
-              </p>
-              <p className={cn("text-lg sm:text-xl font-extrabold font-mono mt-0.5", effectiveSkyTheme === 'night' ? "text-emerald-400" : "text-slate-900")}>
-                94.8%
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Live Wind Speed Slider Footer inside Hero */}
-        <div className="relative z-20 mt-8 pt-4 border-t border-slate-900/10 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs font-bold w-full sm:w-auto">
-            <Wind className="w-4 h-4 text-emerald-600 animate-pulse" />
-            <span className={effectiveSkyTheme === 'night' ? "text-slate-300" : "text-slate-800"}>
-              {isFr ? "Vitesse Vent :" : "Wind Speed:"} <span className="text-emerald-600 font-mono text-sm">{windSpeed} km/h</span>
-            </span>
-          </div>
-
-          <div className="w-full sm:w-64">
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value={windSpeed}
-              onChange={(e) => {
-                setWindSpeed(parseFloat(e.target.value));
-                setIsLiveWind(false);
-              }}
-              className="w-full h-1.5 bg-slate-900/20 rounded-lg appearance-none cursor-pointer accent-emerald-600"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* FOUR LUMINORA FEATURE CARDS Floating Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mt-6">
-        
-        {/* CARD 1: OVERVIEW */}
-        <div className="bg-white rounded-[2rem] p-6 border border-slate-200/80 shadow-md relative overflow-hidden flex flex-col justify-between hover:shadow-lg transition-all">
-          <div className="relative z-10">
-            <h3 className="text-lg font-bold text-slate-800 mb-4">{isFr ? "Vue d'Ensemble" : "Overview"}</h3>
-            
-            <div className="space-y-3">
-              <div>
-                <p className="text-2xl font-black text-slate-900 font-display">973 <span className="text-sm font-semibold text-slate-500">M€</span></p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isFr ? "Revenu Total" : "Total Revenue"}</p>
-              </div>
-
-              <div>
-                <p className="text-xl font-bold text-slate-900 font-display">2.16 €</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isFr ? "Revenu par kWh" : "Revenue per kWh"}</p>
-              </div>
-
-              <div>
-                <p className="text-lg font-bold text-emerald-600 font-display">18.7%</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isFr ? "Retour sur Invest. (ROI)" : "ROI"}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Background Watermark Euro/Currency Symbol */}
-          <div className="absolute right-3 bottom-2 text-slate-100 font-black text-8xl pointer-events-none select-none z-0">
-            €
-          </div>
-        </div>
-
-        {/* CARD 2: SOLAR */}
-        <div className="bg-white rounded-[2rem] p-6 border border-slate-200/80 shadow-md relative overflow-hidden flex justify-between items-end hover:shadow-lg transition-all">
-          <div className="relative z-10 space-y-3">
-            <h3 className="text-lg font-bold text-slate-800 mb-1">{isFr ? "Solaire" : "Solar"}</h3>
-            
-            <div>
-              <p className="text-2xl font-black text-slate-900 font-display">2220 <span className="text-sm font-semibold text-slate-500">MWh</span></p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isFr ? "Production Totale" : "Total Generation"}</p>
-            </div>
-
-            <div>
-              <p className="text-xl font-bold text-slate-900 font-display">2220 <span className="text-xs text-slate-500">MT</span></p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isFr ? "CO₂ Économisé" : "CO₂ Saved"}</p>
-            </div>
-
-            <div>
-              <p className="text-lg font-bold text-emerald-600 font-display">82.9%</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isFr ? "Ratio Performance" : "Performance Ratio"}</p>
-            </div>
-          </div>
-
-          {/* 3D Solar Panel Asset Illustration */}
-          <div className="relative z-10 w-28 h-28 flex items-center justify-center">
-            <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
-              {/* Stand */}
-              <path d="M 50 65 L 50 85 M 35 85 L 65 85" stroke="#94a3b8" strokeWidth="6" strokeLinecap="round" />
-              {/* Solar Panel Surface */}
-              <polygon points="20,35 80,30 90,65 10,70" fill="#2563eb" stroke="#1d4ed8" strokeWidth="3" />
-              {/* Cell Grids */}
-              <line x1="35" y1="34" x2="30" y2="68" stroke="#ffffff" strokeWidth="1.5" opacity="0.8" />
-              <line x1="50" y1="32" x2="50" y2="67" stroke="#ffffff" strokeWidth="1.5" opacity="0.8" />
-              <line x1="65" y1="31" x2="70" y2="66" stroke="#ffffff" strokeWidth="1.5" opacity="0.8" />
-              <line x1="17" y1="47" x2="84" y2="42" stroke="#ffffff" strokeWidth="1.5" opacity="0.8" />
-              <line x1="14" y1="58" x2="87" y2="53" stroke="#ffffff" strokeWidth="1.5" opacity="0.8" />
-              {/* Gloss Shine */}
-              <polygon points="22,36 45,34 30,68 12,69" fill="#ffffff" opacity="0.25" />
-            </svg>
-          </div>
-        </div>
-
-        {/* CARD 3: WIND */}
-        <div className="bg-white rounded-[2rem] p-6 border border-slate-200/80 shadow-md relative overflow-hidden flex justify-between items-end hover:shadow-lg transition-all">
-          <div className="relative z-10 space-y-3">
-            <h3 className="text-lg font-bold text-slate-800 mb-1">{isFr ? "Éolien" : "Wind"}</h3>
-            
-            <div>
-              <p className="text-2xl font-black text-slate-900 font-display">2275 <span className="text-sm font-semibold text-slate-500">MWh</span></p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isFr ? "Production Totale" : "Total Generation"}</p>
-            </div>
-
-            <div>
-              <p className="text-xl font-bold text-slate-900 font-display">17 744 <span className="text-xs text-slate-500">MT</span></p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isFr ? "CO₂ Économisé" : "CO₂ Saved"}</p>
-            </div>
-
-            <div>
-              <p className="text-lg font-bold text-emerald-600 font-display">35.7%</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isFr ? "Facteur Charge Moyen" : "Average PLF"}</p>
-            </div>
-          </div>
-
-          {/* 3D Animated Wind Turbine Asset Illustration (Green Blades) */}
-          <div className="relative z-10 w-28 h-28 flex items-center justify-center">
-            <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
-              {/* Breezy swirl lines */}
-              <path d="M 10 30 Q 25 25 35 30" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" fill="none" />
-              <path d="M 15 42 Q 28 38 40 42" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" fill="none" />
-              {/* Stand */}
-              <polygon points="47,45 53,45 55,90 45,90" fill="#64748b" />
-              <circle cx="50" cy="45" r="4" fill="#334155" />
-              {/* Green Spinning Blades */}
-              <g style={{ transformOrigin: '50px 45px', animation: rotationDuration > 0 ? `turbineSpin ${rotationDuration}s linear infinite` : 'none' }}>
-                {[0, 120, 240].map((deg) => (
-                  <path key={deg} d="M 50 45 L 47 15 Q 50 10 53 15 Z" fill="#22c55e" transform={`rotate(${deg} 50 45)`} />
-                ))}
-                <circle cx="50" cy="45" r="5" fill="#15803d" />
-              </g>
-            </svg>
-          </div>
-        </div>
-
-        {/* CARD 4: REPORT */}
-        <div className="bg-white rounded-[2rem] p-6 border border-slate-200/80 shadow-md relative overflow-hidden flex justify-between items-end hover:shadow-lg transition-all">
-          <div className="relative z-10 space-y-3">
-            <h3 className="text-lg font-bold text-slate-800 mb-1">{isFr ? "Rapports" : "Report"}</h3>
-            
-            <div>
-              <p className="text-2xl font-black text-slate-900 font-display">24</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isFr ? "Rapports Actifs" : "Active Reports"}</p>
-            </div>
-
-            <div>
-              <p className="text-xl font-bold text-slate-900 font-display">147</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isFr ? "Téléchargements" : "Total Downloads"}</p>
-            </div>
-
-            <div>
-              <p className="text-lg font-bold text-emerald-600 font-display">12</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isFr ? "Partagés" : "Shared Reports"}</p>
-            </div>
-          </div>
-
-          {/* 3D Green Report Organizer Folder Asset Illustration */}
-          <div className="relative z-10 w-28 h-28 flex items-center justify-center">
-            <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
-              {/* Holder Container */}
-              <path d="M 20 50 L 25 85 L 85 85 L 90 50 Z" fill="#84cc16" stroke="#65a30d" strokeWidth="3" />
-              {/* Colored Reports inside */}
-              <rect x="32" y="30" width="12" height="40" rx="3" fill="#38bdf8" />
-              <rect x="48" y="20" width="12" height="50" rx="3" fill="#facc15" />
-              <rect x="64" y="38" width="12" height="32" rx="3" fill="#f87171" />
-              {/* Front rim */}
-              <path d="M 20 50 L 90 50 L 85 85 L 25 85 Z" fill="#84cc16" opacity="0.9" />
-              <line x1="20" y1="50" x2="90" y2="50" stroke="#bef264" strokeWidth="3" />
-            </svg>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  );
-});
-WindTurbineFieldCard.displayName = 'WindTurbineFieldCard';
 
 const BuildingConsumptionGraphCard = React.memo(({ 
   buildingsList, 
@@ -2774,22 +2231,6 @@ const BuildingsView = ({
   lastSyncTime?: string;
   onForceSync?: () => void;
 }) => {
-  const [anomalyFilter, setAnomalyFilter] = useState<'ALL' | 'HIGH' | 'LOW' | 'OPTIMAL'>('ALL');
-
-  const overCount = buildingsList.filter(b => parseEnergy(b.consumption) > 200 || b.status === 'ALERTE').length;
-  const underCount = buildingsList.filter(b => parseEnergy(b.consumption) < 50).length;
-  const optimalCount = buildingsList.filter(b => parseEnergy(b.consumption) >= 50 && parseEnergy(b.consumption) <= 200 && b.status !== 'ALERTE').length;
-
-  const filteredBuildings = React.useMemo(() => {
-    return buildingsList.filter(b => {
-      const kwh = parseEnergy(b.consumption);
-      if (anomalyFilter === 'HIGH') return kwh > 200 || b.status === 'ALERTE';
-      if (anomalyFilter === 'LOW') return kwh < 50;
-      if (anomalyFilter === 'OPTIMAL') return kwh >= 50 && kwh <= 200 && b.status !== 'ALERTE';
-      return true;
-    });
-  }, [buildingsList, anomalyFilter]);
-
   return (
     <ViewContainer>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
@@ -2833,74 +2274,8 @@ const BuildingsView = ({
         </div>
       </div>
 
-      {/* Quick Filter Tabs for Anomalies */}
-      <div className="flex items-center gap-1.5 sm:gap-2 mb-6 overflow-x-auto pb-1.5 sm:flex-wrap no-scrollbar">
-        <button
-          onClick={() => setAnomalyFilter('ALL')}
-          className={cn(
-            "px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
-            anomalyFilter === 'ALL' 
-              ? "bg-slate-900 text-white shadow-xs" 
-              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-          )}
-        >
-          <span>{language === 'fr' ? 'Tous les bâtiments' : 'All buildings'}</span>
-          <span className={cn("px-1.5 py-0.5 rounded-full text-[10px]", anomalyFilter === 'ALL' ? "bg-slate-700 text-white" : "bg-slate-100 text-slate-600")}>
-            {buildingsList.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setAnomalyFilter('HIGH')}
-          className={cn(
-            "px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
-            anomalyFilter === 'HIGH' 
-              ? "bg-rose-600 text-white shadow-xs" 
-              : "bg-white text-rose-700 border border-rose-200 hover:bg-rose-50"
-          )}
-        >
-          <TrendingUp className="w-3.5 h-3.5" />
-          <span>{language === 'fr' ? 'Surconsommation' : 'High consumption'}</span>
-          <span className={cn("px-1.5 py-0.5 rounded-full text-[10px]", anomalyFilter === 'HIGH' ? "bg-rose-800 text-white" : "bg-rose-100 text-rose-700")}>
-            {overCount}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setAnomalyFilter('LOW')}
-          className={cn(
-            "px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
-            anomalyFilter === 'LOW' 
-              ? "bg-amber-600 text-white shadow-xs" 
-              : "bg-white text-amber-700 border border-amber-200 hover:bg-amber-50"
-          )}
-        >
-          <TrendingDown className="w-3.5 h-3.5" />
-          <span>{language === 'fr' ? 'Sous-consommation' : 'Abnormal low'}</span>
-          <span className={cn("px-1.5 py-0.5 rounded-full text-[10px]", anomalyFilter === 'LOW' ? "bg-amber-800 text-white" : "bg-amber-100 text-amber-800")}>
-            {underCount}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setAnomalyFilter('OPTIMAL')}
-          className={cn(
-            "px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap",
-            anomalyFilter === 'OPTIMAL' 
-              ? "bg-emerald-700 text-white shadow-xs" 
-              : "bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50"
-          )}
-        >
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>{language === 'fr' ? 'Nominale / Optimale' : 'Nominal / Optimal'}</span>
-          <span className={cn("px-1.5 py-0.5 rounded-full text-[10px]", anomalyFilter === 'OPTIMAL' ? "bg-emerald-900 text-white" : "bg-emerald-100 text-emerald-800")}>
-            {optimalCount}
-          </span>
-        </button>
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-        {filteredBuildings.map((b) => {
+        {buildingsList.map((b) => {
           const isSelected = selectedBuildingId === b.id.toString();
           const isAnom = isBuildingInAnomaly(b);
 
@@ -2909,12 +2284,12 @@ const BuildingsView = ({
               key={b.id} 
               onClick={() => onSelectBuilding?.(b.id.toString())}
               className={cn(
-                "rounded-2xl border p-4 md:p-5 shadow-sm transition-all group relative overflow-hidden flex flex-col justify-between cursor-pointer",
+                "rounded-2xl p-4 md:p-5 transition-all group relative overflow-hidden flex flex-col justify-between cursor-pointer bg-white",
                 isAnom 
-                  ? "border-2 border-rose-500 ring-2 ring-rose-500/40 bg-rose-50/40 shadow-md shadow-rose-100/70 hover:border-rose-600 hover:shadow-lg hover:shadow-rose-200/80" 
+                  ? "border-2 border-rose-500 ring-4 ring-rose-500/20 shadow-lg shadow-rose-950/10 hover:border-rose-600 hover:shadow-xl" 
                   : isSelected 
-                    ? "border-emerald-600 ring-2 ring-emerald-500/30 bg-emerald-50/15 shadow-md" 
-                    : "bg-white border-slate-200/60 hover:border-emerald-300 hover:shadow-md"
+                    ? "border-2 border-emerald-600 ring-4 ring-emerald-500/20 shadow-xl shadow-emerald-950/10" 
+                    : "border border-slate-200/80 hover:border-emerald-400 hover:shadow-md"
               )}
             >
               <div>
@@ -2982,50 +2357,10 @@ const BuildingsView = ({
                   {formatBuildingName(b.name, b.id)}
                 </h3>
 
-                {/* Anomaly Detection Status Banner */}
-                {(() => {
-                  const kwh = parseEnergy(b.consumption);
-                  if (isAnom || kwh > 200 || b.status === 'ALERTE') {
-                    return (
-                      <div className="mb-3 px-2.5 py-1.5 rounded-xl bg-rose-100 border-2 border-rose-300 text-rose-950 flex items-center justify-between gap-1.5 text-[11px] font-extrabold shadow-2xs">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <TrendingUp className="w-3.5 h-3.5 shrink-0 text-rose-600 animate-bounce" />
-                          <span className="truncate">{language === 'fr' ? '🔴 Dérive en surconsommation' : '🔴 Overconsumption drift'}</span>
-                        </div>
-                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-600 text-white shrink-0">
-                          {b.trend || '+28.4%'}
-                        </span>
-                      </div>
-                    );
-                  }
-                  if (kwh < 50) {
-                    return (
-                      <div className="mb-3 px-2.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-800 flex items-center justify-between gap-1.5 text-[11px] font-bold">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <TrendingDown className="w-3.5 h-3.5 shrink-0 text-amber-600" />
-                          <span className="truncate">{language === 'fr' ? 'Sous-conso suspecte' : 'Suspicious low intake'}</span>
-                        </div>
-                        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-200/80 text-amber-900 shrink-0">
-                          Télérelève
-                        </span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div className="mb-3 px-2.5 py-1 rounded-xl bg-emerald-50/70 border border-emerald-100 text-emerald-800 flex items-center justify-between gap-1.5 text-[11px] font-medium">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-600" />
-                        <span className="truncate">{language === 'fr' ? 'Conso nominale' : 'Nominal usage'}</span>
-                      </div>
-                      <span className="text-[9px] font-bold text-emerald-700 font-mono shrink-0">{b.economy || '15% éco'}</span>
-                    </div>
-                  );
-                })()}
-
                 {(b.powerWinterKw !== undefined || b.powerSummerKw !== undefined) && (
                   <div className={cn(
                     "rounded-xl p-2.5 mb-3 text-xs space-y-1 border",
-                    isAnom ? "bg-rose-100/60 border-rose-200" : "bg-slate-50/80 border-slate-100"
+                    isAnom ? "bg-rose-50 border-rose-200" : "bg-slate-50 border-slate-200/80"
                   )}>
                     <div className="flex justify-between text-slate-600">
                       <span>Besoin Hiver :</span>
@@ -3045,7 +2380,7 @@ const BuildingsView = ({
               
               <div>
                 <div className={cn(
-                  "grid grid-cols-2 gap-3 pt-3 border-t mb-3",
+                  "pt-3 border-t mb-3 flex items-center justify-between",
                   isAnom ? "border-rose-200" : "border-slate-100"
                 )}>
                   <div>
@@ -3053,9 +2388,7 @@ const BuildingsView = ({
                       "text-[9px] font-bold uppercase tracking-wider",
                       isAnom ? "text-rose-700 font-extrabold" : "text-slate-400"
                     )}>
-                      {isAnom 
-                        ? (language === 'fr' ? 'CONSO ÉLEC (ANOMALIE)' : 'ELEC CONS (ANOMALY)') 
-                        : (language === 'fr' ? 'CONSO ÉLEC' : 'ELEC CONS')}
+                      {language === 'fr' ? 'CONSO ÉLEC' : 'ELEC CONS'}
                     </p>
                     <p className={cn(
                       "text-xs font-mono inline-block mt-0.5",
@@ -3065,30 +2398,20 @@ const BuildingsView = ({
                     )}>
                       {parseEnergy(b.consumption).toLocaleString()} kWh/j
                     </p>
-                    {b.consumptionYearMwh && (
+                  </div>
+                  {b.consumptionYearMwh && (
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                        {language === 'fr' ? 'ANNUEL' : 'ANNUAL'}
+                      </p>
                       <p className={cn(
-                        "text-[10px] font-semibold font-mono",
-                        isAnom ? "text-rose-700" : "text-emerald-700"
+                        "text-xs font-semibold font-mono mt-0.5",
+                        isAnom ? "text-rose-700 font-bold" : "text-emerald-700"
                       )}>
                         {b.consumptionYearMwh} MWh/an
                       </p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'ÉCONOMIE' : 'SAVINGS'}</p>
-                    <p className={cn(
-                      "text-xs font-mono",
-                      isAnom ? "text-rose-600 font-bold" : "text-emerald-700 font-bold"
-                    )}>
-                      {b.economy || '15%'}
-                    </p>
-                    <p className={cn(
-                      "text-[10px] font-mono",
-                      isAnom ? "text-rose-600 font-bold" : "text-slate-500 font-medium"
-                    )}>
-                      {b.trend || '-1.2%'}
-                    </p>
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Boutons d'Action & Communication Croisée */}
@@ -3107,7 +2430,7 @@ const BuildingsView = ({
                         "py-1.5 px-2 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1 cursor-pointer",
                         isAnom 
                           ? "bg-rose-600 hover:bg-rose-700 text-white shadow-xs" 
-                          : "bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200/60"
+                          : "bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200"
                       )}
                       title="Voir au Tableau de Bord"
                     >
@@ -3120,7 +2443,7 @@ const BuildingsView = ({
                         onSelectBuilding?.(b.id.toString());
                         onNavigateView('gtb');
                       }}
-                      className="py-1.5 px-2 bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1 border border-slate-200/60 cursor-pointer"
+                      className="py-1.5 px-2 bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1 border border-slate-200 cursor-pointer"
                       title="Contrôles GTB de ce bâtiment"
                     >
                       <SlidersHorizontal className="w-3 h-3 text-emerald-600" />
@@ -3132,7 +2455,7 @@ const BuildingsView = ({
                         onSelectBuilding?.(b.id.toString());
                         onNavigateView('analytics');
                       }}
-                      className="py-1.5 px-2 bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1 border border-slate-200/60 cursor-pointer"
+                      className="py-1.5 px-2 bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1 border border-slate-200 cursor-pointer"
                       title="Analyses détaillées"
                     >
                       <BarChart3 className="w-3 h-3 text-emerald-600" />
@@ -3465,87 +2788,7 @@ const AnalyticsView = React.memo(({
             </div>
           </div>
         </div>
-      ) : (
-        /* Tableau comparatif des 10 bâtiments quand "Tout le Parc" est sélectionné */
-        <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs mb-6 overflow-hidden">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 font-display">
-                {language === 'fr' ? 'Comparatif Énergétique & Thermique des 10 Bâtiments' : 'Fleet Energy & Thermal Comparison (10 Buildings)'}
-              </h3>
-              <p className="text-xs text-slate-400 font-medium mt-0.5">
-                {language === 'fr' ? 'Supervision consolidée du parc immobilier' : 'Consolidated portfolio monitoring'}
-              </p>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[640px]">
-              <thead>
-                <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  <th className="pb-3 pl-2">Bâtiment</th>
-                  <th className="pb-3">Type</th>
-                  <th className="pb-3">Hiver (kW)</th>
-                  <th className="pb-3">Été (kW)</th>
-                  <th className="pb-3">Canicule (kW)</th>
-                  <th className="pb-3">Conso (kWh/j)</th>
-                  <th className="pb-3">Statut</th>
-                  <th className="pb-3 text-right pr-2">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100/70">
-                {buildingsList.map(b => {
-                  const isAnom = isBuildingInAnomaly(b);
-                  return (
-                    <tr key={b.id} className={cn(
-                      "transition",
-                      isAnom ? "bg-rose-50/70 hover:bg-rose-100/70 border-l-4 border-rose-600" : "hover:bg-slate-50/70"
-                    )}>
-                      <td className="py-3 pl-2 font-bold text-slate-800">
-                        <div className="flex items-center gap-1.5">
-                          {isAnom && <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse shrink-0" />}
-                          <span className={cn(isAnom ? "text-rose-950 font-extrabold" : "text-slate-800")}>
-                            {formatBuildingName(b.name, b.id)}
-                          </span>
-                        </div>
-                        <span className="block text-[10px] font-normal text-slate-400">{cleanBuildingLocation(b.location, b.id)}</span>
-                      </td>
-                      <td className="py-3 font-medium text-slate-600">{b.type || 'Tertiaire'}</td>
-                      <td className="py-3 font-bold text-sky-700">{b.powerWinterKw ?? '--'}</td>
-                      <td className="py-3 font-bold text-amber-600">{b.powerSummerKw ?? '--'}</td>
-                      <td className="py-3 font-bold text-rose-600">{b.powerHeatwaveKw ?? '--'}</td>
-                      <td className="py-3">
-                        <span className={cn(
-                          "font-mono inline-block",
-                          isAnom 
-                            ? "px-2 py-0.5 rounded-md bg-rose-200 text-rose-950 font-extrabold border border-rose-300 shadow-2xs" 
-                            : "font-semibold text-slate-800"
-                        )}>
-                          {parseEnergy(b.consumption).toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="py-3"><Tag status={b.status} /></td>
-                      <td className="py-3 text-right pr-2">
-                        <button
-                          onClick={() => onSelectBuilding?.(b.id.toString())}
-                          className={cn(
-                            "px-2.5 py-1 rounded-lg font-bold text-[11px] transition cursor-pointer",
-                            isAnom 
-                              ? "bg-rose-600 hover:bg-rose-700 text-white shadow-xs" 
-                              : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800"
-                          )}
-                        >
-                          {isAnom ? (language === 'fr' ? 'Inspecter' : 'Inspect') : (language === 'fr' ? 'Analyser' : 'Analyze')}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      ) : null}
     </ViewContainer>
   );
 });
@@ -5075,8 +4318,8 @@ export default function App() {
 
   return (
     <div className="flex h-dvh bg-slate-900 font-sans text-slate-900 overflow-hidden relative">
-      {/* Full site wind energy background image layer with dynamic time-of-day cycle & unblurred photo */}
-      <GlobalWindFarmBackground windSpeed={32} skyTheme="auto" />
+      {/* Full site eco-district architectural background layer with dynamic time-of-day cycle */}
+      <GlobalDistrictBackground skyTheme="auto" />
       {/* Modals for Add/Edit */}
       <AnimatePresence>
         {(isAddBuildingModalOpen || editingBuilding) && (
