@@ -48,3 +48,26 @@
 .glass-card {
   @apply bg-white border border-slate-100 shadow-xl shadow-slate-200/50;
 }
+
+/* Suppression du contour / cadre noir lors du clic sur les graphiques Recharts et éléments SVG */
+.recharts-wrapper,
+.recharts-wrapper *,
+.recharts-wrapper:focus,
+.recharts-wrapper:focus-visible,
+.recharts-surface,
+.recharts-surface *,
+.recharts-surface:focus,
+.recharts-surface:focus-visible,
+.recharts-responsive-container,
+.recharts-responsive-container *,
+.recharts-responsive-container:focus,
+.recharts-responsive-container:focus-visible,
+svg,
+svg:focus,
+svg:focus-visible,
+svg * {
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+

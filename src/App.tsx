@@ -1067,9 +1067,9 @@ const EnergyMixCard = React.memo(({ language, buildingsList, isGlobal, selectedB
       </div>
 
       <div className="flex flex-col items-center gap-4">
-        <div className="relative w-36 h-36 sm:w-40 sm:h-40 flex items-center justify-center">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+        <div className="relative w-36 h-36 sm:w-40 sm:h-40 flex items-center justify-center outline-none select-none">
+          <ResponsiveContainer width="100%" height="100%" style={{ outline: 'none' }}>
+            <PieChart margin={{ top: 2, right: 2, bottom: 2, left: 2 }} style={{ outline: 'none' }} tabIndex={-1}>
               <defs>
                 <linearGradient id="solarGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
@@ -1425,11 +1425,16 @@ const BuildingConsumptionGraphCard = React.memo(({
       )}
 
       {/* The Interactive Chart Container */}
-      <div className="w-full h-[260px] sm:h-[300px] mt-1 min-w-0">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="w-full h-[260px] sm:h-[300px] mt-1 min-w-0 outline-none focus:outline-none select-none">
+        <ResponsiveContainer width="100%" height="100%" style={{ outline: 'none' }}>
           {isGlobal ? (
             /* Bar Chart comparing all buildings */
-            <BarChart data={dynamicBarData} margin={{ top: 15, right: 15, left: 10, bottom: 25 }}>
+            <BarChart 
+              data={dynamicBarData} 
+              margin={{ top: 15, right: 15, left: 10, bottom: 25 }}
+              style={{ outline: 'none' }}
+              tabIndex={-1}
+            >
               <defs>
                 <linearGradient id="globalBarGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#064E3B" stopOpacity={1} />
@@ -1488,7 +1493,12 @@ const BuildingConsumptionGraphCard = React.memo(({
             </BarChart>
           ) : (
             /* Bar Chart for individual building showing the 7 days of the week in site colors */
-            <BarChart data={buildingWeeklyData} margin={{ top: 15, right: 15, left: 10, bottom: 25 }}>
+            <BarChart 
+              data={buildingWeeklyData} 
+              margin={{ top: 15, right: 15, left: 10, bottom: 25 }}
+              style={{ outline: 'none' }}
+              tabIndex={-1}
+            >
               <defs>
                 <linearGradient id="singleBldgDailyGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#047857" stopOpacity={1} />
@@ -2788,7 +2798,86 @@ const AnalyticsView = React.memo(({
             </div>
           </div>
         </div>
-      ) : null}
+      ) : (
+        /* Tableau comparatif des 10 bâtiments quand "Tout le Parc" est sélectionné */
+        <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs mb-6 overflow-hidden">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 font-display">
+                {language === 'fr' ? 'Comparatif Énergétique & Thermique des 10 Bâtiments' : 'Fleet Energy & Thermal Comparison (10 Buildings)'}
+              </h3>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">
+                {language === 'fr' ? 'Supervision consolidée du parc immobilier' : 'Consolidated portfolio monitoring'}
+              </p>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs min-w-[640px]">
+              <thead>
+                <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <th className="pb-3 pl-2">Bâtiment</th>
+                  <th className="pb-3">Type</th>
+                  <th className="pb-3">Hiver (kW)</th>
+                  <th className="pb-3">Été (kW)</th>
+                  <th className="pb-3">Canicule (kW)</th>
+                  <th className="pb-3">Conso (kWh/j)</th>
+                  <th className="pb-3">Statut</th>
+                  <th className="pb-3 text-right pr-2">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100/70">
+                {buildingsList.map(b => {
+                  const isAnom = isBuildingInAnomaly(b);
+                  return (
+                    <tr key={b.id} className={cn(
+                      "transition",
+                      isAnom ? "bg-rose-50/70 hover:bg-rose-100/70 border-l-4 border-rose-600" : "hover:bg-slate-50/70"
+                    )}>
+                      <td className="py-3 pl-2 font-bold text-slate-800">
+                        <div className="flex items-center gap-1.5">
+                          {isAnom && <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse shrink-0" />}
+                          <span className={cn(isAnom ? "text-rose-950 font-extrabold" : "text-slate-800")}>
+                            {formatBuildingName(b.name, b.id)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 font-medium text-slate-600">{b.type || 'Tertiaire'}</td>
+                      <td className="py-3 font-bold text-sky-700">{b.powerWinterKw ?? '--'}</td>
+                      <td className="py-3 font-bold text-amber-600">{b.powerSummerKw ?? '--'}</td>
+                      <td className="py-3 font-bold text-rose-600">{b.powerHeatwaveKw ?? '--'}</td>
+                      <td className="py-3">
+                        <span className={cn(
+                          "font-mono inline-block",
+                          isAnom 
+                            ? "px-2 py-0.5 rounded-md bg-rose-200 text-rose-950 font-extrabold border border-rose-300 shadow-2xs" 
+                            : "font-semibold text-slate-800"
+                        )}>
+                          {parseEnergy(b.consumption).toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="py-3"><Tag status={b.status} /></td>
+                      <td className="py-3 text-right pr-2">
+                        <button
+                          onClick={() => onSelectBuilding?.(b.id.toString())}
+                          className={cn(
+                            "px-2.5 py-1 rounded-lg font-bold text-[11px] transition cursor-pointer",
+                            isAnom 
+                              ? "bg-rose-600 hover:bg-rose-700 text-white shadow-xs" 
+                              : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800"
+                          )}
+                        >
+                          {isAnom ? (language === 'fr' ? 'Inspecter' : 'Inspect') : (language === 'fr' ? 'Analyser' : 'Analyze')}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </ViewContainer>
   );
 });
