@@ -450,7 +450,23 @@ const SidebarItem = ({ icon: Icon, label, active = false, onClick }: { icon: any
   </div>
 );
 
-const MetricCard = ({ title, value, subValue, trend, icon: Icon, color = "emerald" }: { title: string, value: string, subValue: string, trend?: string, icon: any, color?: "emerald" | "amber" | "rose" }) => {
+const MetricCard = ({ 
+  title, 
+  value, 
+  subValue, 
+  extraInfo,
+  trend, 
+  icon: Icon, 
+  color = "emerald" 
+}: { 
+  title: string; 
+  value: string; 
+  subValue: string; 
+  extraInfo?: React.ReactNode;
+  trend?: string; 
+  icon: any; 
+  color?: "emerald" | "amber" | "rose";
+}) => {
   const colorMap = {
     emerald: "bg-emerald-50 text-emerald-600",
     amber: "bg-amber-50 text-amber-600",
@@ -461,7 +477,7 @@ const MetricCard = ({ title, value, subValue, trend, icon: Icon, color = "emeral
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white/85 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-white/60 shadow-md flex flex-col gap-2 group hover:shadow-lg transition-all active:scale-[0.99] relative overflow-hidden h-full min-w-0"
+      className="bg-white/85 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-white/60 shadow-md flex flex-col justify-between gap-2 group hover:shadow-lg transition-all active:scale-[0.99] relative overflow-hidden h-full min-w-0"
     >
       <div className="flex justify-between items-start relative z-10 min-w-0">
         <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider leading-none truncate mr-1">{title}</span>
@@ -479,6 +495,11 @@ const MetricCard = ({ title, value, subValue, trend, icon: Icon, color = "emeral
           )}
           <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate min-w-0">{subValue}</span>
         </div>
+        {extraInfo && (
+          <div className="mt-2 pt-1.5 border-t border-slate-100/90">
+            {extraInfo}
+          </div>
+        )}
       </div>
       <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-slate-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
     </motion.div>
@@ -1824,7 +1845,17 @@ const DashboardView = ({
 }) => {
   const { width: windowWidth } = useWindowSize();
   const t = translations[language as keyof typeof translations] || translations.fr;
-  const { isGlobal, selected, consumption, trend, avgEfficiency, topConsumer, anomaliesCount } = metrics;
+  const { 
+    isGlobal, 
+    selected, 
+    consumption, 
+    trend, 
+    avgEfficiency, 
+    topConsumer, 
+    anomaliesCount,
+    totalHeatingPowerKw,
+    selectedHeatingPowerKw
+  } = metrics;
   
   const dynamicBarData = React.useMemo(() => buildingsList.length > 0 ? buildingsList.map(b => {
     const value = parseEnergy(b.consumption);
@@ -1952,7 +1983,35 @@ const DashboardView = ({
         }}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4"
       >
-        <MetricCard title={t.totalConsumption} value={consumption} subValue={t.vsLastMonth} trend={trend} icon={Zap} color="emerald" />
+        <MetricCard 
+          title={isGlobal ? (language === 'fr' ? 'Puissance Chauffage Totale' : 'Total Heating Power') : (language === 'fr' ? 'Puissance Chauffage Site' : 'Site Heating Power')} 
+          value={isGlobal 
+            ? `${Math.round(totalHeatingPowerKw || 133).toLocaleString('fr-FR')} kW` 
+            : `${selectedHeatingPowerKw !== undefined ? `${selectedHeatingPowerKw} kW` : (selected?.powerWinterKw !== undefined ? `${selected.powerWinterKw} kW` : '16,4 kW')}`
+          } 
+          subValue={isGlobal 
+            ? (language === 'fr' 
+                ? `Conso électrique : ${consumption}/j` 
+                : `Electricity consumption: ${consumption}/d`)
+            : (language === 'fr'
+                ? `Conso électrique : ${consumption}/j`
+                : `Electricity consumption: ${consumption}/d`)
+          } 
+          extraInfo={
+            <div className="flex items-center justify-between w-full text-[10px] text-slate-600">
+              <span className="text-slate-500 font-medium flex items-center gap-1">
+                <span>⚡</span>
+                <span>{language === 'fr' ? 'Conso journalière (Google Sheet) :' : 'Daily Conso (Google Sheet):'}</span>
+              </span>
+              <span className="font-bold text-[#236b33] font-mono bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60 shadow-2xs">
+                {consumption}
+              </span>
+            </div>
+          }
+          trend={trend} 
+          icon={Flame} 
+          color="emerald" 
+        />
         <MetricCard title={t.activityPeak} value={isGlobal ? (language === 'fr' ? 'Tous les sites' : 'All Sites') : formatBuildingName(selected?.name, selected?.id) || "N/A"} subValue={isGlobal ? t.alertThreshold : (selected?.status || t.normal)} icon={Activity} color={isGlobal || selected?.status === 'ALERTE' ? "rose" : "emerald"} />
         <MetricCard title={t.efficiency} value={isGlobal ? avgEfficiency + "%" : (parseFloat(String(selected?.economy || '0').replace(/[^0-9.]/g, '')) + 80).toFixed(1) + "%"} subValue={t.targetReached} icon={CheckCircle2} color="emerald" />
         <MetricCard title={t.anomalies} value={String(anomaliesCount)} subValue={topConsumer ? formatBuildingName(topConsumer.name, topConsumer.id) : undefined} icon={AlertTriangle} color={anomaliesCount > 0 ? "rose" : "emerald"} />
@@ -2313,7 +2372,7 @@ const AnalyticsView = React.memo(({
   onForceSync?: () => void;
 }) => {
   const t = translations[language as keyof typeof translations] || translations.fr;
-  const { avgEfficiency, totalConsumptionValue, anomaliesCount } = metrics;
+  const { avgEfficiency, totalConsumptionValue, anomaliesCount, totalHeatingPowerKw } = metrics;
   
   const isGlobal = !selectedBuildingId || selectedBuildingId === 'all';
   const [analyticsTab, setAnalyticsTab] = useState<'supervision' | 'decret'>('supervision');
@@ -2521,13 +2580,13 @@ const AnalyticsView = React.memo(({
           color="emerald" 
         />
         <MetricCard 
-          title={isGlobal ? t.greenMix : (language === 'fr' ? "Puissance Hiver" : "Winter Demand")} 
+          title={isGlobal ? (language === 'fr' ? "Puissance Chauffage Totale" : "Total Heating Demand") : (language === 'fr' ? "Puissance Hiver" : "Winter Demand")} 
           value={isGlobal 
-            ? `${Math.min(95, 25 + (buildingsList.filter(b => b.status === "OPTIMAL").length / (buildingsList.length || 1)) * 40).toFixed(0)}%`
+            ? `${Math.round(totalHeatingPowerKw || 133).toLocaleString('fr-FR')} kW`
             : `${selected?.powerWinterKw ?? '--'} kW`
           } 
-          subValue={isGlobal ? (language === 'fr' ? "Part énergie décarbonée" : "Clean energy share") : (language === 'fr' ? `Été: ${selected?.powerSummerKw ?? '--'} kW` : `Summer: ${selected?.powerSummerKw ?? '--'} kW`)} 
-          icon={isGlobal ? Sun : Flame} 
+          subValue={isGlobal ? (language === 'fr' ? "Besoin thermique hiver (Google Sheet)" : "Winter thermal demand (Google Sheet)") : (language === 'fr' ? `Été: ${selected?.powerSummerKw ?? '--'} kW` : `Summer: ${selected?.powerSummerKw ?? '--'} kW`)} 
+          icon={Flame} 
           color="amber" 
         />
         <MetricCard 
@@ -3602,8 +3661,21 @@ export default function App() {
       ? systemAnomalies.length 
       : systemAnomalies.filter(a => a.targetId === selectedBuilding).length;
 
+    const totalHeatingPowerKw = memoizedBuildings.reduce((acc, b) => {
+      const val = typeof b.powerWinterKw === 'number' 
+        ? b.powerWinterKw 
+        : (parseFloat(String(b.powerWinterKw || '0').replace(',', '.')) || 0);
+      return acc + val;
+    }, 0);
+
+    const selectedHeatingPowerKw = selected?.powerWinterKw !== undefined
+      ? (typeof selected.powerWinterKw === 'number' ? selected.powerWinterKw : parseFloat(String(selected.powerWinterKw).replace(',', '.')))
+      : undefined;
+
     return {
       totalConsumptionValue,
+      totalHeatingPowerKw,
+      selectedHeatingPowerKw,
       avgEfficiency,
       consumption,
       isGlobal,
