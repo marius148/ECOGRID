@@ -41,6 +41,35 @@ service cloud.firestore {
              data.consumption is string && data.consumption.size() <= 50;
     }
 
+    function isValidPlanningIntervention(data) {
+      return data.keys().hasAll(['title', 'buildingId', 'date', 'startHour', 'endHour', 'category', 'status']) &&
+             data.title is string && data.title.size() <= 300 &&
+             data.buildingId is string && data.buildingId.size() <= 100 &&
+             data.date is string && data.date.size() <= 50 &&
+             data.startHour is number &&
+             data.endHour is number &&
+             data.category is string && data.category.size() <= 50 &&
+             data.status in ['planned', 'in_progress', 'completed', 'urgent', 'cancelled'] &&
+             (!('buildingName' in data) || (data.buildingName is string && data.buildingName.size() <= 300)) &&
+             (!('location' in data) || (data.location is string && data.location.size() <= 300)) &&
+             (!('startTimeStr' in data) || (data.startTimeStr is string && data.startTimeStr.size() <= 30)) &&
+             (!('endTimeStr' in data) || (data.endTimeStr is string && data.endTimeStr.size() <= 30)) &&
+             (!('technicianIds' in data) || (data.technicianIds is list && data.technicianIds.size() <= 50)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 2000)) &&
+             (!('source' in data) || (data.source is string && data.source.size() <= 50)) &&
+             (!('rsvpStatus' in data) || (data.rsvpStatus is string && data.rsvpStatus.size() <= 50)) &&
+             (!('priority' in data) || (data.priority is string && data.priority.size() <= 50)) &&
+             (!('sheetRowIndex' in data) || (data.sheetRowIndex is int || data.sheetRowIndex is number)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50));
+    }
+
+    // Planning collection for interventions & maintenance
+    match /planning/{interventionId} {
+      allow read: if true;
+      allow create, update: if isValidId(interventionId) && isValidPlanningIntervention(request.resource.data);
+      allow delete: if isValidId(interventionId);
+    }
+
     // User profiles
     match /users/{userId} {
       allow get: if isOwner(userId) && isValidId(userId);

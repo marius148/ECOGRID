@@ -32,7 +32,8 @@ import {
   Check,
   TrendingUp,
   TrendingDown,
-  Wrench
+  Wrench,
+  Calendar
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -47,6 +48,7 @@ import {
   Cell 
 } from 'recharts';
 import { cn } from '../lib/utils';
+import { getBuildingColorTheme } from '../utils/buildingThemes';
 
 export interface GTBEquipment {
   location: string;
@@ -132,6 +134,20 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
     return buildingsList.find(b => b.id.toString() === selectedBuildingId.toString()) || null;
   }, [buildingsList, selectedBuildingId]);
 
+  const isSelectedAnom = useMemo(() => {
+    if (!selectedBuilding) return false;
+    const strStatus = String(selectedBuilding.status || '').toUpperCase();
+    const strId = String(selectedBuilding.id || '').toUpperCase();
+    const kwh = typeof selectedBuilding.consumption === 'number' 
+      ? selectedBuilding.consumption 
+      : parseFloat(String(selectedBuilding.consumption || '').replace(/[^0-9.]/g, '')) || 0;
+    return strStatus === 'ALERTE' || strId === 'BAT-02' || strId === 'BAT-07' || kwh > 210 || (kwh > 0 && kwh < 30);
+  }, [selectedBuilding]);
+
+  const activeTheme = useMemo(() => {
+    return getBuildingColorTheme(selectedBuildingId, selectedBuilding?.status, isSelectedAnom);
+  }, [selectedBuildingId, selectedBuilding, isSelectedAnom]);
+
   // Nettoyage systématique des équipements pour supprimer tout "x10" et "(Bâtiment X)"
   const sanitizedEquipments = useMemo(() => {
     return gtbEquipments.map((eq, idx) => ({
@@ -201,7 +217,7 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
         setHeatingSetpoint(21.5);
         setCoolingSetpoint(25.0);
         setVentilationRate(850);
-        showFeedback(language === 'fr' ? 'Régulation Automatique IA active' : 'Automated AI regulation active');
+        showFeedback(language === 'fr' ? 'Régulation Automatique active' : 'Automated regulation active');
         break;
     }
   };
@@ -221,27 +237,28 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
     };
   }, [sanitizedEquipments]);
 
-  // Données du graphique circulaire
+  // Données du graphique circulaire adaptées à la charte et au bâtiment sélectionné
   const pieData = useMemo(() => {
     return [
-      { name: 'CVC & Confort', value: 460, color: '#064e3b' },
-      { name: 'GTB Comptage', value: 410, color: '#059669' },
-      { name: 'Production ENR', value: 2602, color: '#10b981' },
+      { name: 'CVC & Confort', value: 460, color: activeTheme.primary },
+      { name: 'GTB Comptage', value: 410, color: activeTheme.secondary || '#065f46' },
+      { name: 'Production ENR', value: 2602, color: activeTheme.accent || '#10b981' },
       { name: 'Sécurité & Utilités', value: 24, color: '#0d9488' },
     ];
-  }, []);
+  }, [activeTheme]);
 
-  // Données du graphique en barres
+  // Données du graphique en barres adaptées
   const barData = useMemo(() => {
+    const scale = selectedBuilding ? 0.35 : 1;
     return [
-      { name: 'CVC', telemetrie: 36, automates: 22 },
-      { name: 'Comptage', telemetrie: 28, automates: 8 },
-      { name: 'Solaire', telemetrie: 24, automates: 16 },
-      { name: 'Stockage', telemetrie: 14, automates: 12 },
-      { name: 'Trigén.', telemetrie: 20, automates: 26 },
-      { name: 'Sécurité', telemetrie: 22, automates: 15 },
+      { name: 'CVC', telemetrie: Math.round(36 * scale), automates: Math.round(22 * scale) },
+      { name: 'Comptage', telemetrie: Math.round(28 * scale), automates: Math.round(8 * scale) },
+      { name: 'Solaire', telemetrie: Math.round(24 * scale), automates: Math.round(16 * scale) },
+      { name: 'Stockage', telemetrie: Math.round(14 * scale), automates: Math.round(12 * scale) },
+      { name: 'Trigén.', telemetrie: Math.round(20 * scale), automates: Math.round(26 * scale) },
+      { name: 'Sécurité', telemetrie: Math.round(22 * scale), automates: Math.round(15 * scale) },
     ];
-  }, []);
+  }, [selectedBuilding]);
 
   // Données de couverture par zone
   const zonesCoverage = useMemo(() => {
@@ -421,8 +438,8 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
           <h1 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 tracking-tight">
             {language === 'fr' ? 'Supervision & Contrôles GTB' : 'BMS Supervision & Controls'}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-            {formattedDate} • {selectedBuilding ? selectedBuilding.name : (language === 'fr' ? 'Périmètre Global du Parc' : 'Global Portfolio Scope')}
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            {selectedBuilding ? `${selectedBuilding.name} • Télémétrie & Régulation` : (language === 'fr' ? 'Supervision Globale • 10 Bâtiments' : 'Global Portfolio Supervision • 10 Buildings')}
           </p>
         </div>
 
@@ -465,6 +482,46 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
         </div>
       </div>
 
+      {/* Sélecteur de Bâtiments GTB Dynamique (couleurs charte graphique) */}
+      <div className="bg-white rounded-2xl p-2.5 border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 md:pb-0">
+          <button
+            onClick={() => onSelectBuilding?.('all')}
+            className={cn(
+              "px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer",
+              !selectedBuildingId || selectedBuildingId === 'all'
+                ? "bg-emerald-900 text-white shadow-xs"
+                : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/70"
+            )}
+          >
+            {language === 'fr' ? 'Tout le Parc' : 'All Sites'}
+          </button>
+          {buildingsList.map(b => {
+            const isSel = selectedBuildingId === b.id.toString();
+            const isAnom = String(b.status).toUpperCase() === 'ALERTE' || String(b.id).toUpperCase() === 'BAT-02' || String(b.id).toUpperCase() === 'BAT-07';
+            const bTheme = getBuildingColorTheme(b.id, b.status, isAnom);
+            return (
+              <button
+                key={b.id}
+                onClick={() => onSelectBuilding?.(b.id.toString())}
+                className={cn(
+                  "px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 border",
+                  isSel
+                    ? `${bTheme.badge} shadow-xs border-transparent ring-2 ring-emerald-600/30`
+                    : isAnom
+                    ? "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100"
+                    : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200/70"
+                )}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: bTheme.primary }} />
+                <span>{b.name}</span>
+                {isAnom && <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* 1.5. Centre de Diagnostic des Anomalies & Alertes GTB */}
       <div className={cn(
         "rounded-2xl p-4 sm:p-5 border transition-all space-y-3.5 shadow-xs",
@@ -489,7 +546,7 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-sm sm:text-base font-bold text-slate-900 font-display break-words">
-                  {language === 'fr' ? 'Diagnostic & Anomalies GTB en Temps Réel' : 'Live BMS Anomaly & Drift Diagnostics'}
+                  {language === 'fr' ? 'Diagnostic & Anomalies GTB' : 'BMS Diagnostics'}
                 </h3>
                 {gtbAnomalies.length > 0 ? (
                   <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-600 text-white uppercase tracking-wider shadow-2xs shrink-0">
@@ -501,11 +558,6 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-500 font-medium mt-0.5 leading-relaxed">
-                {language === 'fr'
-                  ? 'Audit continu des consignes thermiques, conflits chaud/froid et trames d\'automates.'
-                  : 'Continuous audit of thermal setpoints, heat/cool overlaps and fieldbus frames.'}
-              </p>
             </div>
           </div>
 
@@ -538,13 +590,25 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
                   handleAutoFixSetpoints();
                 } else {
                   setHeatingSetpoint(24.5);
-                  showFeedback(language === 'fr' ? 'Consigne test injectée : 24.5°C (Surchauffe GTB)' : 'Test setpoint injected: 24.5°C (Overheating)');
+                  showFeedback(language === 'fr' ? 'Simulation dérive : 24.5°C' : 'Simulated drift: 24.5°C');
                 }
               }}
               className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-xl text-xs font-semibold transition cursor-pointer"
             >
-              <span>{heatingSetpoint >= 23.5 ? (language === 'fr' ? 'Rétablir consigne' : 'Reset setpoint') : (language === 'fr' ? 'Tester surchauffe (24.5°C)' : 'Test high drift (24.5°C)')}</span>
+              <span>{heatingSetpoint >= 23.5 ? (language === 'fr' ? 'Rétablir consigne' : 'Reset setpoint') : (language === 'fr' ? 'Simuler dérive (+3°C)' : 'Simulate drift (+3°C)')}</span>
             </button>
+
+            {/* Cross Navigation to Planning */}
+            {onNavigateView && (
+              <button
+                onClick={() => onNavigateView('planning')}
+                className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title={language === 'fr' ? 'Accéder au planning des interventions' : 'Open interventions planning'}
+              >
+                <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{language === 'fr' ? 'Planning' : 'Planning'}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -578,23 +642,36 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
                   {language === 'fr' ? anom.descFr : anom.descEn}
                 </p>
 
-                <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] font-bold text-slate-500">
-                  <span>{language === 'fr' ? 'Résolution recommandée :' : 'Remedy:'}</span>
-                  {anom.actionType === 'setpoint' ? (
+                <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] font-bold text-slate-500 gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span>{language === 'fr' ? 'Résolution :' : 'Remedy:'}</span>
+                    {anom.actionType === 'setpoint' ? (
+                      <button
+                        onClick={handleAutoFixSetpoints}
+                        className="text-indigo-600 hover:text-indigo-800 hover:underline uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                      >
+                        <Wrench className="w-3 h-3" />
+                        {language === 'fr' ? 'Réguler à 20.5°C' : 'Align setpoint'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleRearmAllEquipments}
+                        className="text-slate-800 hover:underline uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        {language === 'fr' ? 'Acquitter l\'alarme' : 'Acknowledge'}
+                      </button>
+                    )}
+                  </div>
+
+                  {onNavigateView && (
                     <button
-                      onClick={handleAutoFixSetpoints}
-                      className="text-indigo-600 hover:text-indigo-800 hover:underline uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                      onClick={() => onNavigateView('planning')}
+                      className="text-emerald-700 hover:text-emerald-900 hover:underline uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                      title={language === 'fr' ? 'Planifier une intervention pour cette anomalie' : 'Schedule intervention'}
                     >
-                      <Wrench className="w-3 h-3" />
-                      {language === 'fr' ? 'Réguler à 20.5°C' : 'Align setpoint'}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleRearmAllEquipments}
-                      className="text-slate-800 hover:underline uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      {language === 'fr' ? 'Acquitter l\'alarme' : 'Acknowledge'}
+                      <Calendar className="w-3 h-3 text-emerald-600" />
+                      <span>{language === 'fr' ? 'Planifier' : 'Schedule'}</span>
                     </button>
                   )}
                 </div>
@@ -606,8 +683,8 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
             <Check className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>
               {language === 'fr'
-                ? 'Tous les régulateurs CVC, automates BACnet/Modbus et compteurs d\'énergie fonctionnent dans les plages thermiques optimales.'
-                : 'All HVAC loop controllers, BACnet/Modbus hardware and energy meters operate within optimal parameters.'}
+                ? 'Paramètres nominaux sur l\'ensemble des boucles CVC et bus de terrain.'
+                : 'Optimal setpoints across all HVAC loops and fieldbus controllers.'}
             </span>
           </div>
         )}
@@ -623,11 +700,11 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
             </h2>
           </div>
 
-          {/* Bouton Optimisation IA */}
+          {/* Bouton Optimisation Automatique */}
           <button
             onClick={() => {
               setAiOptimizationActive(!aiOptimizationActive);
-              showFeedback(aiOptimizationActive ? 'Optimisation IA désactivée' : 'Optimisation IA activée');
+              showFeedback(aiOptimizationActive ? 'Optimisation automatique désactivée' : 'Optimisation automatique activée');
             }}
             className={cn(
               "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border",
@@ -637,7 +714,7 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
             )}
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{language === 'fr' ? 'Optimisation IA GTB' : 'AI Optimization'}</span>
+            <span>{language === 'fr' ? 'Régulation Optimisée' : 'Optimized Regulation'}</span>
             <span className="text-[10px] uppercase font-bold tracking-wider">{aiOptimizationActive ? 'ON' : 'OFF'}</span>
           </button>
         </div>
@@ -645,7 +722,7 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
         {/* Boutons Sélecteurs de Mode (100% Interactifs) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {[
-            { id: 'AUTO', label: 'Auto (IA)', desc: 'Régulation optimale' },
+            { id: 'AUTO', label: language === 'fr' ? 'Automatique' : 'Automatic', desc: 'Régulation optimale' },
             { id: 'CONFORT', label: 'Confort', desc: '22.0°C' },
             { id: 'ECO', label: 'Éco GTB', desc: '19.0°C' },
             { id: 'NUIT', label: 'Nuit', desc: '16.0°C' },
@@ -821,8 +898,8 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
           {/* 4 Cartes KPI */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             
-            {/* Carte 1 : Vert Foncé Forêt sobre, sans badge lumineux */}
-            <div className="bg-[#064e3b] text-white rounded-2xl p-5 shadow-sm flex flex-col justify-between min-h-[135px]">
+            {/* Carte 1 */}
+            <div className="bg-[#064e3b] text-white rounded-2xl p-5 shadow-sm flex flex-col justify-between min-h-[115px]">
               <div className="flex items-center justify-between">
                 <div className="w-9 h-9 rounded-xl bg-emerald-800 flex items-center justify-center text-white border border-emerald-700/60">
                   <FileText className="w-4 h-4" />
@@ -832,32 +909,28 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
                 </span>
               </div>
 
-              <div className="mt-3">
+              <div className="mt-2">
                 <p className="text-xs font-medium text-emerald-200/90 mb-0.5">
-                  {language === 'fr' ? 'Points de Contrôle Normalisés' : 'Total BMS Points'}
+                  {language === 'fr' ? 'Points de Contrôle' : 'Total BMS Points'}
                 </p>
                 <div className="text-3xl font-bold font-display tracking-tight text-white">
                   91 Points
                 </div>
               </div>
-
-              <div className="mt-2 text-[11px] font-medium text-emerald-300/80">
-                {language === 'fr' ? 'Supervision continue des équipements' : 'Active equipment supervision'}
-              </div>
             </div>
 
             {/* Carte 2 */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between min-h-[135px]">
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between min-h-[115px]">
               <div className="flex items-center justify-between">
                 <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 border border-slate-200/60">
                   <Layers className="w-4 h-4" />
                 </div>
                 <span className="text-xs font-semibold text-slate-500">
-                  {metrics.categoriesCount} Macro-lots
+                  {metrics.categoriesCount} Lots
                 </span>
               </div>
 
-              <div className="mt-3">
+              <div className="mt-2">
                 <p className="text-xs font-medium text-slate-500 mb-0.5">
                   {language === 'fr' ? 'Lots Techniques' : 'Technical Lots'}
                 </p>
@@ -865,14 +938,10 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
                   {metrics.categoriesCount} Lots
                 </div>
               </div>
-
-              <div className="mt-2 text-[11px] font-medium text-slate-400">
-                CVC, Énergie Solaire, Comptages, Utilités
-              </div>
             </div>
 
             {/* Carte 3 */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between min-h-[135px]">
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between min-h-[115px]">
               <div className="flex items-center justify-between">
                 <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 border border-slate-200/60">
                   <Activity className="w-4 h-4" />
@@ -882,7 +951,7 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
                 </span>
               </div>
 
-              <div className="mt-3">
+              <div className="mt-2">
                 <p className="text-xs font-medium text-slate-500 mb-0.5">
                   {language === 'fr' ? 'Disponibilité Réseau' : 'Network Uptime'}
                 </p>
@@ -890,14 +959,10 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
                   {metrics.availability}
                 </div>
               </div>
-
-              <div className="mt-2 text-[11px] font-medium text-slate-400">
-                {language === 'fr' ? 'Taux de service des automates' : 'Automate service rate'}
-              </div>
             </div>
 
             {/* Carte 4 */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between min-h-[135px]">
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between min-h-[115px]">
               <div className="flex items-center justify-between">
                 <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 border border-slate-200/60">
                   <Cpu className="w-4 h-4" />
@@ -907,17 +972,13 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
                 </span>
               </div>
 
-              <div className="mt-3">
+              <div className="mt-2">
                 <p className="text-xs font-medium text-slate-500 mb-0.5">
                   {language === 'fr' ? 'Protocoles Bus' : 'Bus Protocols'}
                 </p>
                 <div className="text-3xl font-bold font-display tracking-tight text-slate-900">
                   {metrics.protocolsCount} Bus
                 </div>
-              </div>
-
-              <div className="mt-2 text-[11px] font-medium text-slate-400">
-                BACnet IP, Modbus RTU, M-Bus, KNX
               </div>
             </div>
 
@@ -928,10 +989,10 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="min-w-0">
                 <h3 className="text-base font-bold font-display text-slate-900 leading-snug">
-                  {language === 'fr' ? 'Points de Supervision GTB par Macro-Lot' : 'BMS Supervision Points by Macro-Lot'}
+                  {language === 'fr' ? 'Points de Contrôle par Lot' : 'BMS Points by Lot'}
                 </h3>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  {language === 'fr' ? 'Répartition des commandes et des télérelèves' : 'Commands and sensors breakdown'}
+                  {language === 'fr' ? 'Télérelèves et commandes actives' : 'Sensors & field commands'}
                 </p>
               </div>
 
@@ -957,16 +1018,21 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
               </div>
             </div>
 
-            {/* Légende du graphique */}
-            <div className="flex items-center gap-5 text-xs font-semibold text-slate-600 mb-4">
+            {/* Légende du graphique aux couleurs du bâtiment sélectionné */}
+            <div className="flex items-center gap-5 text-xs font-semibold text-slate-600 mb-4 flex-wrap">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600" />
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: activeTheme.primary }} />
                 <span>{language === 'fr' ? 'Capteurs & Télérelèves' : 'Sensors & Meters'}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-sm bg-[#064e3b]" />
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: activeTheme.secondary || activeTheme.accent }} />
                 <span>{language === 'fr' ? 'Commandes Automates' : 'Automate Commands'}</span>
               </div>
+              {selectedBuilding && (
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-md border" style={{ color: activeTheme.primary, borderColor: `${activeTheme.primary}40`, backgroundColor: `${activeTheme.primary}12` }}>
+                  {selectedBuilding.name}
+                </span>
+              )}
             </div>
 
             {/* Zone graphique */}
@@ -1001,14 +1067,14 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
                   <Bar 
                     dataKey="telemetrie" 
                     name={language === 'fr' ? 'Télérelèves' : 'Meters'} 
-                    fill="#10b981" 
+                    fill={activeTheme.primary} 
                     radius={[6, 6, 0, 0]} 
                     barSize={16}
                   />
                   <Bar 
                     dataKey="automates" 
                     name={language === 'fr' ? 'Automates' : 'Automates'} 
-                    fill="#064e3b" 
+                    fill={activeTheme.secondary || activeTheme.accent} 
                     radius={[6, 6, 0, 0]} 
                     barSize={16}
                   />
@@ -1027,10 +1093,10 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
             <div className="flex items-center justify-between mb-2">
               <div>
                 <h3 className="text-base font-bold font-display text-slate-900">
-                  {language === 'fr' ? 'Inventaire des Lots' : 'Lot Distribution'}
+                  {language === 'fr' ? 'Lots Techniques' : 'Technical Lots'}
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
-                  {language === 'fr' ? 'Équipements répertoriés' : 'Registered equipments'}
+                  {language === 'fr' ? 'Répartition des macro-lots' : 'Equipment distribution'}
                 </p>
               </div>
             </div>
@@ -1100,7 +1166,7 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-base font-bold font-display text-slate-900">
-                  {language === 'fr' ? 'Couverture par Zone' : 'Zone Coverage'}
+                  {language === 'fr' ? 'Couverture Réseau' : 'Zone Coverage'}
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
                   {language === 'fr' ? 'Densité des points de mesure' : 'Measurement density'}
@@ -1145,14 +1211,14 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-slate-900 text-base">
-                {language === 'fr' ? 'Inventaire des Équipements & Actionneurs GTB' : 'BMS Equipments & Actuators Inventory'}
+                {language === 'fr' ? 'Actionneurs & Capteurs GTB' : 'BMS Actuators & Sensors'}
               </h3>
               <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono font-bold text-xs">
                 {filteredEquipments.length}
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              {language === 'fr' ? 'Cliquez sur un équipement pour accéder à ses commandes avancées' : 'Click any equipment to access detailed controls'}
+              {language === 'fr' ? 'Points de commande et télémétries de terrain' : 'Fieldbus telemetry and remote control points'}
             </p>
           </div>
 

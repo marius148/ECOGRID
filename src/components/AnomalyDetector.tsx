@@ -840,7 +840,7 @@ export const AutoAnomalyScannerCard: React.FC<AutoAnomalyScannerCardProps> = ({
                               className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
                             >
                               <Sparkles className="w-3 h-3" />
-                              <span>{isFr ? "IA Délester" : "AI Balance"}</span>
+                              <span>{isFr ? "Délester" : "Balance Load"}</span>
                             </button>
                           )}
                         </div>
