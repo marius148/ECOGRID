@@ -500,10 +500,10 @@ const MetricCard = ({
         </div>
       </div>
       <div className="min-w-0">
-        <h3 className="text-xl sm:text-2xl font-bold font-display text-slate-900 leading-tight mb-1 truncate tracking-tight">{value}</h3>
+        <h3 className="text-xl sm:text-2xl font-bold font-display text-slate-900 leading-tight mb-1 truncate tracking-tight tabular-nums">{value}</h3>
         <div className="flex items-center gap-1.5 flex-wrap min-w-0 text-xs">
           {trend && (
-            <span className={cn("font-semibold px-1.5 py-0.2 rounded shrink-0", trend.startsWith('-') ? "text-emerald-700 bg-emerald-50" : "text-rose-700 bg-rose-50")}>
+            <span className={cn("font-semibold px-1.5 py-0.2 rounded shrink-0 tabular-nums", trend.startsWith('-') ? "text-emerald-700 bg-emerald-50" : "text-rose-700 bg-rose-50")}>
               {trend}
             </span>
           )}
@@ -554,7 +554,7 @@ const ViewContainer = ({ children, className }: { children: React.ReactNode, cla
     animate={{ opacity: 1, scale: 1 }}
     exit={{ opacity: 0, scale: 0.98 }}
     transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-    className={cn("p-3 sm:p-4 md:p-6 space-y-4 max-w-7xl mx-auto w-full min-w-0", className)}
+    className={cn("p-3 sm:p-4 md:p-6 space-y-4 max-w-7xl mx-auto w-full min-w-0 pb-24 lg:pb-6", className)}
   >
     {children}
   </motion.div>
@@ -606,12 +606,6 @@ const SettingsView = ({
   lastSyncTime
 }: SettingsViewProps) => {
   const t = translations[settings.language as keyof typeof translations] || translations.fr;
-  const [localSheetUrl, setLocalSheetUrl] = useState(googleSheetsUrl || '');
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
-  useEffect(() => {
-    if (googleSheetsUrl) setLocalSheetUrl(googleSheetsUrl);
-  }, [googleSheetsUrl]);
 
   return (
     <ViewContainer>
@@ -782,85 +776,6 @@ const SettingsView = ({
               >
                 English
               </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Intégration & Télémétrie Google Sheets */}
-        <div className="bg-white rounded-3xl p-5 md:p-8 border border-slate-200/60 shadow-sm transition-all hover:shadow-md lg:col-span-2">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-100">
-                <FileSpreadsheet className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900 font-display">
-                  {settings.language === 'fr' ? 'Liaison & Télémétrie Google Sheets' : 'Google Sheets Telemetry Link'}
-                </h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  {settings.language === 'fr' 
-                    ? 'Détection automatique des dérives énergétiques et des alarmes calculée en direct depuis votre feuille de calcul.' 
-                    : 'Automated energy drift and alarm detection computed live from your spreadsheet.'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                <span>{settings.language === 'fr' ? 'Synchronisé' : 'Connected'}</span>
-              </span>
-              <button
-                type="button"
-                onClick={onForceSync}
-                disabled={isSyncing}
-                className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shadow-2xs"
-              >
-                <RefreshCw className={cn("w-3.5 h-3.5 text-emerald-700", isSyncing && "animate-spin")} />
-                <span>{isSyncing ? '...' : (settings.language === 'fr' ? 'Actualiser' : 'Sync')}</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-                {settings.language === 'fr' ? 'URL de publication Google Sheets (Format CSV) :' : 'Published Google Sheets CSV URL:'}
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={localSheetUrl}
-                  onChange={(e) => setLocalSheetUrl(e.target.value)}
-                  placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-800 focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    onUpdateGoogleSheetsUrl?.(localSheetUrl);
-                    setSaveSuccess(true);
-                    setTimeout(() => setSaveSuccess(false), 3000);
-                  }}
-                  className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs shrink-0"
-                >
-                  {saveSuccess ? (settings.language === 'fr' ? 'Enregistré ✓' : 'Saved ✓') : (settings.language === 'fr' ? 'Enregistrer' : 'Save')}
-                </button>
-              </div>
-              <p className="text-[11px] text-slate-400 font-medium mt-1.5">
-                {settings.language === 'fr'
-                  ? 'Pour lier une feuille : Fichier > Partager > Publier sur le web > Sélectionner Format CSV.'
-                  : 'To link a sheet: File > Share > Publish to web > Select CSV format.'}
-              </p>
-            </div>
-
-            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex flex-col justify-between text-xs">
-              <div>
-                <p className="font-semibold text-slate-700">{settings.language === 'fr' ? 'Dernière relève :' : 'Last telemetry poll:'}</p>
-                <p className="font-mono text-emerald-800 font-bold mt-0.5">{lastSyncTime || (settings.language === 'fr' ? 'En direct' : 'Live')}</p>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-2">
-                {settings.language === 'fr' ? 'Fréquence : actualisation automatique toutes les 60 secondes.' : 'Frequency: auto refreshed every 60s.'}
-              </p>
             </div>
           </div>
         </div>
@@ -2119,11 +2034,11 @@ const BuildingsView = ({
             {language === 'fr' ? 'Surveillance, puissances thermiques et consommations du parc.' : 'Monitoring, thermal power and portfolio consumption.'}
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           {selectedBuildingId && selectedBuildingId !== 'all' && (
             <button
               onClick={() => onSelectBuilding?.('all')}
-              className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
+              className="px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition cursor-pointer min-h-[40px] flex items-center justify-center"
             >
               {language === 'fr' ? 'Désélectionner' : 'Clear selection'}
             </button>
@@ -2153,7 +2068,7 @@ const BuildingsView = ({
               link.click();
               document.body.removeChild(link);
             }}
-            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2 rounded-xl font-bold text-xs shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2.5 rounded-xl font-bold text-xs shadow-2xs transition flex items-center gap-1.5 cursor-pointer min-h-[40px]"
             title={language === 'fr' ? 'Exporter la liste en CSV' : 'Export to CSV'}
           >
             <Download className="w-3.5 h-3.5 text-emerald-600" />
@@ -2161,7 +2076,7 @@ const BuildingsView = ({
           </button>
           <button 
             onClick={onAddClick}
-            className="bg-emerald-900 text-white px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:bg-emerald-800 active:scale-95 transition-all flex items-center gap-2 self-start sm:self-auto cursor-pointer"
+            className="bg-emerald-900 text-white px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:bg-emerald-800 active:scale-95 transition-all flex items-center gap-2 self-start sm:self-auto cursor-pointer min-h-[40px]"
           >
             <Plus className="w-4 h-4" /> {language === 'fr' ? 'Ajouter' : 'Add'}
           </button>
@@ -2524,11 +2439,11 @@ const AnalyticsView = React.memo(({
       </div>
 
       {/* Sub-tab Navigation */}
-      <div className="flex items-center gap-2 mb-5">
+      <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1 scrollbar-none flex-nowrap sm:flex-wrap">
         <button
           onClick={() => setAnalyticsTab('supervision')}
           className={cn(
-            "px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer",
+            "px-3.5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap min-h-[40px]",
             analyticsTab === 'supervision'
               ? "bg-[#236b33] text-white shadow-2xs"
               : "bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80"
@@ -2541,7 +2456,7 @@ const AnalyticsView = React.memo(({
         <button
           onClick={() => setAnalyticsTab('decret')}
           className={cn(
-            "px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer",
+            "px-3.5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap min-h-[40px]",
             analyticsTab === 'decret'
               ? "bg-[#236b33] text-white shadow-2xs"
               : "bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80"
@@ -5054,7 +4969,8 @@ export default function App() {
         <div className="flex items-center gap-2 shrink-0">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2.5 bg-slate-50 text-slate-600 rounded-xl border border-slate-200 active:scale-95 transition-all shrink-0"
+            className="p-2.5 bg-slate-50 text-slate-600 rounded-xl border border-slate-200 active:scale-95 transition-all shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Toggle Navigation Menu"
           >
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -5062,10 +4978,10 @@ export default function App() {
         </div>
         
         {/* Mobile Building Dropdown Selector */}
-        <div className="relative shrink min-w-0 max-w-[130px] sm:max-w-[200px] md:max-w-[280px]">
+        <div className="relative shrink min-w-0 max-w-[140px] sm:max-w-[220px] md:max-w-[280px]">
           <div 
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-1.5 bg-slate-100/80 px-2.5 py-1.5 rounded-xl cursor-pointer hover:bg-slate-200 transition-all border border-slate-200/40 w-full"
+            className="flex items-center gap-1.5 bg-slate-100/80 px-2.5 py-2 min-h-[40px] rounded-xl cursor-pointer hover:bg-slate-200 transition-all border border-slate-200/40 w-full"
           >
             <span className="text-xs font-semibold text-slate-800 truncate">{currentBuildingName}</span>
             <ChevronDown className={cn("w-3.5 h-3.5 text-slate-500 transition-transform ml-auto shrink-0", isDropdownOpen && "rotate-180")} />
@@ -5112,8 +5028,9 @@ export default function App() {
         <div className="flex items-center gap-1">
           <button 
             onClick={() => setIsCommandPaletteOpen(true)}
-            className="p-2 text-slate-700 active:scale-95 transition-all cursor-pointer"
+            className="p-2.5 text-slate-700 active:scale-95 transition-all cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-slate-100"
             title={settings.language === 'fr' ? 'Recherche rapide' : 'Quick search'}
+            aria-label="Recherche rapide"
           >
             <Search className="w-5 h-5" />
           </button>
@@ -5122,8 +5039,9 @@ export default function App() {
               setIsNotificationsOpen(true);
               setHasViewedNotifications(true);
             }}
-            className="p-2 text-slate-700 active:scale-95 transition-all relative cursor-pointer"
+            className="p-2.5 text-slate-700 active:scale-95 transition-all relative cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl hover:bg-slate-100"
             title="Notifications"
+            aria-label="Notifications"
           >
             <Bell className="w-5 h-5" />
             {unreadAlertsCount > 0 && (
@@ -5334,6 +5252,92 @@ export default function App() {
           <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
         </div>
       </main>
+
+      {/* Mobile & Tablet Bottom Navigation Bar (Thumb-zone Anchor) */}
+      <nav 
+        aria-label="Navigation mobile"
+        className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 lg:hidden shadow-[0_-4px_24px_rgba(15,23,42,0.08)] px-2 py-1 flex items-center justify-around"
+      >
+        <button
+          type="button"
+          onClick={() => setActiveView('dashboard')}
+          className={cn(
+            "flex flex-col items-center justify-center flex-1 min-h-[46px] py-1 rounded-xl transition-all cursor-pointer",
+            activeView === 'dashboard' 
+              ? "text-emerald-900 font-bold bg-emerald-50/90 shadow-2xs" 
+              : "text-slate-500 hover:text-slate-800 font-medium"
+          )}
+        >
+          <LayoutDashboard className={cn("w-5 h-5", activeView === 'dashboard' ? "text-[#236b33]" : "text-slate-400")} />
+          <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">
+            {currentTranslations.dashboard || 'Bord'}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveView('buildings')}
+          className={cn(
+            "flex flex-col items-center justify-center flex-1 min-h-[46px] py-1 rounded-xl transition-all cursor-pointer",
+            activeView === 'buildings' 
+              ? "text-emerald-900 font-bold bg-emerald-50/90 shadow-2xs" 
+              : "text-slate-500 hover:text-slate-800 font-medium"
+          )}
+        >
+          <Building2 className={cn("w-5 h-5", activeView === 'buildings' ? "text-[#236b33]" : "text-slate-400")} />
+          <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">
+            {currentTranslations.buildings || 'Parc'}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveView('gtb')}
+          className={cn(
+            "flex flex-col items-center justify-center flex-1 min-h-[46px] py-1 rounded-xl transition-all cursor-pointer",
+            activeView === 'gtb' 
+              ? "text-emerald-900 font-bold bg-emerald-50/90 shadow-2xs" 
+              : "text-slate-500 hover:text-slate-800 font-medium"
+          )}
+        >
+          <SlidersHorizontal className={cn("w-5 h-5", activeView === 'gtb' ? "text-[#236b33]" : "text-slate-400")} />
+          <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">
+            {currentTranslations.gtb || 'GTB'}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveView('planning')}
+          className={cn(
+            "flex flex-col items-center justify-center flex-1 min-h-[46px] py-1 rounded-xl transition-all cursor-pointer",
+            activeView === 'planning' 
+              ? "text-emerald-900 font-bold bg-emerald-50/90 shadow-2xs" 
+              : "text-slate-500 hover:text-slate-800 font-medium"
+          )}
+        >
+          <Calendar className={cn("w-5 h-5", activeView === 'planning' ? "text-[#236b33]" : "text-slate-400")} />
+          <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">
+            {currentTranslations.planning || 'Planning'}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveView('reports')}
+          className={cn(
+            "flex flex-col items-center justify-center flex-1 min-h-[46px] py-1 rounded-xl transition-all cursor-pointer",
+            activeView === 'reports' 
+              ? "text-emerald-900 font-bold bg-emerald-50/90 shadow-2xs" 
+              : "text-slate-500 hover:text-slate-800 font-medium"
+          )}
+        >
+          <FileText className={cn("w-5 h-5", activeView === 'reports' ? "text-[#236b33]" : "text-slate-400")} />
+          <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">
+            {currentTranslations.reports || 'Rapports'}
+          </span>
+        </button>
+      </nav>
 
       {/* Realistic Smartphone Push Notification Banner (Top Lockscreen / Dynamic Island Style) */}
       <AnimatePresence>

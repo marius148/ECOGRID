@@ -13,6 +13,10 @@
     overflow-x: hidden;
     max-width: 100vw;
     -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    touch-action: manipulation;
   }
 
   body {
@@ -24,6 +28,12 @@
     @apply font-display tracking-tight font-bold;
     overflow-wrap: break-word;
     word-break: normal;
+    text-wrap: balance;
+  }
+
+  /* Support des chiffres tabulaires pour tous les indicateurs et métriques */
+  .tabular-nums, .font-mono {
+    font-variant-numeric: tabular-nums;
   }
 }
 

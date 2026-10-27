@@ -190,7 +190,7 @@ export const DecretTertiaireModule: React.FC<DecretTertiaireModuleProps> = ({
             />
           </div>
 
-          <div className="flex justify-between items-center text-[11px] text-slate-500 font-medium mt-2">
+          <div className="flex flex-wrap justify-between items-center gap-1.5 text-[10px] sm:text-[11px] text-slate-500 font-medium mt-2">
             <span>{isFr ? `Réf. ${baselineYear} : ${baselineConsumptionMwh.toLocaleString()} MWh` : `Ref. ${baselineYear}: ${baselineConsumptionMwh.toLocaleString()} MWh`}</span>
             <span className="font-semibold text-slate-700">{isFr ? `Actuel : ${currentAnnualConsumptionMwh.toLocaleString()} MWh` : `Current: ${currentAnnualConsumptionMwh.toLocaleString()} MWh`}</span>
             <span>{isFr ? `Cible 2030 : ${target2030Mwh.toLocaleString()} MWh` : `Target 2030: ${target2030Mwh.toLocaleString()} MWh`}</span>

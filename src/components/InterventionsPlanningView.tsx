@@ -1211,7 +1211,7 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
         )}
       </AnimatePresence>
 
-      <div className="flex flex-col xl:flex-row min-h-[780px]">
+      <div className="flex flex-col xl:flex-row min-h-0 xl:min-h-[780px]">
         
         {/* ================= LEFT SIDEBAR ================= */}
         {!isSidebarCollapsed && (
