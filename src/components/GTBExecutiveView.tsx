@@ -1,54 +1,32 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
-  FileText, 
-  Layers, 
-  Activity, 
   Cpu, 
-  Search, 
-  CheckCircle2, 
+  AlertTriangle, 
   RefreshCw, 
-  MapPin, 
-  SlidersHorizontal,
-  Table as TableIcon,
-  LayoutGrid,
-  Building2,
+  Building2, 
+  ChevronDown, 
+  Thermometer, 
+  Lightbulb, 
+  Fan, 
+  CheckCircle2, 
+  Zap, 
   Flame,
-  Zap,
-  ArrowRight,
-  X,
-  Power,
-  Sliders,
-  Thermometer,
-  Fan,
+  Droplets,
   Sun,
-  Shield,
-  Clock,
-  Sparkles,
-  ToggleLeft,
-  ToggleRight,
-  AlertTriangle,
-  Play,
-  RotateCcw,
-  Check,
-  TrendingUp,
-  TrendingDown,
-  Wrench,
-  Calendar
+  ShieldCheck,
+  Check
 } from 'lucide-react';
 import { 
   BarChart, 
   Bar, 
   XAxis, 
   YAxis, 
-  CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell 
+  ResponsiveContainer,
+  Cell
 } from 'recharts';
 import { cn } from '../lib/utils';
-import { getBuildingColorTheme } from '../utils/buildingThemes';
+import { GtbPointsMatrixTable } from './GtbPointsMatrixTable';
 
 export interface GTBEquipment {
   location: string;
@@ -71,10 +49,28 @@ export const cleanGtbText = (val: any): string => {
     .trim();
 };
 
-const cleanQty = (val: any): number => {
-  if (typeof val === 'number') return val;
-  const cleaned = cleanGtbText(val).replace(/[^0-9]/g, '');
-  return parseInt(cleaned, 10) || 1;
+export const checkBuildingAnomaly = (b: any): { isAnom: boolean; isAttention: boolean; deltaPrct: number; nominalKwh: number } => {
+  if (!b) return { isAnom: false, isAttention: false, deltaPrct: 0, nominalKwh: 196 };
+  
+  const status = String(b.status || '').toUpperCase();
+  const kwh = typeof b.consumption === 'number'
+    ? b.consumption
+    : parseFloat(String(b.consumption || '0').replace(/[^0-9.]/g, '')) || 0;
+  
+  const surface = typeof b.surface === 'number'
+    ? b.surface
+    : parseFloat(String(b.surface || '1000').replace(/[^0-9.]/g, '')) || 1000;
+  
+  const type = String(b.type || '').toLowerCase();
+  const isT1 = type.includes('t1') || type.includes('étudiant') || type.includes('etudiant') || surface < 1000;
+  const nominalKwh = isT1 ? 114 : 196;
+  
+  const deltaPrct = nominalKwh > 0 && kwh > 0 ? Math.round(((kwh - nominalKwh) / nominalKwh) * 100) : 0;
+  
+  const isAnom = status === 'ALERTE' || deltaPrct >= 20 || (deltaPrct <= -45 && kwh > 0);
+  const isAttention = !isAnom && (status === 'ATTENTION' || (deltaPrct >= 10 && deltaPrct < 20) || (deltaPrct <= -25 && deltaPrct > -45));
+  
+  return { isAnom, isAttention, deltaPrct, nominalKwh };
 };
 
 interface GTBExecutiveViewProps {
@@ -92,1358 +88,729 @@ interface GTBExecutiveViewProps {
 export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
   language,
   buildingsList,
-  selectedBuildingId,
+  selectedBuildingId = 'all',
   onSelectBuilding,
   onNavigateView,
   gtbEquipments = [],
-  isSyncing,
+  isSyncing = false,
   lastSyncTime,
   onForceSync
 }) => {
-  // Filtres et Vues
-  const [selectedZone, setSelectedZone] = useState<string>('Tous');
-  const [selectedCategory, setSelectedCategory] = useState<string>('Tous');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [showTable, setShowTable] = useState<boolean>(false);
-  const [timeFilter, setTimeFilter] = useState<string>('today');
+  const isFr = language === 'fr';
 
-  // État interactif des régulations GTB en temps réel
-  const [globalMode, setGlobalMode] = useState<'AUTO' | 'CONFORT' | 'ECO' | 'NUIT' | 'CANICULE' | 'GEL'>('AUTO');
-  const [heatingSetpoint, setHeatingSetpoint] = useState<number>(21.5);
-  const [coolingSetpoint, setCoolingSetpoint] = useState<number>(25.0);
-  const [ventilationRate, setVentilationRate] = useState<number>(850);
-  const [lightingLux, setLightingLux] = useState<number>(350);
-  const [aiOptimizationActive, setAiOptimizationActive] = useState<boolean>(true);
-  const [nightSetbackActive, setNightSetbackActive] = useState<boolean>(true);
+  // Navigation entre Tableau de Bord GTB et Matrice Google Sheet
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'matrix'>('dashboard');
 
-  // État interactif individuel des équipements
-  const [equipmentStates, setEquipmentStates] = useState<Record<string, { status: string; override: boolean; setpoint?: number }>>({});
-  const [selectedEquipmentModal, setSelectedEquipmentModal] = useState<GTBEquipment | null>(null);
-  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  // Sélection interne réactive synchronisée avec les props
+  const [currentSelectedId, setCurrentSelectedId] = useState<string>(selectedBuildingId || 'all');
+  useEffect(() => {
+    if (selectedBuildingId) {
+      setCurrentSelectedId(selectedBuildingId);
+    }
+  }, [selectedBuildingId]);
 
-  // Notifications temporaires lors d'une action
+  const [acknowledgedAlarms, setAcknowledgedAlarms] = useState<string[]>([]);
+  const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
+  const [chartMetric, setChartMetric] = useState<'kwh' | 'kw'>('kwh');
+
   const showFeedback = (msg: string) => {
-    setActionNotice(msg);
-    setTimeout(() => {
-      setActionNotice(null);
-    }, 3000);
+    setFeedbackNotice(msg);
+    setTimeout(() => setFeedbackNotice(null), 3000);
   };
 
+  // Trouver le bâtiment sélectionné dans la liste
   const selectedBuilding = useMemo(() => {
-    if (!selectedBuildingId || selectedBuildingId === 'all') return null;
-    return buildingsList.find(b => b.id.toString() === selectedBuildingId.toString()) || null;
-  }, [buildingsList, selectedBuildingId]);
+    if (!currentSelectedId || currentSelectedId === 'all') return null;
+    return buildingsList.find(b => {
+      if (b.id?.toString() === currentSelectedId.toString()) return true;
+      const bNum = (b.id?.toString() || '').match(/\d+/)?.[0];
+      const sNum = currentSelectedId.toString().match(/\d+/)?.[0];
+      return bNum && sNum && parseInt(bNum, 10) === parseInt(sNum, 10);
+    }) || null;
+  }, [buildingsList, currentSelectedId]);
 
-  const isSelectedAnom = useMemo(() => {
-    if (!selectedBuilding) return false;
-    const strStatus = String(selectedBuilding.status || '').toUpperCase();
-    const strId = String(selectedBuilding.id || '').toUpperCase();
-    const kwh = typeof selectedBuilding.consumption === 'number' 
-      ? selectedBuilding.consumption 
-      : parseFloat(String(selectedBuilding.consumption || '').replace(/[^0-9.]/g, '')) || 0;
-    return strStatus === 'ALERTE' || strId === 'BAT-02' || strId === 'BAT-07' || kwh > 210 || (kwh > 0 && kwh < 30);
-  }, [selectedBuilding]);
+  const isGlobal = !selectedBuilding;
 
-  const activeTheme = useMemo(() => {
-    return getBuildingColorTheme(selectedBuildingId, selectedBuilding?.status, isSelectedAnom);
-  }, [selectedBuildingId, selectedBuilding, isSelectedAnom]);
+  // Données consolidées réelles du bâtiment ou du parc
+  const gtbData = useMemo(() => {
+    const selectedCheck = checkBuildingAnomaly(selectedBuilding);
+    const isAnom = !isGlobal && selectedCheck.isAnom;
+    const isAttention = !isGlobal && selectedCheck.isAttention;
 
-  // Nettoyage systématique des équipements pour supprimer tout "x10" et "(Bâtiment X)"
-  const sanitizedEquipments = useMemo(() => {
-    return gtbEquipments.map((eq, idx) => ({
-      ...eq,
-      id: `EQ-${idx}`,
-      location: cleanGtbText(eq.location) || 'Bâtiments',
-      category: cleanGtbText(eq.category) || 'Général',
-      name: cleanGtbText(eq.name),
-      brandModel: cleanGtbText(eq.brandModel),
-      quantity: cleanQty(eq.quantity),
-      protocol: cleanGtbText(eq.protocol),
-      pointType: cleanGtbText(eq.pointType),
-      status: equipmentStates[`EQ-${idx}`]?.status || cleanGtbText(eq.status) || 'Actif'
-    }));
-  }, [gtbEquipments, equipmentStates]);
+    const surfaceM2 = selectedBuilding 
+      ? parseInt(String(selectedBuilding.surface || '1300').replace(/[^0-9]/g, ''), 10) || 1300
+      : 10250;
 
-  // Bascule du statut d'un équipement en 1 clic
-  const handleToggleEquipment = (eqId: string, currentStatus: string) => {
-    const nextStatus = currentStatus === 'Actif' ? 'En veille' : currentStatus === 'En veille' ? 'Arrêté' : 'Actif';
-    setEquipmentStates(prev => ({
-      ...prev,
-      [eqId]: {
-        ...(prev[eqId] || {}),
-        status: nextStatus,
-        override: true
-      }
-    }));
-    showFeedback(`Équipement ${eqId} commuté : ${nextStatus}`);
-  };
+    const buildingType = selectedBuilding
+      ? (selectedBuilding.type || (surfaceM2 > 1000 ? 'T3 Familial' : 'T1bis Étudiant'))
+      : 'Parc Mixte (10 Bâtiments)';
 
-  // Modes prédéfinis interactifs
-  const handleSelectMode = (mode: 'AUTO' | 'CONFORT' | 'ECO' | 'NUIT' | 'CANICULE' | 'GEL') => {
-    setGlobalMode(mode);
-    switch (mode) {
-      case 'CONFORT':
-        setHeatingSetpoint(22.0);
-        setCoolingSetpoint(24.5);
-        setVentilationRate(950);
-        showFeedback(language === 'fr' ? 'Mode Confort activé (22.0°C)' : 'Comfort Mode active (22.0°C)');
-        break;
-      case 'ECO':
-        setHeatingSetpoint(19.0);
-        setCoolingSetpoint(26.0);
-        setVentilationRate(700);
-        showFeedback(language === 'fr' ? 'Mode Éco GTB activé (19.0°C)' : 'Eco BMS Mode active (19.0°C)');
-        break;
-      case 'NUIT':
-        setHeatingSetpoint(16.0);
-        setCoolingSetpoint(28.0);
-        setVentilationRate(400);
-        showFeedback(language === 'fr' ? 'Abaissement Nuit activé (16.0°C)' : 'Night Setback active (16.0°C)');
-        break;
-      case 'CANICULE':
-        setHeatingSetpoint(18.0);
-        setCoolingSetpoint(25.0);
-        setVentilationRate(1100);
-        showFeedback(language === 'fr' ? 'Protection Canicule active (25.0°C)' : 'Heatwave protection active (25.0°C)');
-        break;
-      case 'GEL':
-        setHeatingSetpoint(8.0);
-        setCoolingSetpoint(32.0);
-        setVentilationRate(300);
-        showFeedback(language === 'fr' ? 'Hors-Gel activé (8.0°C)' : 'Frost protection active (8.0°C)');
-        break;
-      case 'AUTO':
-      default:
-        setHeatingSetpoint(21.5);
-        setCoolingSetpoint(25.0);
-        setVentilationRate(850);
-        showFeedback(language === 'fr' ? 'Régulation Automatique active' : 'Automated regulation active');
-        break;
-    }
-  };
+    const dailyKwh = selectedBuilding
+      ? (typeof selectedBuilding.consumption === 'number' 
+          ? selectedBuilding.consumption 
+          : parseFloat(String(selectedBuilding.consumption || '196').replace(/[^0-9.]/g, '')) || 196)
+      : buildingsList.reduce((acc, b) => {
+          const val = typeof b.consumption === 'number' 
+            ? b.consumption 
+            : parseFloat(String(b.consumption || '100').replace(/[^0-9.]/g, '')) || 100;
+          return acc + val;
+        }, 0);
 
-  // Métriques
-  const metrics = useMemo(() => {
-    const totalItems = sanitizedEquipments.reduce((acc, curr) => acc + (typeof curr.quantity === 'number' ? curr.quantity : 1), 0);
-    const uniqueCategories = Array.from(new Set(sanitizedEquipments.map(e => e.category)));
-    const uniqueProtocols = Array.from(new Set(sanitizedEquipments.map(e => e.protocol.split('/')[0].trim()))).filter(Boolean);
-    
-    return {
-      pointsCount: 91,
-      totalEquipments: totalItems || 3496,
-      categoriesCount: uniqueCategories.length || 7,
-      protocolsCount: uniqueProtocols.length || 6,
-      availability: '99.8%'
-    };
-  }, [sanitizedEquipments]);
+    const yearMwh = selectedBuilding
+      ? (typeof selectedBuilding.consumptionYearMwh === 'number' 
+          ? selectedBuilding.consumptionYearMwh 
+          : parseFloat(String(selectedBuilding.consumptionYearMwh || '71.4').replace(/[^0-9.]/g, '')) || 71.4)
+      : buildingsList.reduce((acc, b) => acc + (b.consumptionYearMwh || 55.2), 0);
 
-  // Données du graphique circulaire adaptées à la charte et au bâtiment sélectionné
-  const pieData = useMemo(() => {
-    return [
-      { name: 'CVC & Confort', value: 460, color: activeTheme.primary },
-      { name: 'GTB Comptage', value: 410, color: activeTheme.secondary || '#065f46' },
-      { name: 'Production ENR', value: 2602, color: activeTheme.accent || '#10b981' },
-      { name: 'Sécurité & Utilités', value: 24, color: '#0d9488' },
-    ];
-  }, [activeTheme]);
+    const winterPowerKw = selectedBuilding
+      ? (typeof selectedBuilding.powerWinterKw === 'number' 
+          ? selectedBuilding.powerWinterKw 
+          : parseFloat(String(selectedBuilding.powerWinterKw || '16.4').replace(',', '.')) || 16.4)
+      : 133.0;
 
-  // Données du graphique en barres adaptées
-  const barData = useMemo(() => {
-    const scale = selectedBuilding ? 0.35 : 1;
-    return [
-      { name: 'CVC', telemetrie: Math.round(36 * scale), automates: Math.round(22 * scale) },
-      { name: 'Comptage', telemetrie: Math.round(28 * scale), automates: Math.round(8 * scale) },
-      { name: 'Solaire', telemetrie: Math.round(24 * scale), automates: Math.round(16 * scale) },
-      { name: 'Stockage', telemetrie: Math.round(14 * scale), automates: Math.round(12 * scale) },
-      { name: 'Trigén.', telemetrie: Math.round(20 * scale), automates: Math.round(26 * scale) },
-      { name: 'Sécurité', telemetrie: Math.round(22 * scale), automates: Math.round(15 * scale) },
-    ];
-  }, [selectedBuilding]);
+    // 1. Confort & Températures adaptatives selon les mesures du Google Sheet
+    const measuredTemp = isGlobal 
+      ? 20.6 
+      : isAnom 
+      ? (22.5 + Math.min(2.5, Math.max(0.5, (selectedCheck.deltaPrct || 20) * 0.05)))
+      : isAttention 
+      ? (selectedCheck.deltaPrct < 0 ? 17.8 : 22.0)
+      : 20.4;
 
-  // Données de couverture par zone
-  const zonesCoverage = useMemo(() => {
-    return [
-      { name: 'Bâtiments', pct: 87, bgClass: 'bg-emerald-800' },
-      { name: 'Zone Technique', pct: 57, bgClass: 'bg-emerald-600' },
-      { name: 'Sous-stations', pct: 37, bgClass: 'bg-emerald-500' },
-      { name: 'Centrale Énergie', pct: 17, bgClass: 'bg-emerald-400' },
-    ];
-  }, []);
+    const setpointTemp = 20.5;
+    const flowTemp = isAnom ? 62.4 : isAttention ? (selectedCheck.deltaPrct < 0 ? 32.0 : 58.0) : 52.4;
+    const returnTemp = isAnom ? 54.0 : isAttention ? (selectedCheck.deltaPrct < 0 ? 28.5 : 49.0) : 44.2;
+    const deltaT = Math.round((flowTemp - returnTemp) * 10) / 10;
 
-  // Filtrage pour le tableau d'inventaire
-  const filteredEquipments = useMemo(() => {
-    return sanitizedEquipments.filter(eq => {
-      if (selectedZone !== 'Tous') {
-        if (!eq.location.toLowerCase().includes(selectedZone.toLowerCase())) return false;
-      }
-      if (selectedCategory !== 'Tous') {
-        if (!eq.category.toLowerCase().includes(selectedCategory.toLowerCase())) return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matches = 
-          eq.name.toLowerCase().includes(q) ||
-          eq.brandModel.toLowerCase().includes(q) ||
-          eq.category.toLowerCase().includes(q) ||
-          eq.protocol.toLowerCase().includes(q) ||
-          eq.pointType.toLowerCase().includes(q) ||
-          eq.location.toLowerCase().includes(q);
-        if (!matches) return false;
-      }
-      return true;
-    });
-  }, [sanitizedEquipments, selectedZone, selectedCategory, searchQuery]);
+    // 2. Éclairage
+    const lightingPoints = isGlobal ? 2992 : Math.round(2992 * (surfaceM2 / 10250));
 
-  // Calcul en direct des anomalies et dérives GTB
-  const gtbAnomalies = useMemo(() => {
-    const list: Array<{
-      id: string;
-      titleFr: string;
-      titleEn: string;
-      descFr: string;
-      descEn: string;
-      severity: 'critical' | 'warning';
-      type: 'temp_high' | 'temp_low' | 'conflict' | 'equipment';
-      actionType?: 'setpoint' | 'rearm';
-    }> = [];
+    // 3. Ventilation réelle
+    const nominalVmcFlow = isGlobal ? 10250 : (surfaceM2 > 1000 ? 1300 : 750);
 
-    // 1. Dérive consigne Chauffage (trop haute ou trop basse)
-    if (heatingSetpoint > 22.5) {
-      const excess = (heatingSetpoint - 20).toFixed(1);
-      const wastePct = Math.round((heatingSetpoint - 20) * 7);
-      list.push({
-        id: 'anom-heat-high',
-        titleFr: 'Surchauffe GTB : Consigne Chauffage Excessive',
-        titleEn: 'BMS Overheating: High Heating Setpoint',
-        descFr: `Consigne fixée à ${heatingSetpoint.toFixed(1)}°C (recommandation : 19.0°C - 21.0°C). Engendre ~+${wastePct}% de surconsommation CVC continue (+${excess}°C au-dessus de 20°C).`,
-        descEn: `Setpoint at ${heatingSetpoint.toFixed(1)}°C (target: 19-21°C). Causes ~+${wastePct}% unnecessary HVAC continuous drain.`,
-        severity: heatingSetpoint >= 24 ? 'critical' : 'warning',
-        type: 'temp_high',
-        actionType: 'setpoint'
-      });
-    } else if (heatingSetpoint < 17.0 && globalMode !== 'GEL') {
-      list.push({
-        id: 'anom-heat-low',
-        titleFr: 'Sous-chauffe GTB : Risque d\'Inconfort Thermique',
-        titleEn: 'BMS Under-heating: Resident Discomfort Hazard',
-        descFr: `Consigne à ${heatingSetpoint.toFixed(1)}°C en période d'occupation. Risque élevé d'inconfort pour les résidents.`,
-        descEn: `Heating setpoint at ${heatingSetpoint.toFixed(1)}°C during occupied schedule. Severe discomfort risk.`,
-        severity: 'warning',
-        type: 'temp_low',
-        actionType: 'setpoint'
-      });
-    }
+    // 4. Compteurs d'énergie réels
+    const elecIndexDisplay = isGlobal ? '1 105 400' : `${Math.round(yearMwh * 1000 + 42000).toLocaleString('fr-FR')}`;
+    const thermalCetIndexMwh = isGlobal ? 718.5 : Math.round(winterPowerKw * 3.5);
+    const dailyWaterM3 = isGlobal ? 36.3 : (surfaceM2 > 1000 ? 5.8 : 1.6);
+    const waterCumulativeM3 = isGlobal ? 14385 : (surfaceM2 > 1000 ? 3135 : 880);
+    const solarIndexKwh = isGlobal ? 389450 : (surfaceM2 > 1000 ? 49370 : 28490);
 
-    // 2. Dérive consigne Climatisation (trop basse)
-    if (coolingSetpoint < 23.0) {
-      list.push({
-        id: 'anom-cool-low',
-        titleFr: 'Sur-Climatisation : Consigne Froid Trop Basse',
-        titleEn: 'Excessive Chilling: Low Cooling Setpoint',
-        descFr: `Consigne froid à ${coolingSetpoint.toFixed(1)}°C (seuil mini recommandé : 24.0°C). Surcharge du compresseur et risque de condensation.`,
-        descEn: `Cooling setpoint at ${coolingSetpoint.toFixed(1)}°C. Compressor stress and condensation hazard.`,
-        severity: 'warning',
-        type: 'temp_low',
-        actionType: 'setpoint'
-      });
-    }
-
-    // 3. Conflit Chaud/Froid simultanés
-    if (heatingSetpoint >= coolingSetpoint) {
-      list.push({
-        id: 'anom-conflict',
-        titleFr: 'Conflit Thermique Majeur : Chauffage >= Climatisation',
-        titleEn: 'Major Thermal Conflict: Heating >= Cooling',
-        descFr: `Consigne chauffage (${heatingSetpoint.toFixed(1)}°C) supérieure ou égale à la consigne froid (${coolingSetpoint.toFixed(1)}°C). Fonctionnement simultané destructeur !`,
-        descEn: `Heating setpoint (${heatingSetpoint.toFixed(1)}°C) overlaps cooling (${coolingSetpoint.toFixed(1)}°C). Energy destructive!`,
-        severity: 'critical',
-        type: 'conflict',
-        actionType: 'setpoint'
-      });
-    }
-
-    // 4. Équipements en alarme ou perte de communication
-    sanitizedEquipments.forEach((eq, idx) => {
-      const s = String(eq.status).toLowerCase();
-      if (s.includes('alarme') || s.includes('défaut') || s.includes('panne') || s.includes('perte')) {
-        list.push({
-          id: `anom-eq-${idx}`,
-          titleFr: `Défaut Automate / Capteur : ${eq.name}`,
-          titleEn: `Hardware / Sensor Alert: ${eq.name}`,
-          descFr: `${eq.location} (${eq.category}) : état « ${eq.status} » sur protocole ${eq.protocol}.`,
-          descEn: `${eq.location} (${eq.category}): state "${eq.status}" over protocol ${eq.protocol}.`,
-          severity: s.includes('alarme') || s.includes('défaut') ? 'critical' : 'warning',
-          type: 'equipment',
-          actionType: 'rearm'
+    // 5. Alarmes réelles générées dynamiquement en fonction du Google Sheet
+    const dynamicFaults: any[] = [];
+    buildingsList.forEach(b => {
+      const bCheck = checkBuildingAnomaly(b);
+      if (bCheck.isAnom || bCheck.isAttention) {
+        const bKwh = typeof b.consumption === 'number' 
+          ? b.consumption 
+          : parseFloat(String(b.consumption || '0').replace(/[^0-9.]/g, '')) || 0;
+        const isHigh = bCheck.deltaPrct > 0;
+        
+        dynamicFaults.push({
+          id: `FLT-${b.id}`,
+          buildingId: b.id.toString(),
+          building: `${b.name} (${b.id})`,
+          title: isHigh
+            ? (isFr ? `Surconsommation Google Sheet (+${bCheck.deltaPrct}%)` : `Google Sheet Overconsumption (+${bCheck.deltaPrct}%)`)
+            : (isFr ? `Sous-consommation anormale Google Sheet (${bCheck.deltaPrct}%)` : `Abnormal low consumption (${bCheck.deltaPrct}%)`),
+          detail: isHigh
+            ? (isFr ? `Consommation télérelevée à ${bKwh} kWh/j (Nominal: ${bCheck.nominalKwh} kWh/j). Puissance hiver : ${b.powerWinterKw ?? '--'} kW.` : `Telemetry: ${bKwh} kWh/d (Nominal: ${bCheck.nominalKwh} kWh/d). Power: ${b.powerWinterKw ?? '--'} kW.`)
+            : (isFr ? `Consommation télérelevée à ${bKwh} kWh/j (Nominal: ${bCheck.nominalKwh} kWh/j). Décrochage compteur ou vanne fermée.` : `Telemetry only ${bKwh} kWh/d. Meter outage or valve closed.`),
+          level: bCheck.isAnom ? 'P1' : 'P2',
+          source: isFr ? 'Télérelève Google Sheet' : 'Google Sheet Telemetry'
         });
       }
     });
 
-    return list;
-  }, [heatingSetpoint, coolingSetpoint, globalMode, sanitizedEquipments]);
+    const activeFaultsList = isGlobal
+      ? dynamicFaults
+      : dynamicFaults.filter(f => f.buildingId === selectedBuilding?.id?.toString());
 
-  // Réarmer tous les équipements en défaut
-  const handleRearmAllEquipments = () => {
-    setEquipmentStates(prev => {
-      const next = { ...prev };
-      sanitizedEquipments.forEach(eq => {
-        const s = String(eq.status).toLowerCase();
-        if (s.includes('alarme') || s.includes('défaut') || s.includes('panne') || s.includes('perte')) {
-          next[eq.id] = {
-            ...(next[eq.id] || {}),
-            status: 'Actif',
-            override: true
-          };
-        }
-      });
-      return next;
-    });
-    showFeedback(language === 'fr' ? 'Tous les automates ont été réarmés (statut: Actif)' : 'All BMS controllers acknowledged and reset (status: Active)');
-  };
-
-  // Corriger automatiquement les consignes GTB
-  const handleAutoFixSetpoints = () => {
-    setHeatingSetpoint(20.5);
-    setCoolingSetpoint(25.0);
-    setGlobalMode('AUTO');
-    showFeedback(language === 'fr' ? 'Consignes GTB recalibrées sur 20.5°C / 25.0°C (Zone neutre: 4.5°C)' : 'BMS setpoints re-aligned to 20.5°C / 25.0°C');
-  };
-
-  // Date formatée
-  const formattedDate = useMemo(() => {
-    const d = new Date();
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return {
+      isAnom,
+      isAttention,
+      surfaceM2,
+      buildingType,
+      dailyKwh,
+      yearMwh,
+      winterPowerKw,
+      measuredTemp,
+      setpointTemp,
+      flowTemp,
+      returnTemp,
+      deltaT,
+      lightingPoints,
+      nominalVmcFlow,
+      elecIndexDisplay,
+      thermalCetIndexMwh,
+      dailyWaterM3,
+      waterIndexDisplay: waterCumulativeM3.toLocaleString('fr-FR'),
+      solarIndexKwh,
+      activeFaultsList: activeFaultsList.filter(f => !acknowledgedAlarms.includes(f.id))
     };
-    const s = d.toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US', options);
-    return s.charAt(0).toUpperCase() + s.slice(1);
-  }, [language]);
+  }, [selectedBuilding, isGlobal, buildingsList, isFr, acknowledgedAlarms]);
+
+  // Données du graphique de télémétrie : une seule valeur par catégorie (sans barres doubles)
+  const chartData = useMemo(() => {
+    if (!isGlobal && selectedBuilding) {
+      // Vue bâtiment individuel : 7 jours de la semaine (Lun - Dim)
+      const WEEK_DAYS = isFr 
+        ? ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'] 
+        : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const WEEK_FACTORS = [0.98, 1.02, 0.95, 1.05, 1.01, 0.72, 0.68];
+      const baseDailyKwh = gtbData.dailyKwh || 100;
+      const baseKw = gtbData.winterPowerKw || 16.4;
+
+      return WEEK_DAYS.map((day, idx) => {
+        const factor = WEEK_FACTORS[idx];
+        const dayVal = chartMetric === 'kwh'
+          ? Math.round(baseDailyKwh * factor)
+          : Math.round(baseKw * (factor >= 1 ? factor : 0.85) * 10) / 10;
+        return {
+          name: day,
+          fullLabel: `${day} — ${selectedBuilding.name}`,
+          value: dayVal,
+          unit: chartMetric === 'kwh' ? 'kWh' : 'kW',
+          isAnom: gtbData.isAnom
+        };
+      });
+    }
+
+    // Vue globale : les 10 bâtiments avec 1 seule valeur par bâtiment
+    return buildingsList.map(b => {
+      const bCheck = checkBuildingAnomaly(b);
+      const isAnom = bCheck.isAnom;
+
+      const kwh = typeof b.consumption === 'number'
+        ? b.consumption
+        : parseFloat(String(b.consumption || '100').replace(/[^0-9.]/g, '')) || 100;
+      const kw = typeof b.powerWinterKw === 'number'
+        ? b.powerWinterKw
+        : parseFloat(String(b.powerWinterKw || '16.4').replace(',', '.')) || 16.4;
+
+      const val = chartMetric === 'kwh' ? Math.round(kwh) : kw;
+
+      return {
+        name: b.name.replace('Bâtiment ', 'Bât. '),
+        fullLabel: `${b.name} (${b.id})`,
+        value: val,
+        unit: chartMetric === 'kwh' ? 'kWh' : 'kW',
+        isAnom
+      };
+    });
+  }, [buildingsList, isGlobal, selectedBuilding, gtbData, chartMetric, isFr]);
 
   return (
-    <div className="w-full space-y-6">
-      {/* Toast de confirmation des actions interactives */}
-      {actionNotice && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 bg-slate-900 text-white text-xs font-semibold rounded-xl shadow-2xl border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
-          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>{actionNotice}</span>
+    <div className="space-y-5 pb-8 font-sans">
+      {/* Toast de confirmation */}
+      {feedbackNotice && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 text-xs font-semibold border border-slate-700">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{feedbackNotice}</span>
         </div>
       )}
 
-      {/* 1. En-tête Principal */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* En-tête de supervision avec sélecteur de périmètre */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 tracking-tight">
-            {language === 'fr' ? 'Supervision & Contrôles GTB' : 'BMS Supervision & Controls'}
+          <h1 className="text-xl sm:text-2xl font-bold font-display text-slate-900 tracking-tight">
+            {isFr ? 'Contrôle & Supervision GTB' : 'BMS Supervisory Control'}
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            {selectedBuilding ? `${selectedBuilding.name} • Télémétrie & Régulation` : (language === 'fr' ? 'Supervision Globale • 10 Bâtiments' : 'Global Portfolio Supervision • 10 Buildings')}
+            {isGlobal 
+              ? (isFr ? 'Parc global · 10 bâtiments · 133 kW souscrits · 5 558 points GTB' : 'Site overview · 10 Buildings · 133 kW contracted · 5,558 points')
+              : (isFr 
+                  ? `Supervision dédiée : ${selectedBuilding?.name} (${selectedBuilding?.id}) · ${gtbData.buildingType} · ${gtbData.surfaceM2} m²` 
+                  : `Dedicated view: ${selectedBuilding?.name} (${selectedBuilding?.id}) · ${gtbData.surfaceM2} m²`)}
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
-          {/* Statut de communication interactif */}
-          <button
-            onClick={() => {
-              onForceSync?.();
-              showFeedback(language === 'fr' ? 'Actualisation de la télémétrie GTB effectuée' : 'BMS telemetry refreshed');
-            }}
-            className="flex items-center gap-2 text-xs text-slate-700 font-semibold bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200/80 shadow-xs transition cursor-pointer"
-          >
-            <span className={cn("w-2 h-2 rounded-full", isSyncing ? "bg-amber-500 animate-spin" : "bg-emerald-500")} />
-            <span>{isSyncing ? (language === 'fr' ? 'Synchronisation...' : 'Syncing...') : (language === 'fr' ? 'Télémétrie Active' : 'Live Telemetry')}</span>
-            <RefreshCw className={cn("w-3.5 h-3.5 text-slate-400", isSyncing && "animate-spin text-emerald-600")} />
-          </button>
-
-          {/* Bouton bascule Vue Synthèse / Inventaire */}
-          <button
-            onClick={() => setShowTable(!showTable)}
-            className={cn(
-              "flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs border cursor-pointer",
-              showTable
-                ? "bg-slate-900 text-white border-slate-900"
-                : "bg-white text-slate-700 hover:bg-slate-50 border-slate-200/80"
-            )}
-          >
-            {showTable ? (
-              <>
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span>{language === 'fr' ? 'Vue Pilotage' : 'Dashboard'}</span>
-              </>
-            ) : (
-              <>
-                <TableIcon className="w-3.5 h-3.5" />
-                <span>{language === 'fr' ? 'Inventaire Automates' : 'Inventory'}</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Sélecteur de Bâtiments GTB Dynamique (couleurs charte graphique) */}
-      <div className="bg-white rounded-2xl p-2.5 border border-slate-200/80 shadow-xs">
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 md:pb-0">
-          <button
-            onClick={() => onSelectBuilding?.('all')}
-            className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer",
-              !selectedBuildingId || selectedBuildingId === 'all'
-                ? "bg-emerald-900 text-white shadow-xs"
-                : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/70"
-            )}
-          >
-            {language === 'fr' ? 'Tout le Parc' : 'All Sites'}
-          </button>
-          {buildingsList.map(b => {
-            const isSel = selectedBuildingId === b.id.toString();
-            const isAnom = String(b.status).toUpperCase() === 'ALERTE' || String(b.id).toUpperCase() === 'BAT-02' || String(b.id).toUpperCase() === 'BAT-07';
-            const bTheme = getBuildingColorTheme(b.id, b.status, isAnom);
-            return (
-              <button
-                key={b.id}
-                onClick={() => onSelectBuilding?.(b.id.toString())}
-                className={cn(
-                  "px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 border",
-                  isSel
-                    ? `${bTheme.badge} shadow-xs border-transparent ring-2 ring-emerald-600/30`
-                    : isAnom
-                    ? "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100"
-                    : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200/70"
-                )}
-              >
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: bTheme.primary }} />
-                <span>{b.name}</span>
-                {isAnom && <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 1.5. Centre de Diagnostic des Anomalies & Alertes GTB */}
-      <div className={cn(
-        "rounded-2xl p-4 sm:p-5 border transition-all space-y-3.5 shadow-xs",
-        gtbAnomalies.length > 0
-          ? "bg-rose-50/40 border-rose-200/90"
-          : "bg-emerald-50/30 border-emerald-200/60"
-      )}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className={cn(
-              "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border shadow-2xs",
-              gtbAnomalies.length > 0 
-                ? "bg-rose-100 border-rose-200 text-rose-700" 
-                : "bg-emerald-100 border-emerald-200 text-emerald-700"
-            )}>
-              {gtbAnomalies.length > 0 ? (
-                <AlertTriangle className="w-5 h-5 animate-pulse" />
-              ) : (
-                <CheckCircle2 className="w-5 h-5" />
-              )}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm sm:text-base font-bold text-slate-900 font-display break-words">
-                  {language === 'fr' ? 'Diagnostic & Anomalies GTB' : 'BMS Diagnostics'}
-                </h3>
-                {gtbAnomalies.length > 0 ? (
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-600 text-white uppercase tracking-wider shadow-2xs shrink-0">
-                    {gtbAnomalies.length} {language === 'fr' ? 'dérive(s) détectée(s)' : 'drift(s)'}
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider shrink-0">
-                    {language === 'fr' ? '100% Nominal' : '100% Nominal'}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-            {gtbAnomalies.some(a => a.actionType === 'setpoint' || a.type === 'temp_high' || a.type === 'temp_low' || a.type === 'conflict') && (
-              <button
-                onClick={handleAutoFixSetpoints}
-                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-              >
-                <Wrench className="w-3.5 h-3.5" />
-                <span>{language === 'fr' ? 'Corriger Consignes (20.5°C)' : 'Align Setpoints (20.5°C)'}</span>
-              </button>
-            )}
-
-            {gtbAnomalies.some(a => a.actionType === 'rearm' || a.type === 'equipment') && (
-              <button
-                onClick={handleRearmAllEquipments}
-                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>{language === 'fr' ? 'Réarmer Automates' : 'Reset Hardware'}</span>
-              </button>
-            )}
-
-            {/* Test Simulation Trigger */}
-            <button
-              onClick={() => {
-                if (heatingSetpoint >= 23.5) {
-                  handleAutoFixSetpoints();
+        {/* Sélecteur de Périmètre / Matrice */}
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-[260px] sm:min-w-[320px]">
+            <select
+              value={activeTab === 'matrix' ? 'matrix' : (currentSelectedId || 'all')}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'matrix') {
+                  setActiveTab('matrix');
                 } else {
-                  setHeatingSetpoint(24.5);
-                  showFeedback(language === 'fr' ? 'Simulation dérive : 24.5°C' : 'Simulated drift: 24.5°C');
+                  setActiveTab('dashboard');
+                  setCurrentSelectedId(val);
+                  onSelectBuilding?.(val);
                 }
               }}
-              className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-xl text-xs font-semibold transition cursor-pointer"
+              className="w-full appearance-none bg-white border border-slate-200 hover:border-emerald-600 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-600/20 text-slate-900 font-semibold text-xs sm:text-sm rounded-xl px-3.5 py-2 pr-9 shadow-2xs cursor-pointer transition-all"
             >
-              <span>{heatingSetpoint >= 23.5 ? (language === 'fr' ? 'Rétablir consigne' : 'Reset setpoint') : (language === 'fr' ? 'Simuler dérive (+3°C)' : 'Simulate drift (+3°C)')}</span>
-            </button>
+              <optgroup label={isFr ? "Périmètre Général" : "General Perimeter"}>
+                <option value="all">
+                  {isFr ? "Parc Complet (10 Bâtiments - 133 kW)" : "Full Portfolio (10 Sites - 133 kW)"}
+                </option>
+                <option value="matrix">
+                  {isFr ? "Matrice des Points GTB (5 558 points)" : "GTB Points Matrix (5,558 points)"}
+                </option>
+              </optgroup>
 
-            {/* Cross Navigation to Planning */}
-            {onNavigateView && (
-              <button
-                onClick={() => onNavigateView('planning')}
-                className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                title={language === 'fr' ? 'Accéder au planning des interventions' : 'Open interventions planning'}
-              >
-                <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{language === 'fr' ? 'Planning' : 'Planning'}</span>
-              </button>
-            )}
+              <optgroup label={isFr ? "Bâtiments Individuels" : "Individual Buildings"}>
+                {buildingsList.map(b => {
+                  const bCheck = checkBuildingAnomaly(b);
+                  const isAnom = bCheck.isAnom;
+                  const isAtt = bCheck.isAttention;
+                  
+                  return (
+                    <option key={b.id} value={b.id.toString()}>
+                      {b.name} ({b.id}) {isAnom ? (isFr ? '· Alerte' : '· Alert') : isAtt ? (isFr ? '· Attention' : '· Warning') : ''}
+                    </option>
+                  );
+                })}
+              </optgroup>
+            </select>
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
-        </div>
 
-        {/* Detailed Anomaly Cards */}
-        {gtbAnomalies.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-            {gtbAnomalies.map((anom) => (
-              <div 
-                key={anom.id}
-                className={cn(
-                  "p-3 rounded-xl border bg-white flex flex-col justify-between gap-2 shadow-2xs transition-all",
-                  anom.severity === 'critical' ? "border-rose-300" : "border-amber-300"
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <AlertTriangle className={cn("w-4 h-4 shrink-0", anom.severity === 'critical' ? "text-rose-600" : "text-amber-600")} />
-                    <span className="text-xs font-bold text-slate-900 truncate">
-                      {language === 'fr' ? anom.titleFr : anom.titleEn}
-                    </span>
+          {/* Bouton de Synchronisation */}
+          <button
+            onClick={onForceSync}
+            disabled={isSyncing}
+            className="h-9 px-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-2xs text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+            title={isFr ? "Actualiser les données" : "Sync data"}
+          >
+            <RefreshCw className={cn("w-3.5 h-3.5 text-emerald-700", isSyncing && "animate-spin")} />
+            <span className="hidden sm:inline">{isSyncing ? '...' : (isFr ? 'Actualiser' : 'Sync')}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Onglet Matrice Google Sheet */}
+      {activeTab === 'matrix' && (
+        <GtbPointsMatrixTable 
+          language={language}
+          selectedBuildingId={currentSelectedId}
+          onSelectBuilding={(id) => {
+            setCurrentSelectedId(id);
+            onSelectBuilding?.(id);
+          }}
+          onNavigateView={onNavigateView}
+        />
+      )}
+
+      {/* Onglet Tableau de Bord GTB */}
+      {activeTab === 'dashboard' && (
+        <div className="space-y-5">
+          {/* Alerte Bâtiment Détectée (si applicable) */}
+          {selectedBuilding && (gtbData.isAnom || gtbData.isAttention) && (
+            <div className={cn(
+              "p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs",
+              gtbData.isAnom ? "bg-rose-50/70 border-rose-200 text-rose-950" : "bg-amber-50/70 border-amber-200 text-amber-950"
+            )}>
+              <div className="flex items-center gap-3">
+                <AlertTriangle className={cn("w-5 h-5 shrink-0", gtbData.isAnom ? "text-rose-600" : "text-amber-600")} />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider">
+                      {gtbData.isAnom 
+                        ? (isFr ? 'Dérive de régulation détectée' : 'Setpoint deviation detected') 
+                        : (isFr ? 'Sous-consommation suspectée' : 'Underconsumption flagged')}
+                    </h3>
+                    <span className="text-xs font-semibold">· {selectedBuilding.name} ({selectedBuilding.id})</span>
+                  </div>
+                  <p className="text-xs opacity-90 mt-0.5">
+                    {gtbData.isAnom 
+                      ? (isFr ? `Température mesurée à ${gtbData.measuredTemp}°C vs consigne contractuelle 20.5°C.` : `Measured temp at ${gtbData.measuredTemp}°C vs setpoint 20.5°C.`)
+                      : (isFr ? `Appel de puissance à 1.2 kW seulement.` : `Low power demand.`)}
+                  </p>
+                </div>
+              </div>
+
+              {gtbData.isAnom && (
+                <button
+                  onClick={() => showFeedback(isFr ? `Consigne ${selectedBuilding.name} réalignée sur 20.5°C nominal` : 'Setpoint realigned to 20.5°C')}
+                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-lg transition cursor-pointer self-start sm:self-auto shrink-0 shadow-2xs"
+                >
+                  {isFr ? 'Réaligner la consigne (20.5°C)' : 'Realign setpoint (20.5°C)'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Grille des 4 modules de supervision technique */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            
+            {/* 1. Régulation Thermique & CVC */}
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center border border-emerald-100">
+                      <Thermometer className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold font-display text-slate-900">
+                        {isFr ? 'Régulation Thermique & CVC' : 'Thermal & HVAC Control'}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {isGlobal ? (isFr ? 'Consolidé 10 bâtiments' : 'Fleet consolidated') : selectedBuilding?.name}
+                      </p>
+                    </div>
                   </div>
                   <span className={cn(
-                    "text-[9px] font-black uppercase px-2 py-0.5 rounded shrink-0",
-                    anom.severity === 'critical' ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
+                    "px-2 py-0.5 rounded-md text-[11px] font-semibold border",
+                    gtbData.isAnom 
+                      ? "bg-rose-50 text-rose-800 border-rose-200" 
+                      : gtbData.isAttention 
+                      ? "bg-amber-50 text-amber-800 border-amber-200" 
+                      : "bg-emerald-50 text-emerald-800 border-emerald-200"
                   )}>
-                    {anom.severity === 'critical' ? (language === 'fr' ? "CRITIQUE" : "CRITICAL") : (language === 'fr' ? "ALERTE" : "WARNING")}
+                    {gtbData.isAnom ? '+4.0°C écart' : gtbData.isAttention ? 'Sous-chauffe' : (isFr ? 'Conforme' : 'Optimal')}
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-600 font-normal leading-relaxed">
-                  {language === 'fr' ? anom.descFr : anom.descEn}
-                </p>
-
-                <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] font-bold text-slate-500 gap-2 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <span>{language === 'fr' ? 'Résolution :' : 'Remedy:'}</span>
-                    {anom.actionType === 'setpoint' ? (
-                      <button
-                        onClick={handleAutoFixSetpoints}
-                        className="text-indigo-600 hover:text-indigo-800 hover:underline uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                      >
-                        <Wrench className="w-3 h-3" />
-                        {language === 'fr' ? 'Réguler à 20.5°C' : 'Align setpoint'}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={handleRearmAllEquipments}
-                        className="text-slate-800 hover:underline uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        {language === 'fr' ? 'Acquitter l\'alarme' : 'Acknowledge'}
-                      </button>
-                    )}
+                <div className="grid grid-cols-2 gap-2.5 my-3 p-3 bg-slate-50/80 rounded-xl border border-slate-100 text-xs">
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-medium">{isFr ? 'T° Ambiance' : 'Indoor T°'}</span>
+                    <p className={cn(
+                      "text-xl font-bold font-display mt-0.5",
+                      gtbData.isAnom ? "text-rose-700" : gtbData.isAttention ? "text-amber-700" : "text-slate-900"
+                    )}>
+                      {gtbData.measuredTemp}°C
+                    </p>
                   </div>
-
-                  {onNavigateView && (
-                    <button
-                      onClick={() => onNavigateView('planning')}
-                      className="text-emerald-700 hover:text-emerald-900 hover:underline uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                      title={language === 'fr' ? 'Planifier une intervention pour cette anomalie' : 'Schedule intervention'}
-                    >
-                      <Calendar className="w-3 h-3 text-emerald-600" />
-                      <span>{language === 'fr' ? 'Planifier' : 'Schedule'}</span>
-                    </button>
-                  )}
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-medium">{isFr ? 'Consigne Active' : 'Setpoint'}</span>
+                    <p className="text-xl font-bold font-display text-emerald-800 mt-0.5">{gtbData.setpointTemp}°C</p>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-medium">{isFr ? 'T° Départ / Retour' : 'Flow / Return'}</span>
+                    <p className="text-xs font-semibold text-slate-800 mt-0.5">{gtbData.flowTemp}°C / {gtbData.returnTemp}°C</p>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-medium">{isFr ? 'Delta T Réseau' : 'Delta T'}</span>
+                    <p className="text-xs font-semibold text-slate-800 mt-0.5">{gtbData.deltaT}°C</p>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 py-1">
-            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>
-              {language === 'fr'
-                ? 'Paramètres nominaux sur l\'ensemble des boucles CVC et bus de terrain.'
-                : 'Optimal setpoints across all HVAC loops and fieldbus controllers.'}
-            </span>
-          </div>
-        )}
-      </div>
 
-      {/* 2. Centre de Commande Interactif : Modes de Marche & Consignes */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2">
-            <Sliders className="w-4 h-4 text-emerald-700" />
-            <h2 className="text-sm font-bold text-slate-800 tracking-tight">
-              {language === 'fr' ? 'Mode de Régulation GTB & Consignes' : 'BMS Operating Mode & Setpoints'}
-            </h2>
-          </div>
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>{isFr ? 'Mode de régulation :' : 'Control mode:'}</span>
+                <span className="font-semibold text-slate-800">{isFr ? 'Loi d’eau automatique' : 'Auto heating curve'}</span>
+              </div>
+            </div>
 
-          {/* Bouton Optimisation Automatique */}
-          <button
-            onClick={() => {
-              setAiOptimizationActive(!aiOptimizationActive);
-              showFeedback(aiOptimizationActive ? 'Optimisation automatique désactivée' : 'Optimisation automatique activée');
-            }}
-            className={cn(
-              "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border",
-              aiOptimizationActive
-                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                : "bg-slate-100 text-slate-500 border-slate-200"
-            )}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{language === 'fr' ? 'Régulation Optimisée' : 'Optimized Regulation'}</span>
-            <span className="text-[10px] uppercase font-bold tracking-wider">{aiOptimizationActive ? 'ON' : 'OFF'}</span>
-          </button>
-        </div>
+            {/* 2. Éclairage & Services Généraux */}
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100">
+                      <Lightbulb className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold font-display text-slate-900">
+                        {isFr ? 'Éclairage & Services' : 'Lighting & Services'}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {isFr ? 'Bus DALI & Horloges' : 'DALI Bus & Scheduling'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                    {gtbData.lightingPoints} {isFr ? 'points' : 'pts'}
+                  </span>
+                </div>
 
-        {/* Boutons Sélecteurs de Mode (100% Interactifs) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          {[
-            { id: 'AUTO', label: language === 'fr' ? 'Automatique' : 'Automatic', desc: 'Régulation optimale' },
-            { id: 'CONFORT', label: 'Confort', desc: '22.0°C' },
-            { id: 'ECO', label: 'Éco GTB', desc: '19.0°C' },
-            { id: 'NUIT', label: 'Nuit', desc: '16.0°C' },
-            { id: 'CANICULE', label: 'Canicule', desc: '25.0°C' },
-            { id: 'GEL', label: 'Hors-Gel', desc: '8.0°C' },
-          ].map((mode) => {
-            const isCurrent = globalMode === mode.id;
-            return (
-              <button
-                key={mode.id}
-                onClick={() => handleSelectMode(mode.id as any)}
-                className={cn(
-                  "p-3 rounded-xl text-left border transition-all cursor-pointer flex flex-col justify-between",
-                  isCurrent
-                    ? "bg-emerald-900 text-white border-emerald-900 shadow-sm ring-2 ring-emerald-600/30"
-                    : "bg-slate-50/70 hover:bg-slate-100 text-slate-700 border-slate-200/70"
+                <div className="space-y-2.5 my-3 p-3 bg-slate-50/80 rounded-xl border border-slate-100 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-medium">{isFr ? 'Asservissement horaire :' : 'Time scheduling:'}</span>
+                    <span className="font-semibold text-slate-800">{isFr ? 'Actif (Abaissement nuit)' : 'Active (Night setback)'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-medium">{isFr ? 'Détection présence communs :' : 'Presence sensing:'}</span>
+                    <span className="font-semibold text-emerald-800 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> {isFr ? 'Opérationnel' : 'Operational'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-medium">{isFr ? 'Puissance éclairage appel :' : 'Lighting demand:'}</span>
+                    <span className="font-semibold text-slate-800">{isGlobal ? '18.4 kW' : '1.8 kW'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>{isFr ? 'Protocole :' : 'Protocol:'}</span>
+                <span className="font-semibold text-slate-800">DALI-2 / Passerelle BACnet</span>
+              </div>
+            </div>
+
+            {/* 3. Ventilation & Traitement d'Air */}
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center border border-cyan-100">
+                      <Fan className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold font-display text-slate-900">
+                        {isFr ? 'Ventilation (VMC)' : 'Ventilation (VMC)'}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {isFr ? 'Caissons Hygro B modulés' : 'Modulated Hygro B'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-cyan-50 text-cyan-800 border border-cyan-200">
+                    {isFr ? 'En service' : 'Running'}
+                  </span>
+                </div>
+
+                <div className="space-y-2.5 my-3 p-3 bg-slate-50/80 rounded-xl border border-slate-100 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-medium">{isFr ? 'Débit d’extraction :' : 'Airflow rate:'}</span>
+                    <span className="text-base font-bold font-display text-slate-900">{gtbData.nominalVmcFlow.toLocaleString('fr-FR')} m³/h</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-medium">{isFr ? 'Régulation :' : 'Control:'}</span>
+                    <span className="font-semibold text-slate-800">{isFr ? 'Modulation hygroréglable' : 'Hygro-modulated'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-medium">{isFr ? 'Pressostats différentiels :' : 'Pressure switches:'}</span>
+                    <span className="font-semibold text-emerald-800 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> {isFr ? 'Nominal' : 'Nominal'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>{isFr ? 'État caisson :' : 'Unit status:'}</span>
+                <span className="font-semibold text-emerald-800">{isFr ? 'Vitesse automatique' : 'Auto speed'}</span>
+              </div>
+            </div>
+
+            {/* 4. Comptage & Télérelève Multi-Fluides */}
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center border border-emerald-100">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold font-display text-slate-900">
+                        {isFr ? 'Comptage & Télérelève' : 'Sub-metering & Telemetry'}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {isFr ? 'Compteurs communicants MID' : 'MID Smart Meters'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                    {gtbData.winterPowerKw} kW {isFr ? 'appel' : 'load'}
+                  </span>
+                </div>
+
+                <div className="space-y-2 my-3 text-xs">
+                  <div className="p-2 bg-slate-50/80 rounded-xl border border-slate-100 flex justify-between items-center">
+                    <span className="text-slate-600 font-medium">{isFr ? 'Électricité (Linky) :' : 'Electricity:'}</span>
+                    <span className="font-bold font-display text-slate-900">{gtbData.elecIndexDisplay} kWh</span>
+                  </div>
+                  <div className="p-2 bg-slate-50/80 rounded-xl border border-slate-100 flex justify-between items-center">
+                    <span className="text-slate-600 font-medium">{isFr ? 'Énergie Thermique (CET) :' : 'Thermal (CET):'}</span>
+                    <span className="font-bold font-display text-slate-900">{gtbData.thermalCetIndexMwh} MWh</span>
+                  </div>
+                  <div className="p-2 bg-slate-50/80 rounded-xl border border-slate-100 flex justify-between items-center">
+                    <span className="text-slate-600 font-medium">{isFr ? 'Eau Froide (EF) :' : 'Cold Water:'}</span>
+                    <span className="font-bold font-display text-slate-900">{gtbData.waterIndexDisplay} m³</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>{isFr ? 'Production Solaire injectée :' : 'Solar PV injected:'}</span>
+                <span className="font-semibold text-amber-700">{gtbData.solarIndexKwh.toLocaleString('fr-FR')} kWh</span>
+              </div>
+            </div>
+
+            {/* 5. Supervision des Alarmes Actives (Prend 2 colonnes sur grand écran) */}
+            <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between md:col-span-2 lg:col-span-2">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className={cn(
+                      "w-8 h-8 rounded-xl flex items-center justify-center border",
+                      gtbData.activeFaultsList.length > 0 
+                        ? "bg-rose-50 text-rose-700 border-rose-200" 
+                        : "bg-emerald-50 text-emerald-800 border-emerald-100"
+                    )}>
+                      <AlertTriangle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold font-display text-slate-900">
+                        {isFr ? 'Alarmes & Dérives Détectées' : 'Active Alarms & Drifts'}
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {gtbData.activeFaultsList.length > 0 
+                          ? `${gtbData.activeFaultsList.length} ${isFr ? 'dérive(s) en cours de surveillance' : 'active drift(s)'}`
+                          : (isFr ? '0 alarme · Boucles de régulation conformes' : '0 active alarms · all nominal')}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "px-2 py-0.5 rounded-md text-[11px] font-semibold border",
+                    gtbData.activeFaultsList.length > 0 
+                      ? "bg-rose-50 text-rose-800 border-rose-200" 
+                      : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  )}>
+                    {gtbData.activeFaultsList.length > 0 ? (isFr ? 'Intervention requise' : 'Action needed') : (isFr ? 'Système nominal' : 'Nominal')}
+                  </span>
+                </div>
+
+                {gtbData.activeFaultsList.length === 0 ? (
+                  <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-100 flex items-center gap-2.5 text-xs my-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="font-semibold text-emerald-950">
+                      {isFr 
+                        ? 'Tous les points de télémesure (TM) et téléalarmes (TA) opèrent dans les seuils normaux.' 
+                        : 'All telemetry points and alarms operate within normal limits.'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="space-y-2 my-2">
+                    {gtbData.activeFaultsList.map(f => (
+                      <div key={f.id} className="p-3 rounded-xl border border-rose-200 bg-rose-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                        <div className="flex items-start gap-2.5 min-w-0">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white shrink-0 mt-0.5">
+                            {f.level}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 truncate">{f.title}</p>
+                            <p className="text-[11px] text-slate-600 truncate">{f.detail} ({f.source})</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                          <button
+                            onClick={() => {
+                              setAcknowledgedAlarms(prev => [...prev, f.id]);
+                              showFeedback(isFr ? `Alarme ${f.id} acquittée par l'opérateur` : 'Alarm acknowledged');
+                            }}
+                            className="px-2.5 py-1 bg-white hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-lg text-xs font-semibold transition cursor-pointer"
+                          >
+                            {isFr ? 'Acquitter' : 'Acknowledge'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold">{mode.label}</span>
-                  {isCurrent && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
-                </div>
-                <span className={cn("text-[10px] mt-1 font-medium", isCurrent ? "text-emerald-200" : "text-slate-400")}>
-                  {mode.desc}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Régleurs Interactifs de Consignes (+ / -) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
-          {/* Chauffage */}
-          <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200/60 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold">
-                <Flame className="w-3.5 h-3.5 text-amber-600" />
-                <span>{language === 'fr' ? 'Consigne Chauffage' : 'Heating Setpoint'}</span>
-              </div>
-              <div className="text-lg font-bold font-mono text-slate-900 mt-0.5">
-                {heatingSetpoint.toFixed(1)}°C
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => {
-                  setHeatingSetpoint(prev => Math.max(12, +(prev - 0.5).toFixed(1)));
-                  showFeedback(`Consigne chauffage : ${(heatingSetpoint - 0.5).toFixed(1)}°C`);
-                }}
-                className="w-7 h-7 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center transition cursor-pointer shadow-2xs"
-              >
-                -
-              </button>
-              <button
-                onClick={() => {
-                  setHeatingSetpoint(prev => Math.min(26, +(prev + 0.5).toFixed(1)));
-                  showFeedback(`Consigne chauffage : ${(heatingSetpoint + 0.5).toFixed(1)}°C`);
-                }}
-                className="w-7 h-7 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center transition cursor-pointer shadow-2xs"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* Climatisation */}
-          <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200/60 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold">
-                <Thermometer className="w-3.5 h-3.5 text-sky-600" />
-                <span>{language === 'fr' ? 'Consigne Froid' : 'Cooling Setpoint'}</span>
-              </div>
-              <div className="text-lg font-bold font-mono text-slate-900 mt-0.5">
-                {coolingSetpoint.toFixed(1)}°C
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => {
-                  setCoolingSetpoint(prev => Math.max(20, +(prev - 0.5).toFixed(1)));
-                  showFeedback(`Consigne froid : ${(coolingSetpoint - 0.5).toFixed(1)}°C`);
-                }}
-                className="w-7 h-7 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center transition cursor-pointer shadow-2xs"
-              >
-                -
-              </button>
-              <button
-                onClick={() => {
-                  setCoolingSetpoint(prev => Math.min(30, +(prev + 0.5).toFixed(1)));
-                  showFeedback(`Consigne froid : ${(coolingSetpoint + 0.5).toFixed(1)}°C`);
-                }}
-                className="w-7 h-7 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center transition cursor-pointer shadow-2xs"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* Ventilation VMC CTA */}
-          <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200/60 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold">
-                <Fan className="w-3.5 h-3.5 text-teal-600 animate-spin" style={{ animationDuration: '4s' }} />
-                <span>{language === 'fr' ? 'Débit VMC / CTA' : 'Ventilation Rate'}</span>
-              </div>
-              <div className="text-lg font-bold font-mono text-slate-900 mt-0.5">
-                {ventilationRate} m³/h
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => {
-                  setVentilationRate(prev => Math.max(300, prev - 50));
-                  showFeedback(`Débit ventilation : ${ventilationRate - 50} m³/h`);
-                }}
-                className="w-7 h-7 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center transition cursor-pointer shadow-2xs"
-              >
-                -
-              </button>
-              <button
-                onClick={() => {
-                  setVentilationRate(prev => Math.min(1600, prev + 50));
-                  showFeedback(`Débit ventilation : ${ventilationRate + 50} m³/h`);
-                }}
-                className="w-7 h-7 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center transition cursor-pointer shadow-2xs"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* Seuil Éclairage */}
-          <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200/60 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold">
-                <Sun className="w-3.5 h-3.5 text-amber-500" />
-                <span>{language === 'fr' ? 'Seuil Éclairage' : 'Lighting Level'}</span>
-              </div>
-              <div className="text-lg font-bold font-mono text-slate-900 mt-0.5">
-                {lightingLux} Lux
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => {
-                  setLightingLux(prev => Math.max(100, prev - 25));
-                  showFeedback(`Seuil d'éclairage : ${lightingLux - 25} Lux`);
-                }}
-                className="w-7 h-7 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center transition cursor-pointer shadow-2xs"
-              >
-                -
-              </button>
-              <button
-                onClick={() => {
-                  setLightingLux(prev => Math.min(800, prev + 25));
-                  showFeedback(`Seuil d'éclairage : ${lightingLux + 25} Lux`);
-                }}
-                className="w-7 h-7 rounded-lg bg-white hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center transition cursor-pointer shadow-2xs"
-              >
-                +
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Grille Principale Dashboard */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        
-        {/* Colonne Gauche : 4 KPI + Graphique */}
-        <div className="lg:col-span-8 flex flex-col gap-5">
-          
-          {/* 4 Cartes KPI */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
-            {/* Carte 1 */}
-            <div className="bg-[#064e3b] text-white rounded-2xl p-5 shadow-sm flex flex-col justify-between min-h-[115px]">
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-emerald-800 flex items-center justify-center text-white border border-emerald-700/60">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-semibold text-emerald-200">
-                  Classe B EN ISO 52120-1
-                </span>
               </div>
 
-              <div className="mt-2">
-                <p className="text-xs font-medium text-emerald-200/90 mb-0.5">
-                  {language === 'fr' ? 'Points de Contrôle' : 'Total BMS Points'}
-                </p>
-                <div className="text-3xl font-bold font-display tracking-tight text-white">
-                  91 Points
-                </div>
-              </div>
-            </div>
-
-            {/* Carte 2 */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between min-h-[115px]">
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 border border-slate-200/60">
-                  <Layers className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-semibold text-slate-500">
-                  {metrics.categoriesCount} Lots
-                </span>
-              </div>
-
-              <div className="mt-2">
-                <p className="text-xs font-medium text-slate-500 mb-0.5">
-                  {language === 'fr' ? 'Lots Techniques' : 'Technical Lots'}
-                </p>
-                <div className="text-3xl font-bold font-display tracking-tight text-slate-900">
-                  {metrics.categoriesCount} Lots
-                </div>
-              </div>
-            </div>
-
-            {/* Carte 3 */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between min-h-[115px]">
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 border border-slate-200/60">
-                  <Activity className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-semibold text-emerald-700">
-                  Optimal
-                </span>
-              </div>
-
-              <div className="mt-2">
-                <p className="text-xs font-medium text-slate-500 mb-0.5">
-                  {language === 'fr' ? 'Disponibilité Réseau' : 'Network Uptime'}
-                </p>
-                <div className="text-3xl font-bold font-display tracking-tight text-slate-900">
-                  {metrics.availability}
-                </div>
-              </div>
-            </div>
-
-            {/* Carte 4 */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between min-h-[115px]">
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 border border-slate-200/60">
-                  <Cpu className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-semibold text-slate-500 font-mono">
-                  BACnet / Modbus
-                </span>
-              </div>
-
-              <div className="mt-2">
-                <p className="text-xs font-medium text-slate-500 mb-0.5">
-                  {language === 'fr' ? 'Protocoles Bus' : 'Bus Protocols'}
-                </p>
-                <div className="text-3xl font-bold font-display tracking-tight text-slate-900">
-                  {metrics.protocolsCount} Bus
-                </div>
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>{isFr ? 'Supervision GTB :' : 'BMS Supervision:'}</span>
+                <span className="font-semibold text-slate-800">{isFr ? 'Télésurveillance active 24/7' : '24/7 Live Monitoring'}</span>
               </div>
             </div>
 
           </div>
 
-          {/* Graphique Barres */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200/70 shadow-xs flex flex-col justify-between flex-1">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <div className="min-w-0">
-                <h3 className="text-base font-bold font-display text-slate-900 leading-snug">
-                  {language === 'fr' ? 'Points de Contrôle par Lot' : 'BMS Points by Lot'}
-                </h3>
+          {/* Graphique de télémétrie comparative — Une seule barre par catégorie */}
+          <div className="bg-white rounded-2xl p-5 md:p-6 shadow-xs border border-slate-200/80">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+              <div>
+                <h2 className="text-sm sm:text-base font-bold font-display text-slate-900">
+                  {isGlobal 
+                    ? (isFr ? 'Télémétrie Consolidée du Parc' : 'Portfolio Consolidated Telemetry')
+                    : (isFr ? `Historique 7 Jours — ${selectedBuilding?.name}` : `7-Day History — ${selectedBuilding?.name}`)}
+                </h2>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  {language === 'fr' ? 'Télérelèves et commandes actives' : 'Sensors & field commands'}
+                  {isGlobal 
+                    ? (isFr 
+                        ? `Comparatif des 10 bâtiments (${chartMetric === 'kwh' ? 'Consommation journalière en kWh' : 'Puissance appelée hiver en kW'})` 
+                        : `Comparison of 10 buildings (${chartMetric === 'kwh' ? 'Daily consumption in kWh' : 'Winter demand in kW'})`)
+                    : (isFr 
+                        ? `Suivi journalier du site (${chartMetric === 'kwh' ? `${Math.round(gtbData.dailyKwh)} kWh/j moyen` : `${gtbData.winterPowerKw} kW puissance appelée`})` 
+                        : `Daily site tracking (${chartMetric === 'kwh' ? `${Math.round(gtbData.dailyKwh)} kWh/d avg` : `${gtbData.winterPowerKw} kW power demand`})`)}
                 </p>
               </div>
 
-              {/* Filtre interactif de période */}
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl self-start sm:self-auto shrink-0">
-                {['today', 'week', 'year'].map((tf) => (
+              {/* Sélecteur de métrique : une seule métrique à la fois */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80">
                   <button
-                    key={tf}
-                    onClick={() => {
-                      setTimeFilter(tf);
-                      showFeedback(`Période sélectionnée : ${tf}`);
-                    }}
+                    type="button"
+                    onClick={() => setChartMetric('kwh')}
                     className={cn(
-                      "px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer",
-                      timeFilter === tf
-                        ? "bg-white text-slate-900 shadow-2xs"
-                        : "text-slate-500 hover:text-slate-800"
+                      "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                      chartMetric === 'kwh'
+                        ? "bg-white text-emerald-900 shadow-2xs font-bold"
+                        : "text-slate-600 hover:text-slate-900"
                     )}
                   >
-                    {tf === 'today' ? (language === 'fr' ? 'Jour' : 'Day') : tf === 'week' ? (language === 'fr' ? 'Semaine' : 'Week') : (language === 'fr' ? 'Année' : 'Year')}
+                    {isFr ? 'Consommation (kWh)' : 'Consumption (kWh)'}
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() => setChartMetric('kw')}
+                    className={cn(
+                      "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                      chartMetric === 'kw'
+                        ? "bg-white text-emerald-900 shadow-2xs font-bold"
+                        : "text-slate-600 hover:text-slate-900"
+                    )}
+                  >
+                    {isFr ? 'Puissance (kW)' : 'Power (kW)'}
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Légende du graphique aux couleurs du bâtiment sélectionné */}
-            <div className="flex items-center gap-5 text-xs font-semibold text-slate-600 mb-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: activeTheme.primary }} />
-                <span>{language === 'fr' ? 'Capteurs & Télérelèves' : 'Sensors & Meters'}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: activeTheme.secondary || activeTheme.accent }} />
-                <span>{language === 'fr' ? 'Commandes Automates' : 'Automate Commands'}</span>
-              </div>
-              {selectedBuilding && (
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-md border" style={{ color: activeTheme.primary, borderColor: `${activeTheme.primary}40`, backgroundColor: `${activeTheme.primary}12` }}>
-                  {selectedBuilding.name}
-                </span>
-              )}
-            </div>
-
-            {/* Zone graphique */}
-            <div className="h-64 sm:h-72 w-full">
+            <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData} barGap={6} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <XAxis 
                     dataKey="name" 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }}
+                    tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }} 
                   />
                   <YAxis 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{ fill: '#94a3b8', fontSize: 11 }}
-                    domain={[0, 40]}
+                    tick={{ fill: '#64748b', fontSize: 11 }} 
                   />
-                  <Tooltip 
-                    cursor={{ fill: '#f8fafc' }}
-                    contentStyle={{ 
-                      backgroundColor: '#0f172a', 
-                      borderRadius: '12px', 
-                      border: 'none', 
-                      color: '#fff',
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                  <Tooltip
+                    cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-slate-900 text-white p-3 rounded-xl shadow-lg text-xs space-y-1">
+                            <p className="font-bold text-emerald-400">{data.fullLabel}</p>
+                            <p className="font-medium">
+                              {chartMetric === 'kwh' ? (isFr ? 'Consommation :' : 'Consumption:') : (isFr ? 'Puissance appelée :' : 'Power demand:')}{' '}
+                              <span className="font-bold text-white font-mono">{data.value} {data.unit}</span>
+                            </p>
+                            {data.isAnom && (
+                              <span className="inline-block px-1.5 py-0.5 mt-0.5 rounded bg-rose-600 text-[10px] font-bold">
+                                {isFr ? 'Anomalie détectée' : 'Anomaly detected'}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
                     }}
                   />
-                  <Bar 
-                    dataKey="telemetrie" 
-                    name={language === 'fr' ? 'Télérelèves' : 'Meters'} 
-                    fill={activeTheme.primary} 
-                    radius={[6, 6, 0, 0]} 
-                    barSize={16}
-                  />
-                  <Bar 
-                    dataKey="automates" 
-                    name={language === 'fr' ? 'Automates' : 'Automates'} 
-                    fill={activeTheme.secondary || activeTheme.accent} 
-                    radius={[6, 6, 0, 0]} 
-                    barSize={16}
-                  />
+                  {/* UNE SEULE BARRE PAR COLONNE */}
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={36}>
+                    {chartData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.isAnom ? '#be123c' : '#236b33'} 
+                      />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Colonne Droite : Donut + Couverture */}
-        <div className="lg:col-span-4 flex flex-col gap-5">
-          
-          {/* Carte 1 : Répartition des Lots */}
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h3 className="text-base font-bold font-display text-slate-900">
-                  {language === 'fr' ? 'Lots Techniques' : 'Technical Lots'}
-                </h3>
-                <p className="text-xs text-slate-500 font-medium">
-                  {language === 'fr' ? 'Répartition des macro-lots' : 'Equipment distribution'}
-                </p>
-              </div>
-            </div>
-
-            {/* Graphique Circulaire */}
-            <div className="h-44 w-full my-1 flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#0f172a', 
-                      borderRadius: '10px', 
-                      border: 'none', 
-                      color: '#fff',
-                      fontSize: '11px',
-                      fontWeight: 'bold' 
-                    }} 
-                  />
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={75}
-                    innerRadius={45}
-                    dataKey="value"
-                    stroke="#ffffff"
-                    strokeWidth={2}
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Liste des catégories cliquables pour filtrer */}
-            <div className="space-y-2 pt-3 border-t border-slate-100">
-              {pieData.map((item, idx) => {
-                const isFiltered = selectedCategory.toLowerCase().includes(item.name.slice(0, 3).toLowerCase());
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      const next = isFiltered ? 'Tous' : item.name.split('&')[0].trim();
-                      setSelectedCategory(next);
-                      showFeedback(`Filtre : ${next}`);
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between text-xs p-2 rounded-xl transition cursor-pointer text-left",
-                      isFiltered ? "bg-slate-100 font-bold" : "hover:bg-slate-50"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                      <span className="font-semibold text-slate-700">{item.name}</span>
-                    </div>
-                    <span className="font-mono font-bold text-slate-800">{item.value}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Carte 2 : Couverture Technique */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-base font-bold font-display text-slate-900">
-                  {language === 'fr' ? 'Couverture Réseau' : 'Zone Coverage'}
-                </h3>
-                <p className="text-xs text-slate-500 font-medium">
-                  {language === 'fr' ? 'Densité des points de mesure' : 'Measurement density'}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {zonesCoverage.map((zone, idx) => (
-                <div 
-                  key={idx} 
-                  onClick={() => {
-                    setSelectedZone(zone.name);
-                    showFeedback(`Zone sélectionnée : ${zone.name}`);
-                  }}
-                  className="space-y-1.5 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition"
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-700">{zone.name}</span>
-                    <span className="font-mono font-bold text-slate-600">{zone.pct}%</span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div 
-                      className={cn("h-full rounded-full transition-all duration-500", zone.bgClass)}
-                      style={{ width: `${zone.pct}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* 4. Tableau d'Inventaire & Contrôles Individuels */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden mt-6">
-        
-        {/* En-tête avec recherche et filtres */}
-        <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-slate-900 text-base">
-                {language === 'fr' ? 'Actionneurs & Capteurs GTB' : 'BMS Actuators & Sensors'}
-              </h3>
-              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono font-bold text-xs">
-                {filteredEquipments.length}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              {language === 'fr' ? 'Points de commande et télémétries de terrain' : 'Fieldbus telemetry and remote control points'}
-            </p>
-          </div>
-
-          {/* Recherche */}
-          <div className="relative w-full md:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={language === 'fr' ? 'Rechercher équipement, bus, modèle...' : 'Search equipment, bus, model...'}
-              className="w-full bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs py-2 pl-9 pr-8 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-600 font-medium transition"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Puces de filtre par zone */}
-        <div className="px-5 py-2.5 bg-slate-50/70 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-          {['Tous', 'Bâtiments', 'Sous-stations', 'Zone Technique', 'Centrale Énergie'].map((zone) => {
-            const isActive = selectedZone === zone;
-            return (
-              <button
-                key={zone}
-                onClick={() => setSelectedZone(zone)}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer border",
-                  isActive
-                    ? "bg-slate-900 text-white border-slate-900"
-                    : "bg-white text-slate-600 hover:bg-slate-100 border-slate-200"
-                )}
-              >
-                {zone === 'Tous' ? (language === 'fr' ? 'Toutes les zones' : 'All Zones') : zone}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tableau */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse min-w-[720px]">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
-                <th className="py-3 px-5 whitespace-nowrap">{language === 'fr' ? 'Localisation' : 'Location'}</th>
-                <th className="py-3 px-5 whitespace-nowrap">{language === 'fr' ? 'Lot' : 'Lot'}</th>
-                <th className="py-3 px-5">{language === 'fr' ? 'Équipement & Marque' : 'Equipment & Brand'}</th>
-                <th className="py-3 px-5 text-center whitespace-nowrap">{language === 'fr' ? 'Qté' : 'Qty'}</th>
-                <th className="py-3 px-5 whitespace-nowrap">{language === 'fr' ? 'Bus' : 'Bus'}</th>
-                <th className="py-3 px-5">{language === 'fr' ? 'Fonction' : 'Function'}</th>
-                <th className="py-3 px-5 text-center whitespace-nowrap">{language === 'fr' ? 'État' : 'Status'}</th>
-                <th className="py-3 px-5 text-center whitespace-nowrap">{language === 'fr' ? 'Action' : 'Action'}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredEquipments.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-10 text-center text-slate-400">
-                    <p className="font-semibold">{language === 'fr' ? 'Aucun équipement trouvé' : 'No equipment found'}</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredEquipments.map((eq: any, idx: number) => {
-                  const eqId = eq.id || `EQ-${idx}`;
-                  const isActif = eq.status === 'Actif';
-                  return (
-                    <tr 
-                      key={eqId} 
-                      onClick={() => setSelectedEquipmentModal(eq)}
-                      className="hover:bg-slate-50/80 transition-colors cursor-pointer"
-                    >
-                      <td className="py-3 px-5 font-semibold text-slate-800 whitespace-nowrap">
-                        {eq.location}
-                      </td>
-
-                      <td className="py-3 px-5 whitespace-nowrap">
-                        <span className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium text-[11px]">
-                          {eq.category}
-                        </span>
-                      </td>
-
-                      <td className="py-3 px-5">
-                        <div className="font-bold text-slate-900 text-xs">{eq.name}</div>
-                        <div className="text-[11px] text-slate-400 font-medium">{eq.brandModel}</div>
-                      </td>
-
-                      <td className="py-3 px-5 text-center whitespace-nowrap font-mono font-bold text-slate-700">
-                        {eq.quantity}
-                      </td>
-
-                      <td className="py-3 px-5 whitespace-nowrap font-mono text-[10px] font-semibold text-slate-600">
-                        {eq.protocol}
-                      </td>
-
-                      <td className="py-3 px-5 text-slate-600 font-medium">
-                        {eq.pointType}
-                      </td>
-
-                      <td className="py-3 px-5 text-center whitespace-nowrap">
-                        <span className={cn(
-                          "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border",
-                          isActif 
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
-                            : eq.status === 'En veille'
-                            ? "bg-amber-50 text-amber-700 border-amber-200"
-                            : "bg-slate-100 text-slate-600 border-slate-200"
-                        )}>
-                          {eq.status}
-                        </span>
-                      </td>
-
-                      <td className="py-3 px-5 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => handleToggleEquipment(eqId, eq.status)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] transition cursor-pointer"
-                        >
-                          {language === 'fr' ? 'Basculer' : 'Toggle'}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Modal Interactive de Contrôle Détaillé d'un Équipement */}
-      {selectedEquipmentModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md p-6 space-y-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Cpu className="w-5 h-5 text-emerald-700" />
-                <h3 className="font-bold text-slate-900 text-base">
-                  {language === 'fr' ? 'Contrôle Actionneur GTB' : 'BMS Actuator Control'}
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedEquipmentModal(null)}
-                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between py-1 border-b border-slate-50">
-                <span className="text-slate-500">{language === 'fr' ? 'Équipement :' : 'Equipment:'}</span>
-                <span className="font-bold text-slate-800">{selectedEquipmentModal.name}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-50">
-                <span className="text-slate-500">{language === 'fr' ? 'Modèle :' : 'Model:'}</span>
-                <span className="font-semibold text-slate-700">{selectedEquipmentModal.brandModel}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-50">
-                <span className="text-slate-500">{language === 'fr' ? 'Zone & Bus :' : 'Zone & Bus:'}</span>
-                <span className="font-mono text-slate-700">{selectedEquipmentModal.location} • {selectedEquipmentModal.protocol}</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-50">
-                <span className="text-slate-500">{language === 'fr' ? 'Fonction :' : 'Function:'}</span>
-                <span className="font-semibold text-slate-700">{selectedEquipmentModal.pointType}</span>
-              </div>
-            </div>
-
-            {/* Commandes directes */}
-            <div className="pt-2 space-y-2">
-              <p className="text-xs font-bold text-slate-700">{language === 'fr' ? 'Action Immédiate :' : 'Immediate Action:'}</p>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => {
-                    handleToggleEquipment((selectedEquipmentModal as any).id || 'EQ-0', 'En veille');
-                    setSelectedEquipmentModal(null);
-                  }}
-                  className="py-2 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs transition cursor-pointer text-center"
-                >
-                  {language === 'fr' ? 'Marche Forcée' : 'Force Run'}
-                </button>
-                <button
-                  onClick={() => {
-                    handleToggleEquipment((selectedEquipmentModal as any).id || 'EQ-0', 'Actif');
-                    setSelectedEquipmentModal(null);
-                  }}
-                  className="py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition cursor-pointer text-center"
-                >
-                  {language === 'fr' ? 'Mettre en Veille' : 'Standby'}
-                </button>
-                <button
-                  onClick={() => {
-                    handleToggleEquipment((selectedEquipmentModal as any).id || 'EQ-0', 'Arrêté');
-                    setSelectedEquipmentModal(null);
-                  }}
-                  className="py-2 px-3 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs transition cursor-pointer text-center"
-                >
-                  {language === 'fr' ? 'Arrêt' : 'Stop'}
-                </button>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => {
-                    showFeedback(`Diagnostic du Bus ${selectedEquipmentModal.protocol} : Communication OK (0 erreur)`);
-                    setSelectedEquipmentModal(null);
-                  }}
-                  className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition cursor-pointer text-center"
-                >
-                  {language === 'fr' ? 'Tester Bus' : 'Test Bus'}
-                </button>
-                <button
-                  onClick={() => {
-                    showFeedback(`Alarmes acquittées sur ${selectedEquipmentModal.name}`);
-                    setSelectedEquipmentModal(null);
-                  }}
-                  className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition cursor-pointer text-center"
-                >
-                  {language === 'fr' ? 'Acquitter Alarme' : 'Ack Alarm'}
-                </button>
-              </div>
             </div>
           </div>
         </div>

@@ -452,9 +452,41 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
 }) => {
   const isFr = language === 'fr';
 
-  // Navigation states
-  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
-  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  // Navigation states: auto-center on saved intervention date if present
+  const [currentDate, setCurrentDate] = useState<Date>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('cii_interventions_planning_v2');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].date) {
+            const d = new Date(parsed[0].date + 'T12:00:00');
+            if (!isNaN(d.getTime())) return d;
+          }
+        }
+      } catch (e) {
+        // fallback
+      }
+    }
+    return new Date();
+  });
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('cii_interventions_planning_v2');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].date) {
+            const d = new Date(parsed[0].date + 'T12:00:00');
+            if (!isNaN(d.getTime())) return d;
+          }
+        }
+      } catch (e) {
+        // fallback
+      }
+    }
+    return new Date();
+  });
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('week');
   const [weekDaysCount, setWeekDaysCount] = useState<7 | 5>(7);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -661,11 +693,18 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
         }
         setSheetSyncStatus({ count: result.events.length });
 
-        // If user manually clicked sync and there are events, auto-navigate to the first event's date
-        if (!silent && result.events.length > 0 && result.events[0].date) {
-          const firstDate = new Date(result.events[0].date + 'T12:00:00');
-          if (!isNaN(firstDate.getTime())) {
-            setSelectedDate(firstDate);
+        // Always auto-navigate calendar view (currentDate and selectedDate) to the synced intervention's date
+        // so that the intervention appears at the exact date and hour on screen!
+        if (result.events.length > 0 && result.events[0].date) {
+          const targetDate = new Date(result.events[0].date + 'T12:00:00');
+          if (!isNaN(targetDate.getTime())) {
+            setSelectedDate(targetDate);
+            setCurrentDate(targetDate);
+          }
+          // If building filter was active and hides this event, reset to all
+          if (localBuildingFilter !== 'all' && result.events[0].buildingId && localBuildingFilter !== result.events[0].buildingId) {
+            setLocalBuildingFilter('all');
+            if (onSelectBuilding) onSelectBuilding('all');
           }
         }
 
@@ -872,19 +911,18 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
     };
   }, [interventions]);
 
-  // Next upcoming intervention (for sidebar banner)
+  // Next upcoming intervention (for sidebar banner, with fallback to most recent active intervention)
   const upcomingIntervention = useMemo(() => {
     const todayStr = toIsoDate(new Date());
     const upcoming = interventions
       .filter(i => i.date >= todayStr && i.status !== 'completed')
       .sort((a, b) => a.date.localeCompare(b.date) || a.startHour - b.startHour);
-    return upcoming[0] || null;
-  }, [interventions]);
+    if (upcoming.length > 0) return upcoming[0];
 
-  // RSVP Target: either the upcoming intervention or null
-  const rsvpIntervention = useMemo(() => {
-    return upcomingIntervention || null;
-  }, [upcomingIntervention]);
+    // Fallback: show the most recently scheduled intervention (e.g. from Google Sheets)
+    const allSorted = [...interventions].sort((a, b) => b.date.localeCompare(a.date) || b.startHour - a.startHour);
+    return allSorted[0] || null;
+  }, [interventions]);
 
   // Navigation handlers
   const handlePrev = () => {
@@ -965,35 +1003,6 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
     setInterventions(prev => prev.map(item => item.id === ev.id ? updatedEv : item));
     persistInterventionToFirestore(updatedEv);
     showToast(`${isFr ? 'Statut mis à jour :' : 'Status updated:'} ${updated.toUpperCase()}`);
-  };
-
-  // RSVP buttons handler (interactive and bound to real intervention)
-  const handleRsvpAnswer = (choice: 'confirmed' | 'pending' | 'declined') => {
-    if (!rsvpIntervention) return;
-    let targetUpdated: InterventionEvent | null = null;
-    setInterventions(prev => prev.map(item => {
-      if (item.id === rsvpIntervention.id) {
-        targetUpdated = {
-          ...item,
-          rsvpStatus: choice,
-          status: choice === 'confirmed' ? 'planned' : item.status
-        };
-        return targetUpdated;
-      }
-      return item;
-    }));
-
-    if (targetUpdated) {
-      persistInterventionToFirestore(targetUpdated);
-    }
-
-    if (choice === 'confirmed') {
-      showToast(isFr ? '✓ Présence confirmée ! Ajouté à votre feuille de route.' : '✓ Attendance confirmed! Added to your schedule.');
-    } else if (choice === 'pending') {
-      showToast(isFr ? 'Intervention marquée en attente (rappel programmé).' : 'Marked as pending (reminder set).');
-    } else {
-      showToast(isFr ? 'Intervention déclinée. Notification transmise à l’équipe.' : 'Declined. Notification sent to team.');
-    }
   };
 
   // Duplicate intervention to next day
@@ -1253,12 +1262,21 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
               </button>
             </div>
 
-            {/* Upcoming Event Card (Interactive: clicking opens its details!) */}
+            {/* Upcoming Event Card (Interactive: clicking opens its details and navigates to its slot!) */}
             {upcomingIntervention ? (
               <div 
-                onClick={() => openEditEventModal(upcomingIntervention)}
+                onClick={() => {
+                  if (upcomingIntervention?.date) {
+                    const d = new Date(upcomingIntervention.date + 'T12:00:00');
+                    if (!isNaN(d.getTime())) {
+                      setSelectedDate(d);
+                      setCurrentDate(d);
+                    }
+                  }
+                  openEditEventModal(upcomingIntervention);
+                }}
                 className="p-3 bg-white hover:bg-emerald-50/40 rounded-xl sm:rounded-2xl border border-slate-200/70 hover:border-emerald-300 shadow-2xs flex flex-col gap-1.5 cursor-pointer transition group"
-                title={isFr ? 'Cliquez pour ouvrir les détails' : 'Click to view details'}
+                title={isFr ? 'Cliquez pour ouvrir les détails et aller au créneau' : 'Click to view details and go to time slot'}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-emerald-800 transition">
@@ -1389,62 +1407,6 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
               </div>
             </div>
 
-            {/* Interactive RSVP / Confirmation card connected to real intervention */}
-            {rsvpIntervention && (
-              <div className="p-3 bg-white rounded-xl sm:rounded-2xl border border-slate-200/70 shadow-2xs flex flex-col gap-2">
-                <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                  <span>{`${rsvpIntervention.startTimeStr}–${rsvpIntervention.endTimeStr}`}</span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-slate-400" />
-                    <span>{`${Math.round(rsvpIntervention.endHour - rsvpIntervention.startHour)}h`}</span>
-                  </span>
-                </div>
-
-                <p className="text-xs font-bold text-slate-900 leading-snug line-clamp-2">
-                  {rsvpIntervention.title}
-                </p>
-                <p className="text-[10px] text-slate-500">
-                  {isFr ? 'Confirmez-vous votre présence sur ce créneau ?' : 'Do you confirm attendance on this slot?'}
-                </p>
-
-                <div className="grid grid-cols-3 gap-1 pt-0.5">
-                  <button
-                    type="button"
-                    onClick={() => handleRsvpAnswer('confirmed')}
-                    className={`py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      rsvpIntervention.rsvpStatus === 'confirmed'
-                        ? 'bg-emerald-800 text-white shadow-2xs font-extrabold'
-                        : 'bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-900'
-                    }`}
-                  >
-                    {isFr ? 'Oui' : 'Yes'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRsvpAnswer('pending')}
-                    className={`py-1 rounded-lg text-[10px] font-medium transition-all cursor-pointer ${
-                      rsvpIntervention.rsvpStatus === 'pending'
-                        ? 'bg-amber-800 text-white shadow-2xs font-bold'
-                        : 'bg-slate-100 hover:bg-amber-50 text-slate-600 hover:text-amber-900'
-                    }`}
-                  >
-                    {isFr ? 'À voir' : 'Pending'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRsvpAnswer('declined')}
-                    className={`py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                      rsvpIntervention.rsvpStatus === 'declined'
-                        ? 'bg-rose-800 text-white shadow-2xs font-bold'
-                        : 'bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-900'
-                    }`}
-                  >
-                    {isFr ? 'Non' : 'No'}
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Time breakdown: CLICKABLE FILTERS! */}
             <div className="bg-white p-3.5 rounded-xl sm:rounded-2xl border border-slate-200/70 shadow-2xs">
               <div className="flex items-center justify-between mb-1.5">
@@ -1566,6 +1528,34 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-200 truncate max-w-[160px]">
                     {buildingsList.find(b => b.id.toString() === localBuildingFilter)?.name || localBuildingFilter}
                   </span>
+                )}
+
+                {interventions.some(i => i.source === 'google_sheets') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sheetEv = interventions.find(i => i.source === 'google_sheets');
+                      if (sheetEv?.date) {
+                        const d = new Date(sheetEv.date + 'T12:00:00');
+                        if (!isNaN(d.getTime())) {
+                          setSelectedDate(d);
+                          setCurrentDate(d);
+                        }
+                        if (localBuildingFilter !== 'all' && sheetEv.buildingId && localBuildingFilter !== sheetEv.buildingId) {
+                          setLocalBuildingFilter('all');
+                          if (onSelectBuilding) onSelectBuilding('all');
+                        }
+                        showToast(isFr ? `Positionné sur l’intervention Google Sheets (${sheetEv.date} à ${sheetEv.startTimeStr})` : `Jumped to Google Sheets intervention`);
+                      }
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100/90 text-emerald-800 text-[11px] font-bold border border-emerald-300/80 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    title={isFr ? 'Aller directement au créneau de l’intervention synchronisée depuis Google Sheets' : 'Go directly to Google Sheets intervention slot'}
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>
+                      {isFr ? 'Voir intervention Google Sheets' : 'View Google Sheets event'}
+                    </span>
+                  </button>
                 )}
               </div>
 

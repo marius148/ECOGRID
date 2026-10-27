@@ -192,11 +192,10 @@ export function getBuildingColorTheme(
   }
 
   const strId = String(buildingId).toUpperCase().trim();
-  // Anomalie détectée si le flag isAnomaly est vrai, si le statut est ALERTE,
-  // ou si non spécifié pour les bâtiments connus en dérive (BAT-02, BAT-07)
+  // Anomalie détectée selon le statut réel du Google Sheet ou le drapeau isAnomaly
   const isAnom = isAnomaly !== undefined 
     ? Boolean(isAnomaly) 
-    : (status === 'ALERTE' || strId === 'BAT-02' || strId === 'BAT-07');
+    : (String(status).toUpperCase() === 'ALERTE');
 
   if (isAnom) {
     return ALERT_THEME;

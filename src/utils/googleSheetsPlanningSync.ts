@@ -201,8 +201,12 @@ export function normalizeDate(rawDate: string): string {
   }
 
   let trimmed = rawDate.trim();
-  // Strip leading day names like "Mercredi 23/09" or "Lun 24"
-  trimmed = trimmed.replace(/^(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|lun|mar|mer|jeu|ven|sam|dim)\.?\s+/i, '');
+  // Strip leading day names or words like "Mercredi 23/09", "Lun 24", "le 8", "jour 8"
+  trimmed = trimmed
+    .replace(/^(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|lun|mar|mer|jeu|ven|sam|dim)\.?\s+/i, '')
+    .replace(/^(?:le|du|jour|d|date)\s*[:=]?\s*/i, '')
+    .replace(/[.,;]$/, '')
+    .trim();
 
   // Check ISO format YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
@@ -274,7 +278,7 @@ export function normalizeDate(rawDate: string): string {
     }
   }
 
-  // Check single day number e.g. "24" (current month and year)
+  // Check single day number e.g. "8" or "24" (current month and year)
   if (/^\d{1,2}$/.test(trimmed)) {
     const d = parseInt(trimmed, 10);
     if (d >= 1 && d <= 31) {
@@ -428,7 +432,10 @@ export async function fetchAndParseGoogleSheetsInterventions(
   }
 
   let csvText = await response.text();
-  let lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let lines = csvText
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(l => l && !/^[,;\s]+$/.test(l));
 
   if (lines.length === 0) {
     return {
@@ -496,7 +503,10 @@ export async function fetchAndParseGoogleSheetsInterventions(
           const retryRes = await fetch(`${tabCsvUrl}&_t=${Date.now()}`);
           if (retryRes.ok) {
             const retryCsvText = await retryRes.text();
-            const retryLines = retryCsvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            const retryLines = retryCsvText
+              .split(/\r?\n/)
+              .map(l => l.trim())
+              .filter(l => l && !/^[,;\s]+$/.test(l));
             
             for (let i = 0; i < retryLines.length; i++) {
               const line = retryLines[i].toLowerCase();

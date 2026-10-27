@@ -30,6 +30,7 @@ import {
   ExternalLink,
   Sparkles,
   FileDown,
+  FileSpreadsheet,
   Clock,
   Battery,
   Activity,
@@ -83,7 +84,9 @@ import {
   EyeOff,
   UserPlus,
   LogIn,
-  KeyRound
+  KeyRound,
+  Fan,
+  Wind
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -110,6 +113,7 @@ import { LoginView } from './components/LoginView';
 import { InterventionsPlanningView } from './components/InterventionsPlanningView';
 import { CommandPaletteModal } from './components/CommandPaletteModal';
 import { DecretTertiaireModule } from './components/DecretTertiaireModule';
+import { GtbPointsMatrixTable } from './components/GtbPointsMatrixTable';
 import { 
   AutoAnomalyScannerCard, 
   detectSystemAnomalies, 
@@ -283,13 +287,23 @@ export const cleanBuildingLocation = (loc?: string, id?: string | number): strin
   return cleaned || 'Rue de Malbosc, 34080 Montpellier';
 };
 
-// Détection automatique du statut d'anomalie pour un bâtiment (marquage rouge automatique)
+// Détection automatique du statut d'anomalie pour un bâtiment basée sur les seuils réels du Google Sheet
 export const isBuildingInAnomaly = (b: any): boolean => {
   if (!b) return false;
-  if (b.status === 'ALERTE') return true;
+  const status = String(b.status || '').toUpperCase();
+  if (status === 'ALERTE') return true;
+
   const kwh = parseEnergy(b.consumption);
-  if (kwh > 210) return true; // Surconsommation anormale
-  if (kwh < 30) return true;  // Sous-consommation anormale / rupture
+  const type = String(b.type || '').toLowerCase();
+  const surface = parseFloat(String(b.surface || '').replace(/[^0-9.]/g, '')) || 1000;
+  const isT1 = type.includes('t1') || type.includes('étudiant') || type.includes('etudiant') || surface < 1000;
+  const nominal = isT1 ? 114 : 196;
+
+  if (nominal > 0 && kwh > 0) {
+    const deltaPrct = ((kwh - nominal) / nominal) * 100;
+    if (deltaPrct >= 20) return true; // Surconsommation >= +20%
+    if (deltaPrct <= -50) return true; // Sous-consommation anormale / rupture
+  }
   return false;
 };
 
@@ -477,44 +491,49 @@ const MetricCard = ({
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white/85 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-white/60 shadow-md flex flex-col justify-between gap-2 group hover:shadow-lg transition-all active:scale-[0.99] relative overflow-hidden h-full min-w-0"
+      className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between gap-3 group hover:border-slate-300 transition-all h-full min-w-0"
     >
-      <div className="flex justify-between items-start relative z-10 min-w-0">
-        <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider leading-none truncate mr-1">{title}</span>
-        <div className={cn("p-1.5 rounded-lg transition-transform group-hover:scale-110 shrink-0", colorMap[color])}>
+      <div className="flex justify-between items-start min-w-0">
+        <span className="text-slate-500 text-xs font-medium truncate mr-2">{title}</span>
+        <div className={cn("p-1.5 rounded-lg shrink-0", colorMap[color])}>
           <Icon className="w-4 h-4" />
         </div>
       </div>
-      <div className="relative z-10 min-w-0">
-        <h3 className="text-lg sm:text-xl md:text-2xl font-bold font-display text-slate-900 leading-tight mb-1 truncate">{value}</h3>
-        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+      <div className="min-w-0">
+        <h3 className="text-xl sm:text-2xl font-bold font-display text-slate-900 leading-tight mb-1 truncate tracking-tight">{value}</h3>
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0 text-xs">
           {trend && (
-            <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0", trend.startsWith('-') ? "text-emerald-700 bg-emerald-100/50" : "text-rose-700 bg-rose-100/50")}>
+            <span className={cn("font-semibold px-1.5 py-0.2 rounded shrink-0", trend.startsWith('-') ? "text-emerald-700 bg-emerald-50" : "text-rose-700 bg-rose-50")}>
               {trend}
             </span>
           )}
-          <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate min-w-0">{subValue}</span>
+          <span className="text-slate-500 font-medium truncate min-w-0">{subValue}</span>
         </div>
         {extraInfo && (
-          <div className="mt-2 pt-1.5 border-t border-slate-100/90">
+          <div className="mt-2 pt-2 border-t border-slate-100">
             {extraInfo}
           </div>
         )}
       </div>
-      <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-slate-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
     </motion.div>
   );
 };
 
 const Tag = ({ status }: { status: BuildingStats['status'] }) => {
   const styles = {
-    OPTIMAL: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    ATTENTION: "bg-amber-50 text-amber-700 border-amber-200",
-    ALERTE: "bg-rose-600 text-white border-rose-700 font-black shadow-2xs"
+    OPTIMAL: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    ATTENTION: "bg-amber-50 text-amber-800 border-amber-200",
+    ALERTE: "bg-rose-50 text-rose-800 border-rose-200"
+  };
+  const labels: Record<string, string> = {
+    OPTIMAL: "Nominal",
+    ATTENTION: "Surveillance",
+    ALERTE: "Alerte"
   };
   return (
-    <span className={cn("px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wider uppercase border", styles[status])}>
-      {status === 'ALERTE' ? '🔴 ' : ''}{status}
+    <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold border", styles[status])}>
+      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", status === 'ALERTE' ? 'bg-rose-600' : status === 'ATTENTION' ? 'bg-amber-600' : 'bg-emerald-600')} />
+      <span>{labels[status] || status}</span>
     </span>
   );
 };
@@ -565,10 +584,34 @@ interface SettingsViewProps {
   fileInputRef: React.RefObject<HTMLInputElement>;
   handlePhotoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   setSettings: React.Dispatch<React.SetStateAction<any>>;
+  googleSheetsUrl?: string;
+  onUpdateGoogleSheetsUrl?: (url: string) => void;
+  onForceSync?: () => void;
+  isSyncing?: boolean;
+  lastSyncTime?: string;
 }
 
-const SettingsView = ({ userProfile, onProfileChange, settings, setSettings, toggleSetting, fileInputRef, handlePhotoUpload }: SettingsViewProps) => {
+const SettingsView = ({ 
+  userProfile, 
+  onProfileChange, 
+  settings, 
+  setSettings, 
+  toggleSetting, 
+  fileInputRef, 
+  handlePhotoUpload,
+  googleSheetsUrl,
+  onUpdateGoogleSheetsUrl,
+  onForceSync,
+  isSyncing,
+  lastSyncTime
+}: SettingsViewProps) => {
   const t = translations[settings.language as keyof typeof translations] || translations.fr;
+  const [localSheetUrl, setLocalSheetUrl] = useState(googleSheetsUrl || '');
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (googleSheetsUrl) setLocalSheetUrl(googleSheetsUrl);
+  }, [googleSheetsUrl]);
 
   return (
     <ViewContainer>
@@ -742,6 +785,85 @@ const SettingsView = ({ userProfile, onProfileChange, settings, setSettings, tog
             </div>
           </div>
         </div>
+
+        {/* Intégration & Télémétrie Google Sheets */}
+        <div className="bg-white rounded-3xl p-5 md:p-8 border border-slate-200/60 shadow-sm transition-all hover:shadow-md lg:col-span-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-100">
+                <FileSpreadsheet className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 font-display">
+                  {settings.language === 'fr' ? 'Liaison & Télémétrie Google Sheets' : 'Google Sheets Telemetry Link'}
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  {settings.language === 'fr' 
+                    ? 'Détection automatique des dérives énergétiques et des alarmes calculée en direct depuis votre feuille de calcul.' 
+                    : 'Automated energy drift and alarm detection computed live from your spreadsheet.'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                <span>{settings.language === 'fr' ? 'Synchronisé' : 'Connected'}</span>
+              </span>
+              <button
+                type="button"
+                onClick={onForceSync}
+                disabled={isSyncing}
+                className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shadow-2xs"
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5 text-emerald-700", isSyncing && "animate-spin")} />
+                <span>{isSyncing ? '...' : (settings.language === 'fr' ? 'Actualiser' : 'Sync')}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">
+                {settings.language === 'fr' ? 'URL de publication Google Sheets (Format CSV) :' : 'Published Google Sheets CSV URL:'}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={localSheetUrl}
+                  onChange={(e) => setLocalSheetUrl(e.target.value)}
+                  placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-800 focus:bg-white focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    onUpdateGoogleSheetsUrl?.(localSheetUrl);
+                    setSaveSuccess(true);
+                    setTimeout(() => setSaveSuccess(false), 3000);
+                  }}
+                  className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs shrink-0"
+                >
+                  {saveSuccess ? (settings.language === 'fr' ? 'Enregistré ✓' : 'Saved ✓') : (settings.language === 'fr' ? 'Enregistrer' : 'Save')}
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium mt-1.5">
+                {settings.language === 'fr'
+                  ? 'Pour lier une feuille : Fichier > Partager > Publier sur le web > Sélectionner Format CSV.'
+                  : 'To link a sheet: File > Share > Publish to web > Select CSV format.'}
+              </p>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex flex-col justify-between text-xs">
+              <div>
+                <p className="font-semibold text-slate-700">{settings.language === 'fr' ? 'Dernière relève :' : 'Last telemetry poll:'}</p>
+                <p className="font-mono text-emerald-800 font-bold mt-0.5">{lastSyncTime || (settings.language === 'fr' ? 'En direct' : 'Live')}</p>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-2">
+                {settings.language === 'fr' ? 'Fréquence : actualisation automatique toutes les 60 secondes.' : 'Frequency: auto refreshed every 60s.'}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
     </ViewContainer>
@@ -834,15 +956,14 @@ const EnergyMixCard = React.memo(({ language, buildingsList, isGlobal, selectedB
           </div>
         </div>
 
-        <div className="w-full space-y-4 sm:space-y-5">
+        <div className="w-full space-y-3 sm:space-y-3.5 pt-1">
           {energyMixData.map((item) => (
-            <div key={item.name} className="flex flex-col gap-2">
-              <div className="flex justify-between items-end">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
-                  <span className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-wide truncate">{item.name}</span>
-                </div>
-                <span className="text-xs sm:text-sm font-bold font-display text-slate-900">{Math.round(item.value)}%</span>
+            <div key={item.name} className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
+                <span className="text-[10px] sm:text-xs font-bold text-slate-700 uppercase tracking-wide truncate">
+                  {item.name}
+                </span>
               </div>
               <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                 <motion.div 
@@ -1098,91 +1219,6 @@ const BuildingConsumptionGraphCard = React.memo(({
           </button>
         )}
       </div>
-
-      {/* Quick Building Selector Pills with Automatic Red Highlighting for Anomalies */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2.5 scrollbar-none">
-        <button
-          type="button"
-          onClick={() => onSelectBuilding('all')}
-          className={cn(
-            "px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 shrink-0",
-            isGlobal 
-              ? "bg-slate-900 text-white shadow-xs" 
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-          )}
-        >
-          <span>🌐</span>
-          <span>{language === 'fr' ? 'Tous les bâtiments' : 'All buildings'}</span>
-        </button>
-        {buildingsList.map((b) => {
-          const isAnom = isBuildingInAnomaly(b);
-          const isThisSelected = selectedBuildingId === b.id.toString();
-          return (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => onSelectBuilding(b.id.toString())}
-              className={cn(
-                "px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 shrink-0",
-                isAnom 
-                  ? isThisSelected 
-                    ? "bg-rose-600 text-white shadow-sm ring-2 ring-rose-400 font-extrabold" 
-                    : "bg-rose-50 text-rose-700 border border-rose-300 hover:bg-rose-100 ring-1 ring-rose-300 font-extrabold"
-                  : isThisSelected 
-                    ? "bg-emerald-700 text-white shadow-xs" 
-                    : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200/80"
-              )}
-            >
-              {isAnom && <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse inline-block" />}
-              <span>{formatBuildingName(b.name, b.id)}</span>
-              {isAnom && <span className="text-[9px] px-1 py-0.2 rounded bg-rose-600 text-white font-mono">!</span>}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Visual Legend: Explicitly shows normal mode color vs anomaly detected color */}
-      {isGlobal ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-2 px-1 text-[11px]">
-          <div className="flex flex-wrap items-center gap-4 text-slate-600 font-medium">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-[#047857] inline-block shadow-2xs" />
-              <span className="text-slate-700 font-semibold">{language === 'fr' ? 'Mode normal (Consommation nominale)' : 'Normal mode (Nominal consumption)'}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-rose-600 inline-block animate-pulse shadow-2xs" />
-              <span className="text-rose-700 font-bold">{language === 'fr' ? 'Anomalie détectée (Surconsommation)' : 'Anomaly detected (Overconsumption)'}</span>
-            </div>
-          </div>
-          <div className="text-[10px] font-semibold text-slate-500 font-mono bg-slate-50 px-2 py-0.5 rounded-full border border-slate-200/60">
-            {dynamicBarData.filter(d => d.isAnomaly || d.status === 'ALERTE').length} {language === 'fr' ? 'anomalie(s) détectée(s)' : 'anomaly(ies) detected'}
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-2 px-1 text-[11px]">
-          <div className="flex items-center gap-2 text-slate-600 font-medium">
-            <span className={cn(
-              "w-3 h-3 rounded-xs inline-block shadow-2xs",
-              isBuildingInAnomaly(selected) ? "bg-rose-600 animate-pulse" : "bg-[#047857]"
-            )} />
-            <span className="font-semibold text-slate-700">
-              {isBuildingInAnomaly(selected)
-                ? (language === 'fr' ? 'Anomalie détectée sur ce bâtiment (Surconsommation active)' : 'Anomaly detected on this building (Active overconsumption)')
-                : (language === 'fr' ? 'Mode normal : Consommation nominale régulée' : 'Normal mode: Nominal regulated consumption')}
-            </span>
-          </div>
-          <div className={cn(
-            "text-[10px] font-semibold px-2.5 py-0.5 rounded-full border font-mono",
-            isBuildingInAnomaly(selected) 
-              ? "bg-rose-100 text-rose-800 border-rose-300 font-bold" 
-              : "text-emerald-700 bg-emerald-50 border-emerald-200/60 font-bold"
-          )}>
-            {language === 'fr' 
-              ? (isBuildingInAnomaly(selected) ? `⚠️ Anomalie : ${dailyKwh} kWh/j` : `Mode Normal : ${dailyKwh} kWh/j`)
-              : (isBuildingInAnomaly(selected) ? `⚠️ Anomaly: ${dailyKwh} kWh/d` : `Normal Mode: ${dailyKwh} kWh/d`)}
-          </div>
-        </div>
-      )}
 
       {/* The Interactive Chart Container */}
       {(() => {
@@ -1891,9 +1927,9 @@ const DashboardView = ({
 
   return (
     <ViewContainer>
-      <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-wider sm:tracking-widest mb-1 drop-shadow-sm">{currentDate}</h2>
+          <p className="text-xs font-semibold text-emerald-800 mb-0.5">{currentDate}</p>
           <h1 className="text-xl sm:text-2xl font-bold font-display text-slate-900 tracking-tight">
             {language === 'fr' ? 'Tableau de Bord' : 'Energy Dashboard'}
           </h1>
@@ -1903,10 +1939,10 @@ const DashboardView = ({
             <button
               type="button"
               onClick={() => onNavigateView('planning')}
-              className="flex items-center gap-1.5 text-xs text-slate-700 hover:text-emerald-800 font-bold bg-white/90 hover:bg-emerald-50 px-3 py-1.5 rounded-full border border-slate-200/80 shadow-2xs transition cursor-pointer backdrop-blur-xs"
+              className="flex items-center gap-1.5 text-xs text-slate-700 hover:text-emerald-800 font-semibold bg-white hover:bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs transition cursor-pointer"
               title={language === 'fr' ? 'Consulter le planning des interventions' : 'View interventions schedule'}
             >
-              <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+              <Calendar className="w-3.5 h-3.5 text-emerald-700" />
               <span>{language === 'fr' ? 'Planning' : 'Planning'}</span>
             </button>
           )}
@@ -1945,14 +1981,14 @@ const DashboardView = ({
 
               doc.save(`CII_ENERGIE_Bilan_${isGlobal ? 'Global' : selected?.id || 'Site'}_${new Date().toISOString().slice(0, 10)}.pdf`);
             }}
-            className="flex items-center gap-1.5 text-xs text-slate-700 hover:text-emerald-800 font-bold bg-white/90 hover:bg-emerald-50 px-3 py-1.5 rounded-full border border-slate-200/80 shadow-2xs transition cursor-pointer backdrop-blur-xs"
+            className="flex items-center gap-1.5 text-xs text-slate-700 hover:text-emerald-800 font-semibold bg-white hover:bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs transition cursor-pointer"
             title={language === 'fr' ? 'Télécharger le bilan PDF' : 'Download PDF Report'}
           >
-            <Download className="w-3.5 h-3.5 text-emerald-600" />
+            <Download className="w-3.5 h-3.5 text-emerald-700" />
             <span>{language === 'fr' ? 'Bilan PDF' : 'PDF Report'}</span>
           </button>
-          <div className="flex items-center gap-2 text-xs text-slate-600 font-semibold bg-white/90 px-3.5 py-1.5 rounded-full border border-slate-200/80 shadow-2xs backdrop-blur-xs">
-            <span className={cn("w-2 h-2 rounded-full", isSyncing ? "bg-amber-500 animate-spin" : "bg-emerald-500")} />
+          <div className="flex items-center gap-2 text-xs text-slate-600 font-semibold bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+            <span className={cn("w-2 h-2 rounded-full", isSyncing ? "bg-amber-500 animate-spin" : "bg-emerald-600")} />
             <span>{language === 'fr' ? 'Télémétrie en direct' : 'Live Telemetry'}</span>
             {onForceSync && (
               <button
@@ -1960,7 +1996,7 @@ const DashboardView = ({
                 onClick={onForceSync}
                 disabled={isSyncing}
                 title={language === 'fr' ? 'Actualiser les données de télémétrie' : 'Sync telemetry'}
-                className="ml-1 p-1 hover:bg-slate-100 rounded-md text-slate-500 hover:text-emerald-700 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                className="ml-1 p-0.5 hover:bg-slate-100 rounded text-slate-500 hover:text-emerald-700 transition disabled:opacity-50 cursor-pointer"
               >
                 <RefreshCw className={cn("w-3.5 h-3.5", isSyncing && "animate-spin text-emerald-600")} />
               </button>
@@ -2395,158 +2431,125 @@ const AnalyticsView = React.memo(({
     );
   }
 
-  // Calculs interconnectés pour le bâtiment sélectionné ou le parc
-  const buildingKwh = selected ? parseEnergy(selected.consumption) : totalConsumptionValue;
-  const co2Tons = (buildingKwh * 0.000057).toFixed(2); // Facteur d'émission moyen élec France (57 g CO2/kWh)
-  const surfaceNum = selected ? (parseFloat(String(selected.surface || '').replace(/[^0-9.]/g, '')) || 1200) : 15000;
-  const energyDensity = (buildingKwh / surfaceNum).toFixed(1);
-
-  // Calcul intelligent de la répartition des usages énergétiques selon la typologie et les charges thermiques réelles
-  const energyBreakdown = useMemo(() => {
-    if (!selected) return { cvc: 48, lighting: 26, motors: 16, standby: 10 };
-    
-    const kwh = parseEnergy(selected.consumption);
-    const isStudent = (selected.type || '').toLowerCase().includes('étudiant');
-    const winterKw = Number(selected.powerWinterKw) || 15;
-    const isHighCons = kwh > 180;
-    const isVeryLowCons = kwh < 50;
-
-    let cvc: number;
-    let lighting: number;
-    let motors: number;
-    let standby: number;
-
-    if (isVeryLowCons) {
-      // Bâtiment en veille ou occupation très basse (ex: BAT-04)
-      cvc = 22;
-      lighting = 28;
-      motors = 15;
-      standby = 35;
-    } else if (isHighCons) {
-      // Surconsommation CVC / Chauffage (ex: BAT-02, BAT-07)
-      const ratio = Math.min(66, 52 + Math.round((winterKw / 25) * 8));
-      cvc = ratio;
-      lighting = Math.round((100 - cvc) * 0.45);
-      motors = Math.round((100 - cvc) * 0.35);
-      standby = Math.max(5, 100 - cvc - lighting - motors);
-    } else if (isStudent) {
-      // Résidence étudiante (750 m², 20 logements T1bis, peu d'ascenseurs)
-      cvc = 44;
-      lighting = 32;
-      motors = 10;
-      standby = 14;
-    } else {
-      // Résidence familiale équilibrée (1300 m², T3 Familial, ascenseurs, VMC)
-      cvc = 49;
-      lighting = 24;
-      motors = 16;
-      standby = 11;
-    }
-
-    return { cvc, lighting, motors, standby };
-  }, [selected]);
 
   return (
     <ViewContainer>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
         <div>
-          <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-wider sm:tracking-widest mb-1.5">{currentDate}</h2>
-          <h1 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 leading-tight">
+          <h2 className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider sm:tracking-widest mb-1 drop-shadow-sm">{currentDate}</h2>
+          <h1 className="text-xl sm:text-2xl font-bold font-display text-slate-900 tracking-tight">
             {language === 'fr' ? 'Analytique & Performance Énergétique' : 'Energy Analytics & Performance'}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
             {isGlobal 
-              ? (language === 'fr' ? 'Vue consolidée sur l\'ensemble du parc (10 bâtiments)' : 'Consolidated fleet performance (10 buildings)')
-              : (language === 'fr' ? `Analyse spécifique : ${selected?.name}` : `Specific analysis: ${selected?.name}`)
+              ? (language === 'fr' ? 'Supervision consolidée sur l’ensemble du parc (10 bâtiments)' : 'Consolidated fleet performance (10 buildings)')
+              : (language === 'fr' ? `Données réelles et télémétrie : ${formatBuildingName(selected?.name, selected?.id)}` : `Real telemetry data: ${formatBuildingName(selected?.name, selected?.id)}`)
             }
           </p>
         </div>
 
         {/* Indicateur de statut de connexion */}
-        <div className="flex items-center gap-2 text-xs text-slate-600 font-semibold bg-white px-3.5 py-1.5 rounded-full border border-slate-200/80 shadow-2xs self-start sm:self-auto">
+        <div className="flex items-center gap-2 text-xs text-slate-600 font-semibold bg-white/90 px-3.5 py-1.5 rounded-full border border-slate-200/80 shadow-2xs self-start sm:self-auto backdrop-blur-xs">
           <span className={cn("w-2 h-2 rounded-full", isSyncing ? "bg-amber-500 animate-spin" : "bg-emerald-500")} />
-          <span>{language === 'fr' ? 'Télémétrie active' : 'Live Telemetry'}</span>
+          <span>{language === 'fr' ? 'Télémétrie en direct' : 'Live Telemetry'}</span>
           {onForceSync && (
             <button
               onClick={onForceSync}
               disabled={isSyncing}
               title={language === 'fr' ? "Actualiser la télémétrie" : "Refresh"}
-              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-emerald-700 transition cursor-pointer"
+              className="p-1 hover:bg-slate-100 rounded text-slate-500 hover:text-emerald-700 transition cursor-pointer"
             >
-              <RefreshCw className={cn("w-3 h-3", isSyncing && "animate-spin text-emerald-600")} />
+              <RefreshCw className={cn("w-3.5 h-3.5", isSyncing && "animate-spin text-emerald-600")} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Sélecteur de Bâtiments pour les analyses - Épuré */}
-      <div className="bg-white rounded-2xl p-2.5 border border-slate-200/80 mb-6 shadow-xs">
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-          <button
-            onClick={() => onSelectBuilding?.('all')}
-            className={cn(
-              "px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer",
-              isGlobal
-                ? "bg-slate-900 text-white font-bold shadow-2xs"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            )}
-          >
-            <span>{language === 'fr' ? 'Tout le Parc' : 'All Portfolio'}</span>
-          </button>
-          {buildingsList.map(b => {
-            const isCurrent = selectedBuildingId === b.id.toString();
-            const isAnom = isBuildingInAnomaly(b);
-            return (
-              <button
-                key={b.id}
-                onClick={() => onSelectBuilding?.(b.id.toString())}
-                className={cn(
-                  "px-3 py-1.5 rounded-xl text-xs whitespace-nowrap transition cursor-pointer flex items-center gap-1.5",
-                  isAnom
-                    ? isCurrent
-                      ? "bg-rose-600 text-white font-extrabold shadow-xs"
-                      : "bg-rose-50 text-rose-700 border border-rose-300 font-bold hover:bg-rose-100"
-                    : isCurrent
-                      ? "bg-slate-900 text-white font-bold shadow-2xs"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                )}
-              >
-                {isAnom && <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />}
-                <span>{b.name}</span>
-                {isAnom && <span className="text-[9px] px-1 py-0.2 rounded bg-rose-600 text-white font-mono">!</span>}
-              </button>
-            );
-          })}
+      {/* Liste déroulante épurée pour la sélection de bâtiment */}
+      <div className="bg-white rounded-2xl p-3 sm:p-3.5 border border-slate-200/80 mb-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 shrink-0">
+            <Building2 className="w-4 h-4" />
+          </div>
+          <div>
+            <label htmlFor="analytics-building-select" className="text-xs font-bold text-slate-800 block">
+              {language === 'fr' ? 'Périmètre d’analyse :' : 'Analysis Scope:'}
+            </label>
+            <span className="text-[11px] text-slate-500 font-normal">
+              {language === 'fr' ? 'Sélectionnez un site ou l’ensemble du parc' : 'Select a site or the whole portfolio'}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-80">
+            <select
+              id="analytics-building-select"
+              value={selectedBuildingId || 'all'}
+              onChange={(e) => onSelectBuilding?.(e.target.value)}
+              className="w-full appearance-none bg-slate-50 hover:bg-white border border-slate-200 hover:border-emerald-600 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-600/20 text-slate-800 font-semibold text-xs sm:text-sm rounded-xl px-3.5 py-2 pr-9 shadow-2xs cursor-pointer transition-all"
+            >
+              <option value="all">
+                {language === 'fr' ? '🏢 Tout le Parc (10 Bâtiments - 133 kW)' : '🏢 All Portfolio (10 Sites - 133 kW)'}
+              </option>
+              <optgroup label={language === 'fr' ? 'Bâtiments du Site' : 'Site Buildings'}>
+                {buildingsList.map(b => {
+                  const isAnom = isBuildingInAnomaly(b);
+                  return (
+                    <option key={b.id} value={b.id.toString()}>
+                      {isAnom ? '⚠️ ' : '🏢 '}
+                      {formatBuildingName(b.name, b.id)}
+                      {isAnom ? (language === 'fr' ? ' [Alerte]' : ' [Alert]') : ''}
+                      {` (${b.powerWinterKw ?? '--'} kW)`}
+                    </option>
+                  );
+                })}
+              </optgroup>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+              <ChevronDown className="w-4 h-4" />
+            </div>
+          </div>
+
+          {!isGlobal && (
+            <button
+              onClick={() => onSelectBuilding?.('all')}
+              className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold transition cursor-pointer whitespace-nowrap"
+              title={language === 'fr' ? 'Revenir à tout le parc' : 'Back to portfolio'}
+            >
+              {language === 'fr' ? 'Tout le Parc' : 'All Sites'}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Sub-tab Navigation: Supervision vs Décret Tertiaire & BACS */}
-      <div className="flex items-center gap-2 mb-6">
+      {/* Sub-tab Navigation */}
+      <div className="flex items-center gap-2 mb-5">
         <button
           onClick={() => setAnalyticsTab('supervision')}
           className={cn(
-            "px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer",
+            "px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer",
             analyticsTab === 'supervision'
-              ? "bg-[#236b33] text-white shadow-xs"
-              : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200"
+              ? "bg-[#236b33] text-white shadow-2xs"
+              : "bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80"
           )}
         >
-          <Activity className="w-3.5 h-3.5" />
-          <span>{language === 'fr' ? 'Supervision des Charges & CVC' : 'Load Profiles & HVAC'}</span>
+          <Activity className="w-4 h-4" />
+          <span>{language === 'fr' ? 'Supervision des Charges & Puissances' : 'Load Profiles & Demands'}</span>
         </button>
 
         <button
           onClick={() => setAnalyticsTab('decret')}
           className={cn(
-            "px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer",
+            "px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer",
             analyticsTab === 'decret'
-              ? "bg-[#236b33] text-white shadow-xs"
-              : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200"
+              ? "bg-[#236b33] text-white shadow-2xs"
+              : "bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80"
           )}
         >
-          <Shield className="w-3.5 h-3.5 text-emerald-600" />
+          <Shield className="w-4 h-4 text-emerald-600" />
           <span>{language === 'fr' ? 'Trajectoire Décret Tertiaire & BACS' : 'Tertiary Decree & BACS Trajectory'}</span>
-          <span className="px-1.5 py-0.2 rounded text-[10px] bg-emerald-100 text-emerald-800 font-mono font-bold">
+          <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-50 text-emerald-800 font-bold border border-emerald-200">
             -40%
           </span>
         </button>
@@ -2556,283 +2559,231 @@ const AnalyticsView = React.memo(({
         <DecretTertiaireModule 
           language={language as any}
           buildingName={isGlobal ? (language === 'fr' ? 'Parc Global (10 Sites)' : 'All Sites (10 Sites)') : formatBuildingName(selected?.name, selected?.id)}
-          buildingSurface={surfaceNum}
-          currentAnnualConsumptionMwh={selected?.consumptionYearMwh || Math.round(buildingKwh * 0.365)}
-          winterDemandKw={selected?.powerWinterKw || 1680}
+          buildingSurface={selected ? (parseFloat(String(selected.surface || '').replace(/[^0-9.]/g, '')) || 1300) : 10250}
+          currentAnnualConsumptionMwh={selected?.consumptionYearMwh || 71}
+          winterDemandKw={selected?.powerWinterKw || 133}
           selectedBuildingId={selectedBuildingId}
         />
       ) : (
         <>
-          {/* Cartes Métriques */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
-        <MetricCard 
-          title={isGlobal ? t.efficiency : (language === 'fr' ? "Économie Réalisée" : "Savings Rate")} 
-          value={isGlobal ? `${avgEfficiency}%` : (selected?.economy || '18%')} 
-          subValue={isGlobal ? (language === 'fr' ? "Score moyen du parc" : "Fleet average score") : (language === 'fr' ? "vs référence 2024" : "vs baseline")} 
-          icon={Activity} 
-          color="emerald" 
-        />
-        <MetricCard 
-          title={t.co2Emissions} 
-          value={`${co2Tons} T`} 
-          subValue={language === 'fr' ? (isGlobal ? "Impact carbone global / j" : "Impact carbone site / j") : "Carbon footprint / day"} 
-          icon={Globe} 
-          color="emerald" 
-        />
-        <MetricCard 
-          title={isGlobal ? (language === 'fr' ? "Puissance Chauffage Totale" : "Total Heating Demand") : (language === 'fr' ? "Puissance Hiver" : "Winter Demand")} 
-          value={isGlobal 
-            ? `${Math.round(totalHeatingPowerKw || 133).toLocaleString('fr-FR')} kW`
-            : `${selected?.powerWinterKw ?? '--'} kW`
-          } 
-          subValue={isGlobal ? (language === 'fr' ? "Besoin thermique hiver (Google Sheet)" : "Winter thermal demand (Google Sheet)") : (language === 'fr' ? `Été: ${selected?.powerSummerKw ?? '--'} kW` : `Summer: ${selected?.powerSummerKw ?? '--'} kW`)} 
-          icon={Flame} 
-          color="amber" 
-        />
-        <MetricCard 
-          title={isGlobal ? t.anomalies : (language === 'fr' ? "Intensité Énergétique" : "Energy Intensity")} 
-          value={isGlobal ? String(anomaliesCount) : `${energyDensity} kWh/m²`} 
-          subValue={isGlobal 
-            ? (language === 'fr' ? "Actions requises" : "Actions required") 
-            : (language === 'fr' ? "Cible max : 20.0" : "Target: 20.0")
-          } 
-          icon={isGlobal ? AlertTriangle : Zap} 
-          color={isGlobal ? (anomaliesCount > 0 ? "rose" : "emerald") : (Number(energyDensity) > 20 ? "rose" : "emerald")} 
-        />
-      </div>
 
-      {/* Détail d'Analyse Spécifique quand un bâtiment est sélectionné */}
-      {selected ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-6">
-          {/* Fiche Technique & Répartition Énergie */}
-          <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                    <Building2 className="w-5 h-5" />
+
+          {/* Détail d'Analyse Spécifique quand un bâtiment est sélectionné */}
+          {selected ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-6">
+              {/* Fiche Technique & Données Réelles du Site */}
+              <div className="lg:col-span-7 bg-white rounded-2xl p-5 md:p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center border border-emerald-100">
+                        <Building2 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base sm:text-lg font-bold text-slate-900 font-display">{formatBuildingName(selected.name, selected.id)}</h3>
+                        <p className="text-xs text-slate-500 font-medium">{selected.type || (language === 'fr' ? 'Bâtiment Tertiaire' : 'Commercial Building')}</p>
+                      </div>
+                    </div>
+                    <Tag status={selected.status} />
                   </div>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-800">{formatBuildingName(selected.name, selected.id)}</h3>
-                    <p className="text-xs text-slate-400 font-medium">{selected.type || (language === 'fr' ? 'Bâtiment Tertiaire' : 'Commercial Building')}</p>
+
+                  {/* Puissances Thermiques Réelles */}
+                  <div className="grid grid-cols-3 gap-3 p-3.5 bg-emerald-50/50 rounded-xl border border-emerald-100 mb-4">
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">{language === 'fr' ? 'Besoin Hiver' : 'Winter Load'}</p>
+                      <p className="text-lg font-bold text-slate-900 font-display mt-0.5">{selected.powerWinterKw ?? '--'} <span className="text-xs font-normal text-slate-500">kW</span></p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">{language === 'fr' ? 'Besoin Été' : 'Summer Load'}</p>
+                      <p className="text-lg font-bold text-slate-900 font-display mt-0.5">{selected.powerSummerKw ?? '--'} <span className="text-xs font-normal text-slate-500">kW</span></p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">{language === 'fr' ? 'Pic Canicule' : 'Heatwave Peak'}</p>
+                      <p className="text-lg font-bold text-emerald-900 font-display mt-0.5">{selected.powerHeatwaveKw ?? '--'} <span className="text-xs font-normal text-emerald-700">kW</span></p>
+                    </div>
+                  </div>
+
+                  {/* Données réelles du bâtiment */}
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5">
+                    {language === 'fr' ? 'Données Réelles du Site' : 'Site Actual Parameters'}
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100">
+                      <p className="text-[11px] font-medium text-slate-500 uppercase">{language === 'fr' ? 'Surface Utile' : 'Usable Surface'}</p>
+                      <p className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">{selected.surface}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100">
+                      <p className="text-[11px] font-medium text-slate-500 uppercase">{language === 'fr' ? 'Consommation 24h' : '24h Consumption'}</p>
+                      <p className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">{selected.consumption}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100">
+                      <p className="text-[11px] font-medium text-slate-500 uppercase">{language === 'fr' ? 'Consommation Annuelle' : 'Annual Consumption'}</p>
+                      <p className="text-sm sm:text-base font-bold text-slate-900 mt-0.5">{selected.consumptionYearMwh ? `${selected.consumptionYearMwh} MWh/an` : '--'}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100">
+                      <p className="text-[11px] font-medium text-slate-500 uppercase">{language === 'fr' ? 'Économie Réalisée' : 'Energy Savings'}</p>
+                      <p className="text-sm sm:text-base font-bold text-emerald-700 mt-0.5">{selected.economy || '18%'}</p>
+                    </div>
                   </div>
                 </div>
-                <Tag status={selected.status} />
+
+                {/* Raccourcis de navigation croisée */}
+                {onNavigateView && (
+                  <div className="pt-4 mt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-xs text-slate-600 font-semibold">
+                      {language === 'fr' ? 'Accès direct pour ce bâtiment :' : 'Direct actions:'}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onNavigateView('gtb')}
+                        className="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                      >
+                        <SlidersHorizontal className="w-3.5 h-3.5" />
+                        <span>{language === 'fr' ? 'Contrôles GTB' : 'BMS Controls'}</span>
+                      </button>
+                      <button
+                        onClick={() => onNavigateView('dashboard')}
+                        className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <LayoutDashboard className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Dashboard</span>
+                      </button>
+                      <button
+                        onClick={() => onNavigateView('reports')}
+                        className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Rapports</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Puissances Thermiques Google Sheets */}
-              <div className="grid grid-cols-3 gap-3 p-3.5 bg-emerald-50/40 rounded-2xl border border-emerald-100/90 mb-5 shadow-2xs">
+              {/* Interconnexion GTB & Automates du bâtiment */}
+              <div className="lg:col-span-5 bg-white rounded-2xl p-5 md:p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between">
                 <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{language === 'fr' ? 'Besoin Hiver' : 'Winter Load'}</p>
-                  <p className="text-base font-bold text-slate-900 font-sans mt-0.5">{selected.powerWinterKw ?? '--'} <span className="text-xs font-semibold text-slate-500">kW</span></p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{language === 'fr' ? 'Besoin Été' : 'Summer Load'}</p>
-                  <p className="text-base font-bold text-slate-900 font-sans mt-0.5">{selected.powerSummerKw ?? '--'} <span className="text-xs font-semibold text-slate-500">kW</span></p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{language === 'fr' ? 'Pic Canicule' : 'Heatwave Peak'}</p>
-                  <p className="text-base font-bold text-emerald-950 font-sans mt-0.5">{selected.powerHeatwaveKw ?? '--'} <span className="text-xs font-bold text-emerald-700">kW</span></p>
-                </div>
-              </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Cpu className="w-5 h-5 text-emerald-800" />
+                      <h3 className="text-sm font-bold text-slate-900 font-display">
+                        {language === 'fr' ? 'Supervision GTB & Capteurs' : 'BMS & Sensors Link'}
+                      </h3>
+                    </div>
+                    <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      Classe B EN ISO 52120-1
+                    </span>
+                  </div>
 
-              {/* Répartition de Charge Estimée */}
-              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
-                {language === 'fr' ? 'Répartition des Postes Énergétiques' : 'Energy Load Breakdown'}
-              </h4>
-              <div className="space-y-2.5">
-                <div>
-                  <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
-                    <span>{language === 'fr' ? 'CVC, Chauffage & Climatisation' : 'HVAC & Climate Control'}</span>
-                    <span className="font-bold text-slate-800">{energyBreakdown.cvc}%</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div className="bg-emerald-600 h-2 rounded-full transition-all duration-500" style={{ width: `${energyBreakdown.cvc}%` }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
-                    <span>{language === 'fr' ? 'Éclairage & Bureautique' : 'Lighting & Plug loads'}</span>
-                    <span className="font-bold text-slate-800">{energyBreakdown.lighting}%</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div className="bg-teal-500 h-2 rounded-full transition-all duration-500" style={{ width: `${energyBreakdown.lighting}%` }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
-                    <span>{language === 'fr' ? 'Force Motrice & Ascenseurs' : 'Elevators & Pumps'}</span>
-                    <span className="font-bold text-slate-800">{energyBreakdown.motors}%</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div className="bg-amber-500 h-2 rounded-full transition-all duration-500" style={{ width: `${energyBreakdown.motors}%` }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1">
-                    <span>{language === 'fr' ? 'Veille & Informatique' : 'Standby & IT'}</span>
-                    <span className="font-bold text-slate-800">{energyBreakdown.standby}%</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div className="bg-indigo-500 h-2 rounded-full transition-all duration-500" style={{ width: `${energyBreakdown.standby}%` }} />
+                  <div className="space-y-2.5 text-xs">
+                    <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100 flex items-center justify-between">
+                      <span className="text-slate-600 font-medium">{language === 'fr' ? 'Points de contrôle actifs' : 'Active control points'}</span>
+                      <span className="font-bold text-slate-900">91 points</span>
+                    </div>
+                    <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100 flex items-center justify-between">
+                      <span className="text-slate-600 font-medium">{language === 'fr' ? 'Régulation CVC Daikin / BACnet' : 'HVAC Daikin / BACnet'}</span>
+                      <span className="font-semibold text-emerald-700 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Opérationnel
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100 flex items-center justify-between">
+                      <span className="text-slate-600 font-medium">{language === 'fr' ? 'Télérelève Linky & Eau' : 'Smart Meters (Linky & Water)'}</span>
+                      <span className="font-semibold text-emerald-700 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> En direct
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100 flex items-center justify-between">
+                      <span className="text-slate-600 font-medium">{language === 'fr' ? 'Consigne confort active' : 'Active comfort setpoint'}</span>
+                      <span className="font-bold text-slate-900">20.5°C Hiver / 25°C Été</span>
+                    </div>
+                    <div className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-100 flex items-center justify-between">
+                      <span className="text-slate-600 font-medium">{language === 'fr' ? 'Localisation du site' : 'Site location'}</span>
+                      <span className="font-semibold text-slate-800 truncate max-w-[200px]">{cleanBuildingLocation(selected.location, selected.id)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Raccourcis de navigation croisée */}
-            {onNavigateView && (
-              <div className="pt-5 mt-5 border-t border-slate-100 flex items-center justify-between gap-3">
-                <span className="text-xs text-slate-400 font-medium">
-                  {language === 'fr' ? 'Actions directes pour ce site :' : 'Direct actions for this site:'}
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => onNavigateView('gtb')}
-                    className="px-3 py-1.5 bg-emerald-900 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <SlidersHorizontal className="w-3.5 h-3.5" />
-                    <span>{language === 'fr' ? 'Supervision GTB' : 'BMS Controls'}</span>
-                  </button>
-                  <button
-                    onClick={() => onNavigateView('dashboard')}
-                    className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <LayoutDashboard className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Dashboard</span>
-                  </button>
-                  <button
-                    onClick={() => onNavigateView('reports')}
-                    className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <FileText className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Rapport</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Interconnexion GTB & Automates du bâtiment */}
-          <div className="lg:col-span-5 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between">
-            <div>
+          ) : (
+            /* Tableau comparatif des 10 bâtiments quand "Tout le Parc" est sélectionné */
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 md:p-6 shadow-xs mb-6 overflow-hidden">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-emerald-700" />
-                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                    {language === 'fr' ? 'Intégration GTB & Capteurs' : 'BMS & Sensors Link'}
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 font-display">
+                    {language === 'fr' ? 'Comparatif du Parc (10 Bâtiments)' : 'Fleet Comparison (10 Buildings)'}
                   </h3>
-                </div>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Classe B EN ISO 52120-1
-                </span>
-              </div>
-
-              <div className="space-y-3 text-xs">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
-                  <span className="text-slate-600 font-medium">{language === 'fr' ? 'Points de contrôle actifs' : 'Active control points'}</span>
-                  <span className="font-bold text-slate-800">91 points</span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
-                  <span className="text-slate-600 font-medium">{language === 'fr' ? 'Régulation CVC Daikin / BACnet' : 'HVAC Daikin / BACnet'}</span>
-                  <span className="font-bold text-emerald-600 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Optimal
-                  </span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
-                  <span className="text-slate-600 font-medium">{language === 'fr' ? 'Télérelève Linky & Eau' : 'Smart Meters (Linky & Water)'}</span>
-                  <span className="font-bold text-emerald-600 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> En direct
-                  </span>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
-                  <span className="text-slate-600 font-medium">{language === 'fr' ? 'Consigne confort active' : 'Active comfort setpoint'}</span>
-                  <span className="font-bold text-slate-800">21.5°C Hiver / 25°C Été</span>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {language === 'fr' ? 'Télémétrie en temps réel et puissances thermiques consolidées' : 'Real-time telemetry and consolidated thermal loads'}
+                  </p>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* Tableau comparatif des 10 bâtiments quand "Tout le Parc" est sélectionné */
-        <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs mb-6 overflow-hidden">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 font-display">
-                {language === 'fr' ? 'Comparatif Énergétique & Thermique des 10 Bâtiments' : 'Fleet Energy & Thermal Comparison (10 Buildings)'}
-              </h3>
-              <p className="text-xs text-slate-400 font-medium mt-0.5">
-                {language === 'fr' ? 'Supervision consolidée du parc immobilier' : 'Consolidated portfolio monitoring'}
-              </p>
-            </div>
-          </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[640px]">
-              <thead>
-                <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  <th className="pb-3 pl-2">Bâtiment</th>
-                  <th className="pb-3">Type</th>
-                  <th className="pb-3">Hiver (kW)</th>
-                  <th className="pb-3">Été (kW)</th>
-                  <th className="pb-3">Canicule (kW)</th>
-                  <th className="pb-3">Conso (kWh/j)</th>
-                  <th className="pb-3">Statut</th>
-                  <th className="pb-3 text-right pr-2">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100/70">
-                {buildingsList.map(b => {
-                  const isAnom = isBuildingInAnomaly(b);
-                  return (
-                    <tr key={b.id} className={cn(
-                      "transition",
-                      isAnom ? "bg-rose-50/70 hover:bg-rose-100/70 border-l-4 border-rose-600" : "hover:bg-slate-50/70"
-                    )}>
-                      <td className="py-3 pl-2 font-bold text-slate-800">
-                        <div className="flex items-center gap-1.5">
-                          {isAnom && <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse shrink-0" />}
-                          <span className={cn(isAnom ? "text-rose-950 font-extrabold" : "text-slate-800")}>
-                            {formatBuildingName(b.name, b.id)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3 font-medium text-slate-600">{b.type || 'Tertiaire'}</td>
-                      <td className="py-3 font-bold text-sky-700">{b.powerWinterKw ?? '--'}</td>
-                      <td className="py-3 font-bold text-amber-600">{b.powerSummerKw ?? '--'}</td>
-                      <td className="py-3 font-bold text-rose-600">{b.powerHeatwaveKw ?? '--'}</td>
-                      <td className="py-3">
-                        <span className={cn(
-                          "font-mono inline-block",
-                          isAnom 
-                            ? "px-2 py-0.5 rounded-md bg-rose-200 text-rose-950 font-extrabold border border-rose-300 shadow-2xs" 
-                            : "font-semibold text-slate-800"
-                        )}>
-                          {parseEnergy(b.consumption).toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="py-3"><Tag status={b.status} /></td>
-                      <td className="py-3 text-right pr-2">
-                        <button
-                          onClick={() => onSelectBuilding?.(b.id.toString())}
-                          className={cn(
-                            "px-2.5 py-1 rounded-lg font-bold text-[11px] transition cursor-pointer",
-                            isAnom 
-                              ? "bg-rose-600 hover:bg-rose-700 text-white shadow-xs" 
-                              : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800"
-                          )}
-                        >
-                          {isAnom ? (language === 'fr' ? 'Inspecter' : 'Inspect') : (language === 'fr' ? 'Analyser' : 'Analyze')}
-                        </button>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs min-w-[640px]">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      <th className="pb-3 pl-2">Bâtiment</th>
+                      <th className="pb-3">Type</th>
+                      <th className="pb-3">Hiver (kW)</th>
+                      <th className="pb-3">Été (kW)</th>
+                      <th className="pb-3">Canicule (kW)</th>
+                      <th className="pb-3">Conso (kWh/j)</th>
+                      <th className="pb-3">Statut</th>
+                      <th className="pb-3 text-right pr-2">Action</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {buildingsList.map(b => {
+                      const isAnom = isBuildingInAnomaly(b);
+                      return (
+                        <tr key={b.id} className={cn(
+                          "transition",
+                          isAnom ? "bg-rose-50/70 hover:bg-rose-100/60 border-l-4 border-rose-500" : "hover:bg-slate-50/80"
+                        )}>
+                          <td className="py-2.5 pl-2 font-bold text-slate-900">
+                            <div className="flex items-center gap-1.5">
+                              {isAnom && <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />}
+                              <span className={cn(isAnom ? "text-rose-950 font-bold" : "text-slate-900")}>
+                                {formatBuildingName(b.name, b.id)}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-2.5 font-medium text-slate-600">{b.type || 'Tertiaire'}</td>
+                          <td className="py-2.5 font-semibold text-sky-700">{b.powerWinterKw ?? '--'}</td>
+                          <td className="py-2.5 font-semibold text-amber-700">{b.powerSummerKw ?? '--'}</td>
+                          <td className="py-2.5 font-semibold text-rose-700">{b.powerHeatwaveKw ?? '--'}</td>
+                          <td className="py-2.5">
+                            <span className={cn(
+                              "inline-block font-semibold",
+                              isAnom 
+                                ? "px-2 py-0.5 rounded-md bg-rose-100 text-rose-900 font-bold border border-rose-200" 
+                                : "text-slate-800"
+                            )}>
+                              {parseEnergy(b.consumption).toLocaleString('fr-FR')}
+                            </span>
+                          </td>
+                          <td className="py-2.5"><Tag status={b.status} /></td>
+                          <td className="py-2.5 text-right pr-2">
+                            <button
+                              onClick={() => onSelectBuilding?.(b.id.toString())}
+                              className={cn(
+                                "px-2.5 py-1 rounded-lg font-semibold text-xs transition cursor-pointer",
+                                isAnom 
+                                  ? "bg-rose-600 hover:bg-rose-700 text-white shadow-2xs" 
+                                  : "bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200"
+                              )}
+                            >
+                              {isAnom ? (language === 'fr' ? 'Inspecter' : 'Inspect') : (language === 'fr' ? 'Détails' : 'Details')}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </>
       )}
     </ViewContainer>
@@ -3217,11 +3168,26 @@ export default function App() {
   const [activeWeatherCity, setActiveWeatherCity] = useState<WeatherCity>(POPULAR_CITIES[0]);
   const [isSyncingSheet, setIsSyncingSheet] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
+  const [googleSheetsUrl, setGoogleSheetsUrl] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('cii_energie_sheets_url') || GOOGLE_SHEETS_CSV_URL;
+    }
+    return GOOGLE_SHEETS_CSV_URL;
+  });
   const [gtbEquipments, setGtbEquipments] = useState<GTBEquipment[]>(GTB_INITIAL_EQUIPMENT);
   const [gtbHeatingSetpoint, setGtbHeatingSetpoint] = useState<number>(21.5);
   const [gtbCoolingSetpoint, setGtbCoolingSetpoint] = useState<number>(25.0);
   const [gtbGlobalMode, setGtbGlobalMode] = useState<string>('AUTO');
   const hasGoogleSheetsSyncRef = React.useRef(false);
+
+  const handleUpdateGoogleSheetsUrl = React.useCallback((newUrl: string) => {
+    const trimmed = newUrl.trim();
+    if (!trimmed) return;
+    setGoogleSheetsUrl(trimmed);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cii_energie_sheets_url', trimmed);
+    }
+  }, []);
 
   const handleFixGtbSetpoint = React.useCallback((heating: number, cooling: number) => {
     setGtbHeatingSetpoint(heating);
@@ -3611,14 +3577,13 @@ export default function App() {
       const detail = e.detail;
       if (detail) {
         const isAlert = detail.title?.includes('🚨') || detail.title?.includes('🔴') || detail.title?.includes('Alerte') || detail.type === 'alert';
-        const isBld2 = detail.message?.includes('Bâtiment 2') || detail.title?.includes('Bâtiment 2');
         
         setActivePushBanner({
           id: 'push-' + Date.now(),
           title: detail.title || (settings.language === 'fr' ? 'Notification ÉcoGrid' : 'EcoGrid Notification'),
           message: detail.message || '',
           type: detail.type || (isAlert ? 'alert' : 'info'),
-          buildingId: detail.buildingId || (isBld2 ? 'BAT-02' : undefined),
+          buildingId: detail.buildingId,
           timestamp: settings.language === 'fr' ? 'MAINTENANT' : 'NOW'
         });
         setHasViewedNotifications(false);
@@ -4013,18 +3978,24 @@ export default function App() {
 
   const triggerTestPushNotification = React.useCallback(() => {
     const isFr = settings.language === 'fr';
+    const anomBuilding = memoizedBuildings.find(b => isBuildingInAnomaly(b)) || memoizedBuildings[0];
+    const bName = anomBuilding?.name || 'Bâtiment 1';
+    const bId = anomBuilding?.id?.toString() || 'BAT-01';
+    const bConso = anomBuilding?.consumption || '196 kWh';
+    const bTrend = anomBuilding?.trend || '+0%';
+
     const event = new CustomEvent('app-notification', {
       detail: {
-        title: isFr ? '🚨 Alerte Dérive Bâtiment 2' : '🚨 Building 2 Drift Alert',
+        title: isFr ? `🚨 Alerte Dérive ${bName}` : `🚨 Drift Alert ${bName}`,
         message: isFr 
-          ? 'Consommation anormale 286 kWh/j détectée (+28.4%). Bâtiment surligné en rouge sur la carte.' 
-          : 'Abnormal consumption 286 kWh/d detected (+28.4%). Building highlighted in red on map.',
+          ? `Consommation anormale relevée dans le Google Sheet : ${bConso}/j (${bTrend}). Bâtiment signalé en rouge.` 
+          : `Abnormal consumption reported in Google Sheet: ${bConso}/d (${bTrend}). Building flagged in red.`,
         type: 'alert',
-        buildingId: 'BAT-02'
+        buildingId: bId
       }
     });
     window.dispatchEvent(event);
-  }, [settings.language]);
+  }, [settings.language, memoizedBuildings]);
 
   const onProfileChange = (field: string, value: string) => {
     const newProfile = { ...userProfile, [field]: value };
@@ -4039,10 +4010,12 @@ export default function App() {
   };
 
   // Synchronisation continue en direct avec le Google Sheets / Excel
-  const fetchGoogleSheetsBackground = React.useCallback(async () => {
+  const fetchGoogleSheetsBackground = React.useCallback(async (overrideUrl?: string) => {
     try {
       setIsSyncingSheet(true);
-      const cacheBustUrl = `${GOOGLE_SHEETS_CSV_URL}&_t=${Date.now()}`;
+      const activeUrl = overrideUrl || googleSheetsUrl;
+      const sep = activeUrl.includes('?') ? '&' : '?';
+      const cacheBustUrl = `${activeUrl}${sep}_t=${Date.now()}`;
       const response = await fetch(cacheBustUrl);
       if (!response.ok) return;
 
@@ -4099,6 +4072,8 @@ export default function App() {
         const heatwaveCol = headers.findIndex(h => /canicule|heatwave|pic\s*[eé]t[eé]/i.test(h));
         const consoCol = headers.findIndex(h => /consommation\s*elec.*kwh\/j|conso.*kwh\/j|kwh\/j/i.test(h));
         const annualCol = headers.findIndex(h => /mwh\/an|annuel|consommation.*an/i.test(h));
+        const statusCol = headers.findIndex(h => /statut|[eé]tat|alerte|anomalie|diagnostic/i.test(h));
+        const surfaceCol = headers.findIndex(h => /surface|m2|m²/i.test(h));
 
         for (let i = buildingHeaderIndex + 1; i < lines.length; i++) {
           const cells = parseLine(lines[i]);
@@ -4125,15 +4100,49 @@ export default function App() {
             const buildingNum = parseInt(cleanIdStr, 10) || (parsedBuildings.length + 1);
             const buildingName = `Bâtiment ${buildingNum}`;
 
+            // Calcul du seuil nominal selon la typologie présente dans le Google Sheet
+            const isT1 = /t1|étudiant|etudiant/i.test(type) || (units !== undefined && units <= 20 && powerWinter !== undefined && powerWinter < 12);
+            const nominalKwh = isT1 ? 114 : 196;
+            const delta = nominalKwh > 0 && conso > 0 ? ((conso - nominalKwh) / nominalKwh) * 100 : 0;
+            const deltaRound = Math.round(delta);
+
+            // Détection de l'état d'anomalie strictement basée sur les données du Google Sheet
+            let calculatedStatus: 'OPTIMAL' | 'ALERTE' | 'ATTENTION' = 'OPTIMAL';
+            if (deltaRound >= 20 || (conso > 0 && deltaRound <= -50)) {
+              calculatedStatus = 'ALERTE';
+            } else if ((deltaRound >= 10 && deltaRound < 20) || (deltaRound <= -25 && deltaRound > -50)) {
+              calculatedStatus = 'ATTENTION';
+            }
+
+            // Si la colonne Statut du Google Sheet est renseignée, elle fait foi
+            let finalStatus: 'OPTIMAL' | 'ALERTE' | 'ATTENTION' = calculatedStatus;
+            if (statusCol !== -1 && cells[statusCol]) {
+              const rawStat = cells[statusCol].trim().toUpperCase();
+              if (rawStat.includes('ALERT') || rawStat.includes('CRITIQU') || rawStat.includes('DÉRIVE') || rawStat.includes('DERIVE')) {
+                finalStatus = 'ALERTE';
+              } else if (rawStat.includes('ATTENTION') || rawStat.includes('SURVEILLANCE') || rawStat.includes('AVERTISS')) {
+                finalStatus = 'ATTENTION';
+              } else if (rawStat.includes('OPTIM') || rawStat.includes('NORM') || rawStat.includes('OK') || rawStat.includes('ACTIF')) {
+                finalStatus = 'OPTIMAL';
+              }
+            }
+
+            const trendStr = deltaRound >= 0 ? `+${deltaRound}%` : `${deltaRound}%`;
+            const surfaceStr = surfaceCol !== -1 && cells[surfaceCol]
+              ? `${cleanVal(cells[surfaceCol]).toLocaleString('fr-FR')} m²`
+              : (isT1 ? '750 m²' : '1 300 m²');
+            const economyVal = Math.max(4, Math.min(30, Math.round(16 - (deltaRound * 0.4))));
+
             parsedBuildings.push({
               id: rawId,
               name: buildingName,
               location: `Rue de Malbosc, 34080 Montpellier (Bâtiment ${buildingNum})`,
-              status: conso > 200 ? 'ATTENTION' : 'OPTIMAL',
+              status: finalStatus,
               consumption: `${conso.toLocaleString('fr-FR')} kWh`,
-              economy: `${Math.round(14 + (parsedBuildings.length % 6))}%`,
-              trend: conso > 200 ? '+14.2%' : (parsedBuildings.length % 2 === 0 ? '-2.1%' : '-1.5%'),
+              economy: `${economyVal}%`,
+              trend: trendStr,
               type,
+              surface: surfaceStr,
               occupancy: '95%',
               unitsCount: units,
               powerWinterKw: powerWinter,
@@ -4211,7 +4220,7 @@ export default function App() {
     } finally {
       setIsSyncingSheet(false);
     }
-  }, []);
+  }, [googleSheetsUrl]);
 
   // Forcer une actualisation manuelle immédiate
   const forceSyncGoogleSheets = React.useCallback(() => {
@@ -4322,6 +4331,11 @@ export default function App() {
           toggleSetting={toggleSetting} 
           fileInputRef={fileInputRef}
           handlePhotoUpload={handlePhotoUpload}
+          googleSheetsUrl={googleSheetsUrl}
+          onUpdateGoogleSheetsUrl={handleUpdateGoogleSheetsUrl}
+          onForceSync={forceSyncGoogleSheets}
+          isSyncing={isSyncingSheet}
+          lastSyncTime={lastSyncTime}
         />
       );
       default: return (
@@ -4473,7 +4487,7 @@ export default function App() {
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center gap-1.5 bg-slate-100/80 px-2.5 py-1.5 rounded-xl cursor-pointer hover:bg-slate-200 transition-all border border-slate-200/40 w-full"
           >
-            <span className="text-[9px] sm:text-[10px] font-bold text-slate-700 uppercase tracking-wider truncate">{currentBuildingName}</span>
+            <span className="text-xs font-semibold text-slate-800 truncate">{currentBuildingName}</span>
             <ChevronDown className={cn("w-3.5 h-3.5 text-slate-500 transition-transform ml-auto shrink-0", isDropdownOpen && "rotate-180")} />
           </div>
 
@@ -4483,26 +4497,26 @@ export default function App() {
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 5, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="absolute right-0 top-full mt-1 w-56 sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 overflow-hidden"
+                className="absolute right-0 top-full mt-1 w-56 sm:w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-1.5 overflow-hidden font-sans"
               >
                 <div 
                   onClick={() => { setSelectedBuilding('all'); setIsDropdownOpen(false); }}
                   className={cn(
-                    "px-3 py-2.5 rounded-xl text-[9px] font-bold uppercase tracking-widest cursor-pointer transition-colors",
-                    selectedBuilding === 'all' ? "bg-emerald-50 text-emerald-700" : "text-slate-500 hover:bg-slate-50"
+                    "px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-colors",
+                    selectedBuilding === 'all' ? "bg-emerald-50 text-emerald-800 font-bold" : "text-slate-700 hover:bg-slate-50"
                   )}
                 >
-                  {settings.language === 'fr' ? 'Tous les sites' : 'All Sites'}
+                  {settings.language === 'fr' ? 'Tous les sites (10 bâtiments)' : 'All Sites (10 Buildings)'}
                 </div>
-                <div className="h-px bg-slate-100 my-1 mx-2" />
-                <div className="max-h-[220px] overflow-y-auto">
+                <div className="h-px bg-slate-100 my-1 mx-1" />
+                <div className="max-h-[220px] overflow-y-auto space-y-0.5">
                   {buildings.map((building) => (
                     <div 
                       key={building.id}
                       onClick={() => { setSelectedBuilding(building.id.toString()); setIsDropdownOpen(false); }}
                       className={cn(
-                        "px-3 py-2.5 rounded-xl text-[9px] font-bold uppercase tracking-widest cursor-pointer transition-colors flex justify-between items-center group",
-                        selectedBuilding === building.id.toString() ? "bg-emerald-50 text-emerald-700" : "text-slate-500 hover:bg-slate-50"
+                        "px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-colors flex justify-between items-center group",
+                        selectedBuilding === building.id.toString() ? "bg-emerald-50 text-emerald-800 font-bold" : "text-slate-700 hover:bg-slate-50"
                       )}
                     >
                       <span className="truncate mr-1.5">{formatBuildingName(building.name, building.id)}</span>
@@ -4658,10 +4672,10 @@ export default function App() {
             <div className="relative">
               <div 
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 bg-slate-100/60 px-3 py-2 rounded-xl cursor-pointer hover:bg-slate-100 transition-all border border-slate-200/20 w-44"
+                className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200/70 px-3 py-2 rounded-xl cursor-pointer transition-all border border-slate-200 w-44"
               >
-                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest truncate">{currentBuildingName}</span>
-                <ChevronDown className={cn("w-3.5 h-3.5 text-slate-400 transition-transform ml-auto animate-in", isDropdownOpen && "rotate-180")} />
+                <span className="text-xs font-semibold text-slate-800 truncate">{currentBuildingName}</span>
+                <ChevronDown className={cn("w-3.5 h-3.5 text-slate-400 transition-transform ml-auto", isDropdownOpen && "rotate-180")} />
               </div>
 
               <AnimatePresence>
@@ -4670,26 +4684,26 @@ export default function App() {
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 5, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 top-full w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 overflow-hidden"
+                    className="absolute right-0 top-full w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-1.5 overflow-hidden font-sans"
                   >
                     <div 
                       onClick={() => { setSelectedBuilding('all'); setIsDropdownOpen(false); }}
                       className={cn(
-                        "px-4 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer transition-colors",
-                        selectedBuilding === 'all' ? "bg-emerald-50 text-emerald-700" : "text-slate-500 hover:bg-slate-50"
+                        "px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-colors",
+                        selectedBuilding === 'all' ? "bg-emerald-50 text-emerald-800 font-bold" : "text-slate-700 hover:bg-slate-50"
                       )}
                     >
-                      {settings.language === 'fr' ? 'Tous les sites' : 'All Sites'}
+                      {settings.language === 'fr' ? 'Tous les sites (10 bâtiments)' : 'All Sites (10 Buildings)'}
                     </div>
-                    <div className="h-px bg-slate-100 my-1 mx-2" />
-                    <div className="max-h-[300px] overflow-y-auto">
+                    <div className="h-px bg-slate-100 my-1 mx-1" />
+                    <div className="max-h-[300px] overflow-y-auto space-y-0.5">
                       {buildings.map((building) => (
                         <div 
                           key={building.id}
                           onClick={() => { setSelectedBuilding(building.id.toString()); setIsDropdownOpen(false); }}
                           className={cn(
-                            "px-4 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer transition-colors flex justify-between items-center group",
-                            selectedBuilding === building.id.toString() ? "bg-emerald-50 text-emerald-700" : "text-slate-500 hover:bg-slate-50"
+                            "px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-colors flex justify-between items-center group",
+                            selectedBuilding === building.id.toString() ? "bg-emerald-50 text-emerald-800 font-bold" : "text-slate-700 hover:bg-slate-50"
                           )}
                         >
                           <span className="truncate mr-2">{formatBuildingName(building.name, building.id)}</span>
@@ -4953,8 +4967,13 @@ export default function App() {
                         onClick={() => {
                           // Dismiss upon looking/inspecting
                           dismissSingleNotification(n.id);
-                          if (n.title.includes('Bâtiment 2') || n.message.includes('Bâtiment 2') || isAnomAlert) {
-                            setSelectedBuilding('BAT-02');
+                          if (n.buildingId) {
+                            setSelectedBuilding(n.buildingId);
+                            setActiveView('buildings');
+                            setIsNotificationsOpen(false);
+                          } else if (isAnomAlert) {
+                            const anomB = memoizedBuildings.find(b => isBuildingInAnomaly(b));
+                            if (anomB) setSelectedBuilding(anomB.id.toString());
                             setActiveView('buildings');
                             setIsNotificationsOpen(false);
                           }
