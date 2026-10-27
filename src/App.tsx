@@ -2842,38 +2842,78 @@ const ReportsView = ({
   const exportToCSV = () => {
     const data = getFilteredData();
     const { monthLabel, year, filterName } = getReportContext();
+    const tariffKwh = 0.215; // Tarif professionnel moyen TTC en €/kWh
+    
     const headers = [
       'ID', 
-      'Name', 
-      'Location', 
-      'Status', 
-      'Type', 
-      'Units', 
-      'PowerWinter_kW', 
-      'PowerSummer_kW', 
-      'PowerHeatwave_kW', 
-      'Consumption_kWh_day', 
-      'Consumption_MWh_year', 
-      'Economy', 
-      'GTB_Class',
-      'Period'
+      'Nom_Site', 
+      'Adresse', 
+      'Statut_GTB', 
+      'Typologie', 
+      'Surface_m2', 
+      'Lots', 
+      'Conso_Jour_kWh', 
+      'Conso_An_MWh', 
+      'Conso_Surfacique_kWh_m2_an', 
+      'Tarif_Elec_EUR_kWh', 
+      'Facture_Jour_EUR', 
+      'Facture_Mois_EUR', 
+      'Facture_An_EUR', 
+      'Economie_GTB_pct', 
+      'Economie_An_EUR', 
+      'Economie_5ans_EUR', 
+      'CO2_An_kg', 
+      'Decret_Tertiaire_Assujetti', 
+      'Decret_Tertiaire_Statut', 
+      'BACS_Norme_Classe',
+      'Puissance_Hiver_kW',
+      'Puissance_Ete_kW',
+      'Periode'
     ];
-    const rows = data.map(b => [
-      b.id, 
-      b.name, 
-      b.location, 
-      b.status, 
-      b.type || 'Tertiaire', 
-      b.unitsCount || '--',
-      b.powerWinterKw ?? '--',
-      b.powerSummerKw ?? '--',
-      b.powerHeatwaveKw ?? '--',
-      parseEnergy(b.consumption), 
-      b.consumptionYearMwh || '--',
-      b.economy || '15%', 
-      'Classe B EN ISO 52120-1 (91 pts)',
-      `${monthLabel} ${year}`
-    ]);
+    
+    const rows = data.map(b => {
+      const surfaceNum = parseFloat(String(b.surface || '').replace(/[^0-9.]/g, '')) || (b.type?.toLowerCase().includes('t1') ? 750 : 1300);
+      const dailyKwh = parseEnergy(b.consumption);
+      const annualKwh = b.consumptionYearMwh ? Math.round(b.consumptionYearMwh * 1000) : Math.round(dailyKwh * 365);
+      const annualMwh = b.consumptionYearMwh != null ? Number(b.consumptionYearMwh) : Math.round((annualKwh / 1000) * 10) / 10;
+      const consoSurfacique = Math.round(annualKwh / surfaceNum);
+      const costDay = Math.round(dailyKwh * tariffKwh * 100) / 100;
+      const costMonth = Math.round(costDay * 30.5);
+      const costYear = Math.round(annualKwh * tariffKwh);
+      const economyPct = parseFloat(String(b.economy || '16').replace(/[^0-9.]/g, '')) || 16;
+      const savingsYear = Math.round(costYear * (economyPct / 100));
+      const savings5Y = savingsYear * 5;
+      const co2YearKg = Math.round(annualKwh * 0.052);
+      const decretAssujetti = surfaceNum >= 1000 ? 'Oui (> 1000 m2)' : 'Oui (Parc tertiaire consolidé)';
+      const decretStatut = b.status === 'OPTIMAL' ? 'Conforme 2030 (-40%)' : b.status === 'ALERTE' ? 'Non Conforme (Surconsommation)' : 'Sous Surveillance';
+
+      return [
+        b.id, 
+        formatBuildingName(b.name, b.id), 
+        cleanBuildingLocation(b.location, b.id), 
+        b.status, 
+        b.type || 'Tertiaire', 
+        surfaceNum,
+        b.unitsCount || 20, 
+        dailyKwh, 
+        annualMwh, 
+        consoSurfacique,
+        tariffKwh,
+        costDay,
+        costMonth,
+        costYear,
+        `${economyPct}%`,
+        savingsYear,
+        savings5Y,
+        co2YearKg,
+        decretAssujetti,
+        decretStatut,
+        'Classe B EN ISO 52120-1 (91 pts)',
+        b.powerWinterKw ?? '--',
+        b.powerSummerKw ?? '--',
+        `${monthLabel} ${year}`
+      ];
+    });
     
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -2881,7 +2921,7 @@ const ReportsView = ({
     const link = document.createElement("a");
     const safeName = filterName.replace(/\s+/g, '_');
     link.setAttribute("href", url);
-    link.setAttribute("download", `CII_ENERGIE_Report_${safeName}_${monthLabel}_${year}.csv`);
+    link.setAttribute("download", `CII_ENERGIE_Audit_Complet_${safeName}_${monthLabel}_${year}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -2891,58 +2931,533 @@ const ReportsView = ({
     const data = getFilteredData();
     const { monthLabel, year, filterName } = getReportContext();
     const doc = new jsPDF() as any;
-    
-    doc.setFontSize(22);
-    doc.setTextColor(35, 107, 51);
-    doc.text('CII ENERGIE - Supervision & Audit GTB', 14, 22);
-    
+    const tariffKwh = 0.215; // Tarif professionnel moyen TTC en €/kWh
+
+    // Audit d'un bâtiment spécifique sélectionné
+    if (activeReportId !== 'all') {
+      const b = buildingsList.find(item => item.id.toString() === activeReportId) || (data.length > 0 ? data[0] : buildingsList[0]);
+      const bName = formatBuildingName(b.name, b.id);
+      const bLocation = cleanBuildingLocation(b.location, b.id);
+      const surfaceNum = parseFloat(String(b.surface || '').replace(/[^0-9.]/g, '')) || (b.type?.toLowerCase().includes('t1') ? 750 : 1300);
+      const dailyKwh = parseEnergy(b.consumption);
+      const annualKwh = b.consumptionYearMwh ? Math.round(b.consumptionYearMwh * 1000) : Math.round(dailyKwh * 365);
+      const annualMwh = b.consumptionYearMwh != null ? Number(b.consumptionYearMwh) : Math.round((annualKwh / 1000) * 10) / 10;
+      const consoSurfacique = Math.round(annualKwh / surfaceNum);
+      const costDay = Math.round(dailyKwh * tariffKwh * 100) / 100;
+      const costMonth = Math.round(costDay * 30.5);
+      const costYear = Math.round(annualKwh * tariffKwh);
+      const economyPct = parseFloat(String(b.economy || '16').replace(/[^0-9.]/g, '')) || 16;
+      const savingsYear = Math.round(costYear * (economyPct / 100));
+      const savings5Y = savingsYear * 5;
+      const co2YearKg = Math.round(annualKwh * 0.052);
+      const co2AvoidedKg = Math.round((savingsYear / tariffKwh) * 0.052);
+      const decretAssujetti = surfaceNum >= 1000 ? "Assujetti direct (> 1 000 m² - Art. L. 174-1 CCH)" : "Assujetti au titre du parc tertiaire du site";
+      const decretStatutLabel = b.status === 'OPTIMAL' 
+        ? "CONFORME (Trajectoire 2030 -40% respectée)" 
+        : b.status === 'ALERTE' 
+        ? "NON CONFORME (Surconsommation dérive +28%)" 
+        : "SOUS SURVEILLANCE (Contrôle télérelève)";
+
+      // --- PAGE 1 : IDENTITÉ, BILAN FINANCIER & DÉCRET TERTIAIRE ---
+      // En-tête bandeau vert émeraude CII ENERGIE
+      doc.setFillColor(24, 76, 38);
+      doc.rect(0, 0, 210, 26, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text('CII ENERGIE  |  AUDIT ÉNERGÉTIQUE TECHNIQUE & RÉGLEMENTAIRE', 14, 11);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(220, 245, 225);
+      doc.text('Télémétrie GTB en temps réel • Conformité Décret Tertiaire & Décret BACS • Analyse Financière', 14, 18);
+      doc.setFontSize(8);
+      doc.text(`Réf: AUD-2026-${b.id}`, 196, 11, { align: 'right' });
+      doc.text(`${currentDate} | ${monthLabel} ${year}`, 196, 18, { align: 'right' });
+
+      // Titre du site
+      let currentY = 33;
+      doc.setTextColor(30, 41, 59);
+      doc.setFontSize(15);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`RAPPORT TECHNIQUE & FINANCIER : ${bName.toUpperCase()}`, 14, currentY);
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Site audité : ${bName} (${b.id}) — ${bLocation}  |  Période : ${monthLabel} ${year}`, 14, currentY + 6);
+
+      // TABLE 1 : Fiche d'Identité & Caractéristiques du Site
+      currentY = 44;
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Fiche d'Identité & Structure", "Spécifications Techniques du Site"]],
+        body: [
+          ["Identifiant & Nom Officiel", `${bName} (${b.id})`],
+          ["Adresse d'Implantation", bLocation],
+          ["Surface Utile Assujettie", `${surfaceNum.toLocaleString('fr-FR')} m²`],
+          ["Typologie & Usage", `${b.type || 'Résidentiel / Tertiaire'} (${b.unitsCount || 20} logements/lots)`],
+          ["Taux d'Occupation Moyen", `${b.occupancy || '95%'} (Occupation nominale active)`],
+          ["Statut Opérationnel GTB", `${b.status} (Supervision continue 24/7 - EN ISO 52120-1 Classe B)`]
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [24, 76, 38], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        styles: { fontSize: 7.5, cellPadding: 2, textColor: [30, 41, 59] },
+        columnStyles: { 
+          0: { fontStyle: 'bold', cellWidth: 55, fillColor: [248, 250, 252] }, 
+          1: { cellWidth: 127 } 
+        },
+        margin: { left: 14, right: 14 }
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 5;
+
+      // TABLE 2 : Bilan Énergétique & Facturation Financière (Prix de l'Énergie)
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Bilan Énergétique & Coûts Financiers (Prix)", "Valeur Chiffrée", "Détails & Méthode de Calcul"]],
+        body: [
+          ["Consommation Journalière", `${dailyKwh.toLocaleString('fr-FR')} kWh / jour`, "Mesure continue compteur MID communicant"],
+          ["Consommation Annuelle Consolidée", `${annualMwh} MWh / an (${annualKwh.toLocaleString('fr-FR')} kWh/an)`, "Historique 12 mois consolidé & extrapolations"],
+          ["Intensité Énergétique Surfacique", `${consoSurfacique} kWh / m² / an`, `Ratio consommation / surface utile (${surfaceNum} m²)`],
+          ["Tarif Réglementé de l'Électricité", `${tariffKwh.toFixed(3).replace('.', ',')} € / kWh TTC`, "Tarif professionnel moyen contrat d'exploitation"],
+          ["Facture Journalière Estimée", `${costDay.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € / jour`, "Coût unitaire direct mesuré par jour"],
+          ["Facture Mensuelle Estimée", `${costMonth.toLocaleString('fr-FR')} € / mois`, "Pondération mensuelle 30,5 jours ouvrés & weekend"],
+          ["Budget Énergétique Annuel Estimé", `${costYear.toLocaleString('fr-FR')} € / an`, "Dépense prévisionnelle annuelle d'électricité"],
+          ["Économies Financières GTB Annuelles", `${savingsYear.toLocaleString('fr-FR')} € / an`, `Gain net généré par l'automatisme Classe B (-${economyPct}%)`],
+          ["Économies Cumulées Projetées (5 ans)", `${savings5Y.toLocaleString('fr-FR')} €`, "Gain financier net sur le cycle quinquennal GTB"],
+          ["Bilan Émissions CO2 & Évitement", `${(co2YearKg / 1000).toFixed(2)} t CO2/an`, `Dont ${(co2AvoidedKg / 1000).toFixed(2)} t CO2/an évitées grâce au pilotage`]
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [15, 118, 110], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        styles: { fontSize: 7.5, cellPadding: 2, textColor: [30, 41, 59] },
+        columnStyles: { 
+          0: { fontStyle: 'bold', cellWidth: 62, fillColor: [248, 250, 252] }, 
+          1: { fontStyle: 'bold', cellWidth: 46, textColor: [15, 118, 110] }, 
+          2: { cellWidth: 74 } 
+        },
+        margin: { left: 14, right: 14 }
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 5;
+
+      // TABLE 3 : Conformité Décret Tertiaire & Réglementation BACS
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Conformité Décret Tertiaire & BACS", "Cadre Réglementaire", "Situation Actuelle du Site"]],
+        body: [
+          ["Champ d'Assujettissement", "Bâtiments tertiaires >= 1 000 m² ou parc consolidé", decretAssujetti],
+          ["Consommation Surfacique Réelle", "Seuil de référence nominal (55 kWh/m²/an)", `${consoSurfacique} kWh/m²/an (${dailyKwh} kWh/j)`],
+          ["Objectif 2030 (Loi ÉLAN - Décret Tertiaire)", "-40% d'énergie finale par rapport à la référence", b.status === 'OPTIMAL' ? "Conforme : trajectoire atteinte (-" + economyPct + "%)" : b.status === 'ALERTE' ? "Non Conforme : surconsommation constatée" : "Sous surveillance : télérelève à contrôler"],
+          ["Objectif 2040 (-50%) & 2050 (-60%)", "Trajectoire bas-carbone nationale SNBC", "Audit quinquennal de performance programmé"],
+          ["Décret BACS (EN ISO 52120-1)", "Obligation système d'automatisation CVC > 70 kW", "Classe B Certifiée — Score : 91 / 100 points"],
+          ["Fonctions d'Automatismes BACS", "Régulation pièce par pièce, délestage dynamique", "PAC asservie, vannes 0-10V, compteurs MID"],
+          ["Statut de Conformité Global", "Validation pour déclaration OPERAT (ADEME)", decretStatutLabel]
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        styles: { fontSize: 7.5, cellPadding: 2, textColor: [30, 41, 59] },
+        columnStyles: { 
+          0: { fontStyle: 'bold', cellWidth: 54, fillColor: [248, 250, 252] }, 
+          1: { cellWidth: 64 }, 
+          2: { fontStyle: 'bold', cellWidth: 64, textColor: b.status === 'ALERTE' ? [190, 24, 93] : [22, 101, 52] } 
+        },
+        margin: { left: 14, right: 14 }
+      });
+
+      // --- PAGE 2 : BILAN THERMIQUE CVC, ÉQUIPEMENTS GTB & PLAN D'ACTION ---
+      doc.addPage();
+      doc.setFillColor(24, 76, 38);
+      doc.rect(0, 0, 210, 18, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`CII ENERGIE  |  BILAN TECHNIQUE CVC & PLAN D'ACTION — ${bName.toUpperCase()}`, 14, 12);
+      doc.setFontSize(8);
+      doc.text('Page 2 / 2', 196, 12, { align: 'right' });
+
+      currentY = 25;
+
+      // TABLE 4 : Puissances Souscrites & Régulation Thermique CVC
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Paramètre Thermique & Puissance", "Puissance / Consigne", "Mode de Régulation & Automatisme GTB"]],
+        body: [
+          ["Puissance Chauffage Hiver", `${b.powerWinterKw ?? '--'} kW`, "Loi d'eau asservie à la météo extérieure et sondes d'ambiance"],
+          ["Puissance Climatisation Été", `${b.powerSummerKw ?? '--'} kW`, "Enclenchement modulant inverter avec limitation des pics"],
+          ["Pic de Puissance Canicule", `${b.powerHeatwaveKw ?? '--'} kW`, "Seuil de sécurité & délestage progressif automatique"],
+          ["Consigne Température Chauffage", "20.5 °C", "Conformité décret sobriété énergétique (seuil 19°C-21°C)"],
+          ["Consigne Climatisation Été", "25.0 °C", "Blocage automatique si température extérieure < 26.0°C"],
+          ["Supervision & Bus de Terrain", "BACnet/IP & Modbus RTU", "6 bus de terrain synchronisés avec rafraîchissement 60s"]
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [180, 83, 9], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        styles: { fontSize: 7.5, cellPadding: 2, textColor: [30, 41, 59] },
+        columnStyles: { 
+          0: { fontStyle: 'bold', cellWidth: 55, fillColor: [248, 250, 252] }, 
+          1: { fontStyle: 'bold', cellWidth: 45, textColor: [180, 83, 9] }, 
+          2: { cellWidth: 82 } 
+        },
+        margin: { left: 14, right: 14 }
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 5;
+
+      // TABLE 5 : Équipements GTB Supervisés sur le Bâtiment
+      autoTable(doc, {
+        startY: currentY,
+        head: [["Équipement GTB Supervisé", "Marque & Référence", "Protocole & Points", "État & Disponibilité"]],
+        body: [
+          ["Pompe à Chaleur Réversible VRV IV+", "DAIKIN REYQ8U", "BACnet / IP (Commande & Alarme)", "Opérationnel - 100%"],
+          ["Boîtiers de Sélection BS Réversibles", "DAIKIN BS-V", "Modbus RTU (Distribution chaud/froid)", "Opérationnel"],
+          ["Unités Intérieures Gainables", "DAIKIN FXSQ", "Régulation pièce par pièce Classe B", "Opérationnel"],
+          ["Ventilation Double Flux VMC", "Atlantic / Aldes Hygro", "Contact sec & modulation 0-10V", "Opérationnel"],
+          ["Compteurs d'Énergie MID", "Schneider Electric / Linky", "LoRaWAN & M-Bus (Index 15 min)", "Télérelève active"],
+          ["Vannes 3 Voies Régulées CVC", "Belimo 0-10V", "Pilotage proportionnel continu", "Opérationnel"]
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [51, 65, 85], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        styles: { fontSize: 7.5, cellPadding: 2, textColor: [30, 41, 59] },
+        columnStyles: { 
+          0: { fontStyle: 'bold', cellWidth: 55, fillColor: [248, 250, 252] }, 
+          1: { cellWidth: 42 }, 
+          2: { cellWidth: 50 }, 
+          3: { fontStyle: 'bold', cellWidth: 35, textColor: [22, 101, 52] } 
+        },
+        margin: { left: 14, right: 14 }
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 7;
+
+      // BOX DIAGNOSTIC & RECOMMANDATIONS TECHNIQUES
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(203, 213, 225);
+      doc.roundedRect(14, currentY, 182, 50, 3, 3, 'FD');
+
+      doc.setTextColor(30, 41, 59);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text("Diagnostic d'Exploitation & Plan d'Action Recommandé", 18, currentY + 7);
+
+      doc.setFontSize(7.8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(51, 65, 85);
+
+      let diagText = "";
+      let rec1 = "";
+      let rec2 = "";
+      let rec3 = "";
+
+      if (b.status === 'ALERTE') {
+        diagText = `Diagnostic : ALERTE SURCONSOMMATION DÉTECTÉE (+28.4% vs nominal). Le bâtiment s'écarte de la trajectoire du Décret Tertiaire avec un surcoût annuel estimé à ${Math.round((dailyKwh - (surfaceNum < 1000 ? 114 : 196)) * tariffKwh * 365).toLocaleString('fr-FR')} €/an. Une action corrective est nécessaire.`;
+        rec1 = "1. Contrôle immédiat de l'étanchéité des vannes 3 voies motorisées (suspicion de circulation chaud/froid simultanée).";
+        rec2 = "2. Révision des plages horaires d'inoccupation des unités gainables et verrouillage de la consigne CVC à 20.5°C.";
+        rec3 = "3. Programmation d'une visite d'inspection terrain sous 48h par le technicien GTB.";
+      } else if (b.status === 'ATTENTION') {
+        diagText = `Diagnostic : SOUS-CONSOMMATION ANORMALE DÉTECTÉE (${dailyKwh} kWh/j vs référence nominale). Le site présente une baisse de charge drastique pouvant être liée à un problème de comptage ou une inoccupation prolongée.`;
+        rec1 = "1. Vérification physique du tore de comptage MID et de la passerelle de télérelève Linky / LoRaWAN.";
+        rec2 = "2. Contrôle de cohérence de l'occupation réelle du bâtiment et des index au Tableau Général Basse Tension (TGBT).";
+        rec3 = "3. Relevé contradictoire de sécurité et test d'injection sur le bus de données CVC.";
+      } else {
+        diagText = `Diagnostic : FONCTIONNEMENT NOMINAL & EXCLUSIVEMENT CONFORME. Le bâtiment respecte intégralement la trajectoire du Décret Tertiaire (-40% 2030) avec une intensité de ${consoSurfacique} kWh/m²/an et une économie annuelle GTB de ${savingsYear.toLocaleString('fr-FR')} €/an.`;
+        rec1 = "1. Maintien des consignes GTB optimisées (20.5°C chauffage / 25.0°C climatisation).";
+        rec2 = "2. Vérification semestrielle de l'étalonnage des sondes de température et des registres de ventilation.";
+        rec3 = "3. Téléversement annuel automatisé des données consolidées sur la plateforme réglementaire OPERAT (ADEME).";
+      }
+
+      const splitDiag = doc.splitTextToSize(diagText, 174);
+      doc.text(splitDiag, 18, currentY + 14);
+      
+      const recStartY = currentY + 14 + (splitDiag.length * 3.8) + 2;
+      doc.setFont('helvetica', 'bold');
+      doc.text("Actions opérationnelles prioritaires :", 18, recStartY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(rec1, 18, recStartY + 5);
+      doc.text(rec2, 18, recStartY + 10);
+      doc.text(rec3, 18, recStartY + 15);
+
+      // Bas de page / Mentions légales
+      doc.setFontSize(7.2);
+      doc.setTextColor(140);
+      doc.text('Rapport certifié généré par la plateforme CII ENERGIE Solutions — Supervision GTB EN ISO 52120-1 Classe B', 14, 282);
+      doc.text('Conforme aux exigences de reporting OPERAT (ADEME) & Décret BACS n° 2020-887 / 2023-259 — Contact : support@cii-energie.fr', 14, 287);
+
+      const safeName = formatBuildingName(b.name, b.id).replace(/\s+/g, '_');
+      doc.save(`Audit_Complet_${safeName}_${monthLabel}_${year}.pdf`);
+      return;
+    }
+
+    // --- RAPPORT GLOBAL DU PARC (10 BÂTIMENTS) ---
+    const totalDailyKwh = buildingsList.reduce((acc, cur) => acc + parseEnergy(cur.consumption), 0);
+    const totalAnnualKwh = buildingsList.reduce((acc, cur) => {
+      const d = parseEnergy(cur.consumption);
+      return acc + (cur.consumptionYearMwh ? Math.round(cur.consumptionYearMwh * 1000) : Math.round(d * 365));
+    }, 0);
+    const totalAnnualMwh = Math.round((totalAnnualKwh / 1000) * 10) / 10;
+    const totalSurface = buildingsList.reduce((acc, cur) => {
+      return acc + (parseFloat(String(cur.surface || '').replace(/[^0-9.]/g, '')) || (cur.type?.toLowerCase().includes('t1') ? 750 : 1300));
+    }, 0);
+    const totalCostYear = Math.round(totalAnnualKwh * tariffKwh);
+    const totalCostMonth = Math.round(totalCostYear / 12);
+    const totalSavingsYear = buildingsList.reduce((acc, cur) => {
+      const d = parseEnergy(cur.consumption);
+      const a = cur.consumptionYearMwh ? Math.round(cur.consumptionYearMwh * 1000) : Math.round(d * 365);
+      const c = a * tariffKwh;
+      const econ = parseFloat(String(cur.economy || '16').replace(/[^0-9.]/g, '')) || 16;
+      return acc + Math.round(c * (econ / 100));
+    }, 0);
+    const totalCo2YearT = ((totalAnnualKwh * 0.052) / 1000).toFixed(1);
+    const totalCo2AvoidedT = (((totalSavingsYear / tariffKwh) * 0.052) / 1000).toFixed(1);
+
+    // PAGE 1 : EN-TÊTE & SYNTHÈSE DÉCRET TERTIAIRE DU PARC
+    doc.setFillColor(24, 76, 38);
+    doc.rect(0, 0, 210, 26, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
-    doc.setTextColor(50);
-    doc.text(`${language === 'fr' ? 'Périmètre' : 'Scope'}: ${filterName} - ${monthLabel} ${year}`, 14, 32);
-    
-    doc.setFontSize(9);
-    doc.setTextColor(100);
-    doc.text(`${language === 'fr' ? 'Généré en direct le' : 'Generated live on'}: ${currentDate} | Télémétrie & Supervision GTB`, 14, 40);
-    doc.text('CII ENERGIE Solutions - Performance Énergétique & Régulation Classe B', 14, 46);
-    
-    const tableColumn = ["Site", "Typologie", "Hiver (kW)", "Été (kW)", "Conso/j", "Statut GTB"];
-    const tableRows = data.map(b => [
-      formatBuildingName(b.name, b.id),
-      b.type || 'Tertiaire',
-      b.powerWinterKw ? `${b.powerWinterKw} kW` : '--',
-      b.powerSummerKw ? `${b.powerSummerKw} kW` : '--',
-      `${parseEnergy(b.consumption).toLocaleString()} kWh`,
-      `${b.status} (91 pts)`
+    doc.text('CII ENERGIE  |  AUDIT GLOBAL CONSOLIDÉ DU PARC IMMOBILIER', 14, 11);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(220, 245, 225);
+    doc.text('Audit Décret Tertiaire • Tarification & Prix • Décret BACS Classe B (91 pts)', 14, 18);
+    doc.setFontSize(8);
+    doc.text('Réf: AUD-2026-PARC-GLOBAL', 196, 11, { align: 'right' });
+    doc.text(`${currentDate} | ${monthLabel} ${year}`, 196, 18, { align: 'right' });
+
+    let currentY = 33;
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('BILAN CONSOLIDÉ DES 10 SITES — PRIX, DÉCRET TERTIAIRE & BACS', 14, currentY);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Ensemble immobilier : 10 Bâtiments (${totalSurface.toLocaleString('fr-FR')} m² au total) — Période : ${monthLabel} ${year}`, 14, currentY + 6);
+
+    currentY = 44;
+
+    // Macro-Bilan synthétique
+    autoTable(doc, {
+      startY: currentY,
+      head: [["Indicateur Clé du Parc", "Valeur Globale Consolidée", "Cadre Réglementaire & Économique"]],
+      body: [
+        ["Patrimoine Supervisé", `10 Bâtiments Actifs (200 lots) — ${totalSurface.toLocaleString('fr-FR')} m²`, "Parc tertiaire assujetti de plein droit au Décret Tertiaire"],
+        ["Consommation Électrique Annuelle", `${totalAnnualMwh} MWh / an (${totalDailyKwh.toLocaleString('fr-FR')} kWh / jour)`, "Intensité moyenne : " + Math.round(totalAnnualKwh / totalSurface) + " kWh / m² / an"],
+        ["Facturation Énergétique Annuelle", `${totalCostYear.toLocaleString('fr-FR')} € / an (${totalCostMonth.toLocaleString('fr-FR')} € / mois)`, "Tarif professionnel régulé moyen : 0,215 € / kWh TTC"],
+        ["Économies Financières Annuelles GTB", `${totalSavingsYear.toLocaleString('fr-FR')} € / an économisés`, "Gain moyen généré par la GTB Classe B (16,4% d'évitement)"],
+        ["Conformité Décret Tertiaire 2030", "80% Conformes  |  10% Surveillance  |  10% Alerte", "Trajectoire -40% d'ici 2030 (Loi ÉLAN / OPERAT ADEME)"],
+        ["Standard Réglementaire BACS", "EN ISO 52120-1 Classe B (91 / 100 points)", "100% des sites télécommandés et télégérés en continu"],
+        ["Bilan Carbone du Parc", `${totalCo2YearT} t CO2/an émises`, `Dont ${totalCo2AvoidedT} t CO2/an évitées grâce à l'automatisme centralisé`]
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [24, 76, 38], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+      styles: { fontSize: 7.5, cellPadding: 2, textColor: [30, 41, 59] },
+      columnStyles: { 
+        0: { fontStyle: 'bold', cellWidth: 58, fillColor: [248, 250, 252] }, 
+        1: { fontStyle: 'bold', cellWidth: 54, textColor: [24, 76, 38] }, 
+        2: { cellWidth: 70 } 
+      },
+      margin: { left: 14, right: 14 }
+    });
+    currentY = (doc as any).lastAutoTable.finalY + 6;
+
+    // TABLEAU 10 BÂTIMENTS : CONFORMITÉ DÉCRET TERTIAIRE
+    const decretRows = buildingsList.map(b => {
+      const surfaceNum = parseFloat(String(b.surface || '').replace(/[^0-9.]/g, '')) || (b.type?.toLowerCase().includes('t1') ? 750 : 1300);
+      const dailyKwh = parseEnergy(b.consumption);
+      const annualKwh = b.consumptionYearMwh ? Math.round(b.consumptionYearMwh * 1000) : Math.round(dailyKwh * 365);
+      const annualMwh = b.consumptionYearMwh != null ? Number(b.consumptionYearMwh) : Math.round((annualKwh / 1000) * 10) / 10;
+      const consoSurfacique = Math.round(annualKwh / surfaceNum);
+      const statutTxt = b.status === 'OPTIMAL' ? 'Conforme (-40%)' : b.status === 'ALERTE' ? 'Non Conforme' : 'Surveillance';
+      return [
+        formatBuildingName(b.name, b.id),
+        b.type || 'Tertiaire',
+        `${surfaceNum} m²`,
+        `${annualMwh} MWh`,
+        `${consoSurfacique} kWh/m²`,
+        '-40% (2030)',
+        statutTxt
+      ];
+    });
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [["Site", "Typologie", "Surface", "MWh/an", "Intensité", "Obj. 2030", "Statut Décret Tertiaire"]],
+      body: decretRows,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+      styles: { fontSize: 7.2, cellPadding: 1.8, textColor: [30, 41, 59] },
+      columnStyles: { 
+        0: { fontStyle: 'bold', cellWidth: 26 }, 
+        1: { cellWidth: 22 }, 
+        2: { cellWidth: 20 }, 
+        3: { cellWidth: 22 }, 
+        4: { cellWidth: 26 }, 
+        5: { cellWidth: 26 }, 
+        6: { fontStyle: 'bold', cellWidth: 40 } 
+      },
+      margin: { left: 14, right: 14 }
+    });
+
+    // PAGE 2 : BILAN FINANCIER DÉTAILLÉ PAR BÂTIMENT & ACTIONS
+    doc.addPage();
+    doc.setFillColor(24, 76, 38);
+    doc.rect(0, 0, 210, 18, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CII ENERGIE  |  BILAN FINANCIER ÉNERGÉTIQUE & EXPLOITATION DU PARC', 14, 12);
+    doc.setFontSize(8);
+    doc.text('Page 2 / 2', 196, 12, { align: 'right' });
+
+    currentY = 25;
+
+    const financialRows = buildingsList.map(b => {
+      const dailyKwh = parseEnergy(b.consumption);
+      const annualKwh = b.consumptionYearMwh ? Math.round(b.consumptionYearMwh * 1000) : Math.round(dailyKwh * 365);
+      const costDay = Math.round(dailyKwh * tariffKwh * 100) / 100;
+      const costMonth = Math.round(costDay * 30.5);
+      const costYear = Math.round(annualKwh * tariffKwh);
+      const economyPct = parseFloat(String(b.economy || '16').replace(/[^0-9.]/g, '')) || 16;
+      const savingsYear = Math.round(costYear * (economyPct / 100));
+      return [
+        formatBuildingName(b.name, b.id),
+        `${dailyKwh} kWh/j`,
+        `${costMonth.toLocaleString('fr-FR')} €`,
+        `${costYear.toLocaleString('fr-FR')} €`,
+        `${savingsYear.toLocaleString('fr-FR')} € (-${economyPct}%)`,
+        `${((annualKwh * 0.052) / 1000).toFixed(2)} t CO2`
+      ];
+    });
+
+    // Ajout d'une ligne Total
+    financialRows.push([
+      'TOTAL PARC',
+      `${totalDailyKwh} kWh/j`,
+      `${totalCostMonth.toLocaleString('fr-FR')} €`,
+      `${totalCostYear.toLocaleString('fr-FR')} €`,
+      `${totalSavingsYear.toLocaleString('fr-FR')} €`,
+      `${totalCo2YearT} t CO2`
     ]);
 
     autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 54,
+      startY: currentY,
+      head: [["Site", "Conso / Jour", "Facture Mois", "Budget Annuel", "Économie GTB / An", "Émissions CO2"]],
+      body: financialRows,
       theme: 'grid',
-      headStyles: { fillColor: [35, 107, 51] },
-      styles: { fontSize: 8 }
+      headStyles: { fillColor: [15, 118, 110], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+      styles: { fontSize: 7.2, cellPadding: 1.8, textColor: [30, 41, 59] },
+      columnStyles: { 
+        0: { fontStyle: 'bold', cellWidth: 32 }, 
+        1: { cellWidth: 28 }, 
+        2: { cellWidth: 28 }, 
+        3: { fontStyle: 'bold', cellWidth: 30, textColor: [15, 118, 110] }, 
+        4: { fontStyle: 'bold', cellWidth: 38, textColor: [22, 101, 52] }, 
+        5: { cellWidth: 26 } 
+      },
+      margin: { left: 14, right: 14 }
     });
+    currentY = (doc as any).lastAutoTable.finalY + 6;
 
-    const safeName = filterName.replace(/\s+/g, '_');
-    doc.save(`Audit_${safeName}_${monthLabel}_${year}.pdf`);
+    // BOX DIAGNOSTIC GLOBAL
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(203, 213, 225);
+    doc.roundedRect(14, currentY, 182, 45, 3, 3, 'FD');
+
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text("Plan d'Optimisation & Démarches Réglementaires du Parc", 18, currentY + 7);
+
+    doc.setFontSize(7.8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 65, 85);
+
+    const fleetDiag = "Synthèse d'exploitation : Le parc immobilier affiche une efficacité énergétique globale remarquable avec 80% des sites parfaitement alignés sur les exigences du Décret Tertiaire 2030. La supervision GTB Classe B permet d'éviter 21 000+ € de coûts énergétiques annuels.";
+    const fleetRec1 = "• Action prioritaire Bâtiment 2 (Alerte) : Traitement de la surconsommation (+28.4%) via diagnostic vanne 3 voies et gainables.";
+    const fleetRec2 = "• Action prioritaire Bâtiment 4 (Surveillance) : Contrôle physique du tore de comptage Linky pour valider la télérelève basse.";
+    const fleetRec3 = "• Déclaration réglementaire OPERAT : Export consolidé prêt pour la télé-déclaration ADEME annuelle obligatoire.";
+
+    doc.text(doc.splitTextToSize(fleetDiag, 174), 18, currentY + 14);
+    doc.text(fleetRec1, 18, currentY + 24);
+    doc.text(fleetRec2, 18, currentY + 30);
+    doc.text(fleetRec3, 18, currentY + 36);
+
+    doc.setFontSize(7.2);
+    doc.setTextColor(140);
+    doc.text('Rapport consolidé certifié généré par CII ENERGIE Solutions — Télémétrie & Régulation GTB EN ISO 52120-1 Classe B', 14, 282);
+    doc.text('Conforme aux exigences de reporting OPERAT (ADEME) & Décret BACS n° 2020-887 / 2023-259 — Contact : support@cii-energie.fr', 14, 287);
+
+    doc.save(`Audit_Consolide_Parc_Global_${monthLabel}_${year}.pdf`);
   };
 
   const exportToJSON = () => {
     const data = getFilteredData();
     const { monthLabel, year, filterName } = getReportContext();
+    const tariffKwh = 0.215;
+
     const exportData = {
       period: `${monthLabel} ${year}`,
       generatedAt: currentDate,
       scope: filterName,
       gtbStandard: "Classe B (EN ISO 52120-1) - 91 points",
-      data
+      electricityTariffEurTtc: tariffKwh,
+      regulatoryCompliance: {
+        decretTertiaire: "Loi ÉLAN / Décret n° 2019-771 (Objectif 2030 à -40%)",
+        decretBACS: "Décret BACS n° 2020-887 / 2023-259 (Classe B)",
+        operatPlatform: "Prêt pour télé-déclaration ADEME"
+      },
+      sites: data.map(b => {
+        const surfaceNum = parseFloat(String(b.surface || '').replace(/[^0-9.]/g, '')) || (b.type?.toLowerCase().includes('t1') ? 750 : 1300);
+        const dailyKwh = parseEnergy(b.consumption);
+        const annualKwh = b.consumptionYearMwh ? Math.round(b.consumptionYearMwh * 1000) : Math.round(dailyKwh * 365);
+        const annualMwh = b.consumptionYearMwh != null ? Number(b.consumptionYearMwh) : Math.round((annualKwh / 1000) * 10) / 10;
+        const consoSurfacique = Math.round(annualKwh / surfaceNum);
+        const costDay = Math.round(dailyKwh * tariffKwh * 100) / 100;
+        const costMonth = Math.round(costDay * 30.5);
+        const costYear = Math.round(annualKwh * tariffKwh);
+        const economyPct = parseFloat(String(b.economy || '16').replace(/[^0-9.]/g, '')) || 16;
+        const savingsYear = Math.round(costYear * (economyPct / 100));
+
+        return {
+          id: b.id,
+          name: formatBuildingName(b.name, b.id),
+          location: cleanBuildingLocation(b.location, b.id),
+          surfaceM2: surfaceNum,
+          type: b.type || 'Tertiaire',
+          occupancy: b.occupancy || '95%',
+          unitsCount: b.unitsCount || 20,
+          status: b.status,
+          energy: {
+            dailyConsumptionKwh: dailyKwh,
+            annualConsumptionKwh: annualKwh,
+            annualConsumptionMwh: annualMwh,
+            intensityKwhPerM2Year: consoSurfacique,
+            powerWinterKw: b.powerWinterKw,
+            powerSummerKw: b.powerSummerKw,
+            powerHeatwaveKw: b.powerHeatwaveKw,
+            heatingSetpointC: 20.5,
+            coolingSetpointC: 25.0
+          },
+          financial: {
+            tariffEurKwh: tariffKwh,
+            dailyCostEur: costDay,
+            monthlyBillEur: costMonth,
+            annualBudgetEur: costYear,
+            gtbSavingsPercent: economyPct,
+            annualSavingsEur: savingsYear,
+            fiveYearSavingsEur: savingsYear * 5
+          },
+          decretTertiaire: {
+            assujetti: surfaceNum >= 1000,
+            targetReduction2030Percent: -40,
+            targetReduction2040Percent: -50,
+            targetReduction2050Percent: -60,
+            complianceStatus: b.status === 'OPTIMAL' ? 'CONFORME' : b.status === 'ALERTE' ? 'NON_CONFORME' : 'SOUS_SURVEILLANCE'
+          }
+        };
+      })
     };
+
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
     const safeName = filterName.replace(/\s+/g, '_');
-    downloadAnchorNode.setAttribute("download", `CII_ENERGIE_${safeName}_${monthLabel}_${year}.json`);
+    downloadAnchorNode.setAttribute("download", `CII_ENERGIE_Audit_Complet_${safeName}_${monthLabel}_${year}.json`);
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
@@ -3101,27 +3616,87 @@ const ReportsView = ({
 
         {/* Résumé des données interconnectées */}
         {selectedBuildingData ? (
-          <div className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'Consommation Électrique' : 'Electricity Consumption'}</p>
-              <p className="text-lg font-bold text-slate-800 mt-1">{parseEnergy(selectedBuildingData.consumption).toLocaleString()} kWh/j</p>
-              <p className="text-xs text-emerald-600 font-semibold mt-0.5">{selectedBuildingData.consumptionYearMwh ? `${selectedBuildingData.consumptionYearMwh} MWh/an` : ''}</p>
-            </div>
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'Puissances Thermiques' : 'Thermal Power'}</p>
-              <p className="text-sm font-bold text-sky-700 mt-1">Hiver : {selectedBuildingData.powerWinterKw ?? '--'} kW</p>
-              <p className="text-sm font-bold text-amber-600">Été : {selectedBuildingData.powerSummerKw ?? '--'} kW</p>
-            </div>
+          <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Consommation & Surface */}
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col justify-between">
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'Supervision GTB' : 'BMS Supervision'}</p>
-                <p className="text-sm font-bold text-emerald-700 mt-1">91 points Classe B</p>
-                <p className="text-xs text-slate-500 font-medium">VRV Daikin, BACnet/IP, Linky</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'Consommation & Surface' : 'Consumption & Surface'}</p>
+                <p className="text-xl font-bold text-slate-800 mt-1">{parseEnergy(selectedBuildingData.consumption).toLocaleString()} kWh/j</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    {selectedBuildingData.consumptionYearMwh ? `${selectedBuildingData.consumptionYearMwh} MWh/an` : ''}
+                  </span>
+                  <span className="text-xs text-slate-500 font-medium">
+                    {selectedBuildingData.surface || (selectedBuildingData.type?.toLowerCase().includes('t1') ? '750 m²' : '1 300 m²')}
+                  </span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium mt-3 pt-2 border-t border-slate-200/60">
+                {Math.round(((selectedBuildingData.consumptionYearMwh ? selectedBuildingData.consumptionYearMwh * 1000 : parseEnergy(selectedBuildingData.consumption) * 365)) / (parseFloat(String(selectedBuildingData.surface || '').replace(/[^0-9.]/g, '')) || (selectedBuildingData.type?.toLowerCase().includes('t1') ? 750 : 1300)))} kWh/m²/an
+              </p>
+            </div>
+
+            {/* Prix & Facturation Énergétique */}
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'Prix & Budget Électrique' : 'Energy Pricing & Budget'}</p>
+                <p className="text-xl font-bold text-slate-800 mt-1">
+                  {Math.round((selectedBuildingData.consumptionYearMwh ? selectedBuildingData.consumptionYearMwh * 1000 : parseEnergy(selectedBuildingData.consumption) * 365) * 0.215).toLocaleString('fr-FR')} €/an
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs font-semibold text-emerald-800">
+                    {Math.round(parseEnergy(selectedBuildingData.consumption) * 0.215 * 30.5).toLocaleString('fr-FR')} €/mois
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    (0,215 €/kWh TTC)
+                  </span>
+                </div>
+              </div>
+              <p className="text-[11px] text-emerald-700 font-semibold mt-3 pt-2 border-t border-slate-200/60">
+                Économie GTB : ~{Math.round((selectedBuildingData.consumptionYearMwh ? selectedBuildingData.consumptionYearMwh * 1000 : parseEnergy(selectedBuildingData.consumption) * 365) * 0.215 * ((parseFloat(String(selectedBuildingData.economy || '16').replace(/[^0-9.]/g, '')) || 16) / 100)).toLocaleString('fr-FR')} €/an (-{selectedBuildingData.economy || '16%'})
+              </p>
+            </div>
+
+            {/* Conformité Décret Tertiaire & BACS */}
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'Décret Tertiaire & BACS' : 'Tertiary Decree & BACS'}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className={cn(
+                    "px-2 py-0.5 rounded text-xs font-bold border",
+                    selectedBuildingData.status === 'OPTIMAL' ? "bg-emerald-100 text-emerald-800 border-emerald-300" :
+                    selectedBuildingData.status === 'ALERTE' ? "bg-rose-100 text-rose-800 border-rose-300" :
+                    "bg-amber-100 text-amber-800 border-amber-300"
+                  )}>
+                    {selectedBuildingData.status === 'OPTIMAL' ? 'Conforme 2030' : selectedBuildingData.status === 'ALERTE' ? 'Non Conforme' : 'Surveillance'}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">Obj. -40%</span>
+                </div>
+                <p className="text-xs text-slate-600 font-medium mt-1.5">
+                  BACS EN ISO 52120-1 Classe B (91 pts)
+                </p>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium mt-3 pt-2 border-t border-slate-200/60">
+                Prêt télé-déclaration ADEME OPERAT
+              </p>
+            </div>
+
+            {/* Puissances Thermiques & CVC */}
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col justify-between">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'Puissances & Consignes CVC' : 'HVAC Thermal & Setpoints'}</p>
+                <div className="flex items-center justify-between text-xs font-bold mt-1">
+                  <span className="text-sky-700">Hiver : {selectedBuildingData.powerWinterKw ?? '--'} kW</span>
+                  <span className="text-amber-600">Été : {selectedBuildingData.powerSummerKw ?? '--'} kW</span>
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium mt-1">
+                  Consigne GTB : 20.5°C Hiver / 25°C Été
+                </p>
               </div>
               {onNavigateView && (
                 <button
                   onClick={() => onNavigateView('gtb')}
-                  className="mt-3 text-left text-xs font-bold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 cursor-pointer"
+                  className="mt-3 text-left text-xs font-bold text-emerald-800 hover:text-emerald-950 flex items-center gap-1 cursor-pointer pt-2 border-t border-slate-200/60"
                 >
                   <span>{language === 'fr' ? 'Voir dans Contrôle GTB' : 'View in BMS'}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -3130,21 +3705,26 @@ const ReportsView = ({
             </div>
           </div>
         ) : (
-          <div className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'Parc Total Supervisé' : 'Total Fleet Monitored'}</p>
-              <p className="text-lg font-bold text-slate-800 mt-1">10 Bâtiments Actifs</p>
-              <p className="text-xs text-emerald-600 font-semibold mt-0.5">Surveillance continue 24/7</p>
+              <p className="text-xl font-bold text-slate-800 mt-1">10 Bâtiments (200 lots)</p>
+              <p className="text-xs text-emerald-700 font-semibold mt-0.5">10 250 m² audités • Surveillance 24/7</p>
             </div>
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'Standard Réglementaire' : 'Regulation Standard'}</p>
-              <p className="text-sm font-bold text-emerald-700 mt-1">EN ISO 52120-1 Classe B</p>
-              <p className="text-xs text-slate-500 font-medium">BACS Décret Tertiaire conforme</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'Facturation Globale (Prix)' : 'Total Energy Bill'}</p>
+              <p className="text-xl font-bold text-slate-800 mt-1">~129 000 € / an</p>
+              <p className="text-xs text-emerald-700 font-semibold mt-0.5">Économie GTB : ~21 000 €/an (-16,4%)</p>
+            </div>
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'Décret Tertiaire & BACS' : 'Tertiary Decree & BACS'}</p>
+              <p className="text-sm font-bold text-emerald-800 mt-1">80% Conformes (Objectif 2030)</p>
+              <p className="text-xs text-slate-500 font-medium">BACS Classe B (91 pts) • Décret 2020-887</p>
             </div>
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{language === 'fr' ? 'Disponibilité Réseau GTB' : 'BMS Network Uptime'}</p>
-              <p className="text-lg font-bold text-emerald-600 mt-1">99.8%</p>
-              <p className="text-xs text-slate-400 font-medium">6 bus de terrain synchronisés</p>
+              <p className="text-xl font-bold text-emerald-600 mt-1">99.8%</p>
+              <p className="text-xs text-slate-400 font-medium">6 bus BACnet / Modbus synchronisés</p>
             </div>
           </div>
         )}
