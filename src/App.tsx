@@ -118,6 +118,7 @@ import {
   AutoAnomalyScannerCard, 
   detectSystemAnomalies, 
   getBuildingAnomalyStatus, 
+  SystemAnomalyModal,
   type AnomalyItem 
 } from './components/AnomalyDetector';
 import { getBuildingColorTheme, BUILDING_PALETTES } from './utils/buildingThemes';
@@ -312,10 +313,10 @@ const BAR_DATA = [
   { name: 'Bât. A', value: 4200, status: 'optimal' },
   { name: 'Bât. B', value: 4800, status: 'optimal' },
   { name: 'Bât. C', value: 3900, status: 'optimal' },
-  { name: 'Bât. D', value: 6800, status: 'alert' },
+  { name: 'Bât. D', value: 4500, status: 'optimal' },
   { name: 'Bât. E', value: 4500, status: 'optimal' },
   { name: 'Bât. F', value: 3200, status: 'optimal' },
-  { name: 'Bât. G', value: 7500, status: 'alert' },
+  { name: 'Bât. G', value: 4600, status: 'optimal' },
   { name: 'Bât. H', value: 4900, status: 'optimal' },
   { name: 'Bât. I', value: 5200, status: 'optimal' },
   { name: 'Bât. J', value: 4100, status: 'optimal' },
@@ -324,16 +325,16 @@ const BAR_DATA = [
 const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzA9anmbi31SQYS9-Qzo1oFGEagoJ6GcDljSYd7kJe8OCLzyujYZnTmpYlM92ljA/pub?output=csv";
 
 const TABLE_DATA: BuildingStats[] = [
-  { id: 'BAT-01', name: 'Bâtiment 1', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-02', name: 'Bâtiment 2', location: 'Rue de Malbosc, 34080 Montpellier', status: 'ALERTE', consumption: '286 kWh', economy: '4%', trend: '+28.4%', type: 'T3 Familial', occupancy: '92%', unitsCount: 20, powerWinterKw: 24.8, powerSummerKw: 6.2, powerHeatwaveKw: 9.8, consumptionYearMwh: 104.2, surface: '1 300 m²' },
-  { id: 'BAT-03', name: 'Bâtiment 3', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-04', name: 'Bâtiment 4', location: 'Rue de Malbosc, 34080 Montpellier', status: 'ATTENTION', consumption: '14 kWh', economy: '26%', trend: '-88.5%', type: 'T3 Familial', occupancy: '94%', unitsCount: 20, powerWinterKw: 1.2, powerSummerKw: 1.0, powerHeatwaveKw: 1.1, consumptionYearMwh: 5.1, surface: '1 300 m²' },
-  { id: 'BAT-05', name: 'Bâtiment 5', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '-2.1%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
-  { id: 'BAT-06', name: 'Bâtiment 6', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '-1.8%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
-  { id: 'BAT-07', name: 'Bâtiment 7', location: 'Rue de Malbosc, 34080 Montpellier', status: 'ALERTE', consumption: '172 kWh', economy: '7%', trend: '+35.1%', type: 'T1bis Étudiant', occupancy: '96%', unitsCount: 20, powerWinterKw: 15.4, powerSummerKw: 5.8, powerHeatwaveKw: 8.9, consumptionYearMwh: 62.8, surface: '750 m²' },
-  { id: 'BAT-08', name: 'Bâtiment 8', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '-2.4%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
-  { id: 'BAT-09', name: 'Bâtiment 9', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '-1.5%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
-  { id: 'BAT-10', name: 'Bâtiment 10', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '-3.1%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-01', name: 'Bâtiment 1', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '0%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-02', name: 'Bâtiment 2', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '0%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-03', name: 'Bâtiment 3', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '0%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-04', name: 'Bâtiment 4', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '0%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-05', name: 'Bâtiment 5', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '196 kWh', economy: '16%', trend: '0%', type: 'T3 Familial', occupancy: '95%', unitsCount: 20, powerWinterKw: 16.4, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 71.4, surface: '1 300 m²' },
+  { id: 'BAT-06', name: 'Bâtiment 6', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '0%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-07', name: 'Bâtiment 7', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '0%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-08', name: 'Bâtiment 8', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '0%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-09', name: 'Bâtiment 9', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '0%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
+  { id: 'BAT-10', name: 'Bâtiment 10', location: 'Rue de Malbosc, 34080 Montpellier', status: 'OPTIMAL', consumption: '114 kWh', economy: '18%', trend: '0%', type: 'T1bis Étudiant', occupancy: '98%', unitsCount: 20, powerWinterKw: 10.2, powerSummerKw: 4.1, powerHeatwaveKw: 7.2, consumptionYearMwh: 41.6, surface: '750 m²' },
 ];
 
 const GTB_INITIAL_EQUIPMENT: GTBEquipment[] = [
@@ -341,8 +342,8 @@ const GTB_INITIAL_EQUIPMENT: GTBEquipment[] = [
   { location: "Bâtiments", category: "CVC - Distribution", name: "Boîtier BS Box multi-ports", brandModel: "DAIKIN BS16Q14AV1B", quantity: 40, protocol: "Modbus RTU", pointType: "Régulation débit", status: "Actif" },
   { location: "Bâtiments", category: "CVC - Confort", name: "Unités Gainables Logements", brandModel: "DAIKIN FXSQ-A", quantity: 200, protocol: "Bus KNX", pointType: "Consigne & Température", status: "Actif" },
   { location: "Bâtiments", category: "CVC - ECS", name: "Hydrobox ECS Individuelle", brandModel: "DAIKIN HXHD", quantity: 200, protocol: "Modbus RTU", pointType: "Sonde Température", status: "Actif" },
-  { location: "Bâtiments", category: "CVC - Ventilation", name: "Centrale VMC Hygro B", brandModel: "Motorisation EC", quantity: 10, protocol: "Modbus RTU", pointType: "Débit & Alarme Filtre", status: "Alarme" },
-  { location: "Bâtiments", category: "GTB - Comptage", name: "Compteur Électrique Linky/Modbus", brandModel: "Enedis / Schneider", quantity: 200, protocol: "Modbus / RS485", pointType: "Télérelève kWh", status: "Défaut" },
+  { location: "Bâtiments", category: "CVC - Ventilation", name: "Centrale VMC Hygro B", brandModel: "Motorisation EC", quantity: 10, protocol: "Modbus RTU", pointType: "Débit & Alarme Filtre", status: "Actif" },
+  { location: "Bâtiments", category: "GTB - Comptage", name: "Compteur Électrique Linky/Modbus", brandModel: "Enedis / Schneider", quantity: 200, protocol: "Modbus / RS485", pointType: "Télérelève kWh", status: "Actif" },
   { location: "Bâtiments", category: "GTB - Comptage", name: "Compteur Eau Froide", brandModel: "Compteur Télérelevé", quantity: 200, protocol: "M-Bus", pointType: "Index Volumétrique m3", status: "Actif" },
   { location: "Sous-stations", category: "GTB - Comptage", name: "Compteur Énergie Thermique (CET)", brandModel: "Siemens / Kamstrup", quantity: 10, protocol: "M-Bus", pointType: "Énergie Chaud/Froid", status: "Actif" },
   { location: "Bâtiments", category: "Sécurité", name: "Trappes Désenfumage SSI", brandModel: "Norme NF S61-937", quantity: 10, protocol: "TOR (SSI)", pointType: "Report Alarme / Position", status: "Actif" },
@@ -471,7 +472,10 @@ const MetricCard = ({
   extraInfo,
   trend, 
   icon: Icon, 
-  color = "emerald" 
+  color = "emerald",
+  onClick,
+  badge,
+  highlighted = false
 }: { 
   title: string; 
   value: string; 
@@ -480,6 +484,9 @@ const MetricCard = ({
   trend?: string; 
   icon: any; 
   color?: "emerald" | "amber" | "rose";
+  onClick?: () => void;
+  badge?: React.ReactNode;
+  highlighted?: boolean;
 }) => {
   const colorMap = {
     emerald: "bg-emerald-50 text-emerald-600",
@@ -491,26 +498,64 @@ const MetricCard = ({
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between gap-3 group hover:border-slate-300 transition-all h-full min-w-0"
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      className={cn(
+        "p-4 rounded-2xl border shadow-xs flex flex-col justify-between gap-3 group transition-all h-full min-w-0 relative overflow-hidden",
+        onClick && "cursor-pointer active:scale-[0.99] select-none",
+        highlighted && color === "rose" 
+          ? "bg-gradient-to-br from-rose-50/90 via-white to-rose-50/40 border-rose-300 ring-2 ring-rose-500/20 shadow-md shadow-rose-950/10 hover:border-rose-400 hover:shadow-lg" 
+          : "bg-white border-slate-200/80 hover:border-slate-300"
+      )}
     >
+      {highlighted && color === "rose" && (
+        <span className="absolute top-0 right-0 w-24 h-24 bg-rose-400/10 rounded-full blur-xl pointer-events-none -mr-8 -mt-8" />
+      )}
       <div className="flex justify-between items-start min-w-0">
-        <span className="text-slate-500 text-xs font-medium truncate mr-2">{title}</span>
-        <div className={cn("p-1.5 rounded-lg shrink-0", colorMap[color])}>
-          <Icon className="w-4 h-4" />
+        <span className={cn(
+          "text-xs font-semibold truncate mr-2",
+          highlighted && color === "rose" ? "text-rose-700" : "text-slate-500"
+        )}>
+          {title}
+        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {badge}
+          <div className={cn(
+            "p-1.5 rounded-lg shrink-0 transition-transform group-hover:scale-105", 
+            colorMap[color],
+            highlighted && color === "rose" && "animate-pulse"
+          )}>
+            <Icon className="w-4 h-4" />
+          </div>
         </div>
       </div>
       <div className="min-w-0">
-        <h3 className="text-xl sm:text-2xl font-bold font-display text-slate-900 leading-tight mb-1 truncate tracking-tight tabular-nums">{value}</h3>
+        <h3 className={cn(
+          "text-xl sm:text-2xl font-bold font-display leading-tight mb-1 truncate tracking-tight tabular-nums",
+          highlighted && color === "rose" ? "text-rose-700 font-extrabold" : "text-slate-900"
+        )}>
+          {value}
+        </h3>
         <div className="flex items-center gap-1.5 flex-wrap min-w-0 text-xs">
           {trend && (
             <span className={cn("font-semibold px-1.5 py-0.2 rounded shrink-0 tabular-nums", trend.startsWith('-') ? "text-emerald-700 bg-emerald-50" : "text-rose-700 bg-rose-50")}>
               {trend}
             </span>
           )}
-          <span className="text-slate-500 font-medium truncate min-w-0">{subValue}</span>
+          <span className={cn(
+            "font-medium truncate min-w-0",
+            highlighted && color === "rose" ? "text-rose-700 font-semibold" : "text-slate-500"
+          )}>
+            {subValue}
+          </span>
         </div>
         {extraInfo && (
-          <div className="mt-2 pt-2 border-t border-slate-100">
+          <div className={cn(
+            "mt-2 pt-2 border-t",
+            highlighted && color === "rose" ? "border-rose-200/70" : "border-slate-100"
+          )}>
             {extraInfo}
           </div>
         )}
@@ -1820,6 +1865,17 @@ const DashboardView = ({
     };
   }) : [], [buildingsList]);
 
+  const [isAnomalyModalOpen, setIsAnomalyModalOpen] = useState(false);
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+
+  const activeAnomalies = React.useMemo(() => {
+    const list: AnomalyItem[] = metrics.systemAnomalies || [];
+    if (isGlobal) return list;
+    return list.filter((a: AnomalyItem) => a.targetId === selectedBuildingId);
+  }, [metrics.systemAnomalies, isGlobal, selectedBuildingId]);
+
+  const hasActiveAnomalies = activeAnomalies.length > 0;
+
   if (buildingsList.length === 0) {
     return (
       <ViewContainer>
@@ -1920,6 +1976,96 @@ const DashboardView = ({
         </div>
       </div>
 
+      {/* Bannière d'Alerte Haute Visibilité en cas d'Anomalie Réelle ou Simulée */}
+      {hasActiveAnomalies && !isBannerDismissed && (
+        <motion.div
+          initial={{ opacity: 0, y: -10, scale: 0.99 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10, scale: 0.99 }}
+          className="bg-gradient-to-r from-rose-500/15 via-amber-500/10 to-rose-500/5 border-2 border-rose-500/40 rounded-2xl p-4 sm:p-4.5 mb-4 shadow-lg shadow-rose-950/5 relative overflow-hidden backdrop-blur-md"
+        >
+          {/* Subtle top indicator bar */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-600 via-amber-500 to-rose-600 animate-pulse" />
+          
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5">
+            <div className="flex items-start sm:items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-rose-600/30 ring-4 ring-rose-500/20 animate-pulse">
+                <AlertTriangle className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-2xs">
+                    {language === 'fr' ? 'Alerte Dérive Active' : 'Active Drift Alert'}
+                  </span>
+                  <span className="text-xs font-black text-rose-900 tracking-tight font-display">
+                    {activeAnomalies.length} {language === 'fr' ? `Anomalie${activeAnomalies.length > 1 ? 's' : ''} Détectée${activeAnomalies.length > 1 ? 's' : ''}` : `Detected Anomaly${activeAnomalies.length > 1 ? 'ies' : ''}`}
+                  </span>
+                  <span className="text-[11px] text-rose-700/80 font-medium hidden sm:inline">•</span>
+                  <span className="text-[11px] text-rose-800 font-semibold truncate max-w-md">
+                    {activeAnomalies[0].titleFr || activeAnomalies[0].titleEn} ({activeAnomalies[0].targetName})
+                  </span>
+                </div>
+                <p className="text-xs text-rose-900/90 font-medium mt-1 line-clamp-2 leading-relaxed">
+                  {activeAnomalies[0].descriptionFr || activeAnomalies[0].descriptionEn}
+                </p>
+                {activeAnomalies[0].recommendationFr && (
+                  <p className="text-[11px] text-rose-800/80 mt-0.5 flex items-center gap-1 font-medium">
+                    <span className="font-bold text-rose-900">💡 Action conseillée :</span>
+                    <span className="truncate">{activeAnomalies[0].recommendationFr}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 self-end md:self-center flex-wrap">
+              <button
+                type="button"
+                onClick={() => setIsAnomalyModalOpen(true)}
+                className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>{language === 'fr' ? `Détails & Diagnostic (${activeAnomalies.length})` : `Diagnostic (${activeAnomalies.length})`}</span>
+              </button>
+
+              {activeAnomalies[0].actionType === 'fix_gtb_setpoint' && onFixGtbSetpoint && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onFixGtbSetpoint(20.5, 25.0);
+                  }}
+                  className="px-3 py-2 bg-white hover:bg-rose-50 active:scale-95 text-rose-700 border border-rose-300 rounded-xl text-xs font-bold transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Wrench className="w-3.5 h-3.5 text-rose-600" />
+                  <span>{language === 'fr' ? 'Recalibrer GTB' : 'Recalibrate'}</span>
+                </button>
+              )}
+
+              {activeAnomalies[0].targetType === 'building' && onSelectBuilding && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectBuilding(activeAnomalies[0].targetId);
+                  }}
+                  className="px-3 py-2 bg-white hover:bg-rose-50 active:scale-95 text-slate-700 hover:text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span>{language === 'fr' ? 'Voir le Site' : 'View Site'}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setIsBannerDismissed(true)}
+                className="p-2 text-rose-400 hover:text-rose-700 hover:bg-rose-100/60 rounded-xl transition cursor-pointer"
+                title={language === 'fr' ? 'Masquer cette bannière' : 'Dismiss'}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       <motion.div 
         initial="hidden"
         animate="show"
@@ -1965,7 +2111,36 @@ const DashboardView = ({
         />
         <MetricCard title={t.activityPeak} value={isGlobal ? (language === 'fr' ? 'Tous les sites' : 'All Sites') : formatBuildingName(selected?.name, selected?.id) || "N/A"} subValue={isGlobal ? t.alertThreshold : (selected?.status || t.normal)} icon={Activity} color={isGlobal || selected?.status === 'ALERTE' ? "rose" : "emerald"} />
         <MetricCard title={t.efficiency} value={isGlobal ? avgEfficiency + "%" : (parseFloat(String(selected?.economy || '0').replace(/[^0-9.]/g, '')) + 80).toFixed(1) + "%"} subValue={t.targetReached} icon={CheckCircle2} color="emerald" />
-        <MetricCard title={t.anomalies} value={String(anomaliesCount)} subValue={topConsumer ? formatBuildingName(topConsumer.name, topConsumer.id) : undefined} icon={AlertTriangle} color={anomaliesCount > 0 ? "rose" : "emerald"} />
+        <MetricCard 
+          title={t.anomalies} 
+          value={hasActiveAnomalies ? `${activeAnomalies.length} ${language === 'fr' ? `Active${activeAnomalies.length > 1 ? 's' : ''}` : 'Active'}` : "0"} 
+          subValue={hasActiveAnomalies 
+            ? (activeAnomalies[0]?.targetName ? `⚠️ ${activeAnomalies[0].targetName}` : (language === 'fr' ? 'Anomalies détectées' : 'Anomalies detected'))
+            : (language === 'fr' ? '✅ Parc 100% Nominal' : '✅ 100% Nominal')
+          } 
+          extraInfo={
+            <div className="flex items-center justify-between w-full text-[10px]">
+              <span className={cn("font-medium", hasActiveAnomalies ? "text-rose-600 font-bold" : "text-slate-500")}>
+                {hasActiveAnomalies ? (language === 'fr' ? 'Diagnostic requis' : 'Action needed') : (language === 'fr' ? 'Google Sheet conforme' : 'Google Sheet compliant')}
+              </span>
+              <span className={cn(
+                "font-bold px-2 py-0.5 rounded-md text-[10px] flex items-center gap-1 transition-all",
+                hasActiveAnomalies 
+                  ? "bg-rose-600 text-white shadow-xs group-hover:bg-rose-700" 
+                  : "bg-emerald-50 text-emerald-800 border border-emerald-200"
+              )}>
+                {hasActiveAnomalies ? (language === 'fr' ? 'Inspecter ➔' : 'Inspect ➔') : (language === 'fr' ? 'Scanner ➔' : 'Scan ➔')}
+              </span>
+            </div>
+          }
+          icon={AlertTriangle} 
+          color={hasActiveAnomalies ? "rose" : "emerald"} 
+          highlighted={hasActiveAnomalies}
+          badge={hasActiveAnomalies ? (
+            <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
+          ) : undefined}
+          onClick={() => setIsAnomalyModalOpen(true)}
+        />
       </motion.div>
 
       {/* Building Consumption Graph Card with Interactive Building Selector */}
@@ -1980,6 +2155,21 @@ const DashboardView = ({
         <EnergyMixCard language={language} buildingsList={buildingsList} isGlobal={isGlobal} selectedBuilding={selected} />
         <MontpellierMapCard language={language} buildingsList={buildingsList} selectedBuildingId={selectedBuildingId} onSelectBuilding={onSelectBuilding} />
       </div>
+
+      {/* Modal interactif complet de diagnostic & traitement des anomalies */}
+      <SystemAnomalyModal
+        isOpen={isAnomalyModalOpen}
+        onClose={() => setIsAnomalyModalOpen(false)}
+        language={language}
+        buildingsList={buildingsList}
+        gtbEquipments={gtbEquipments}
+        gtbControls={gtbControls}
+        onSelectBuilding={onSelectBuilding}
+        onNavigateView={onNavigateView}
+        onFixGtbSetpoint={onFixGtbSetpoint}
+        onSimulateScenario={onSimulateScenario}
+        onOptimize={onOptimize}
+      />
     </ViewContainer>
   );
 };
@@ -3146,6 +3336,14 @@ const ReportsView = ({
     currentY = 44;
 
     // Macro-Bilan synthétique
+    const optimalCount = buildingsList.filter(b => !isBuildingInAnomaly(b) && b.status !== 'ATTENTION').length;
+    const alertCount = buildingsList.filter(b => isBuildingInAnomaly(b)).length;
+    const attentionCount = buildingsList.filter(b => b.status === 'ATTENTION' && !isBuildingInAnomaly(b)).length;
+    const totalBldgs = buildingsList.length || 10;
+    const conformDecretSummary = alertCount === 0 && attentionCount === 0
+      ? "100% Conformes (Objectif 2030 respecté)"
+      : `${Math.round((optimalCount / totalBldgs) * 100)}% Conformes  |  ${Math.round((attentionCount / totalBldgs) * 100)}% Surveillance  |  ${Math.round((alertCount / totalBldgs) * 100)}% Alerte`;
+
     autoTable(doc, {
       startY: currentY,
       head: [["Indicateur Clé du Parc", "Valeur Globale Consolidée", "Cadre Réglementaire & Économique"]],
@@ -3154,7 +3352,7 @@ const ReportsView = ({
         ["Consommation Électrique Annuelle", `${totalAnnualMwh} MWh / an (${totalDailyKwh.toLocaleString('fr-FR')} kWh / jour)`, "Intensité moyenne : " + Math.round(totalAnnualKwh / totalSurface) + " kWh / m² / an"],
         ["Facturation Énergétique Annuelle", `${totalCostYear.toLocaleString('fr-FR')} € / an (${totalCostMonth.toLocaleString('fr-FR')} € / mois)`, "Tarif professionnel régulé moyen : 0,215 € / kWh TTC"],
         ["Économies Financières Annuelles GTB", `${totalSavingsYear.toLocaleString('fr-FR')} € / an économisés`, "Gain moyen généré par la GTB Classe B (16,4% d'évitement)"],
-        ["Conformité Décret Tertiaire 2030", "80% Conformes  |  10% Surveillance  |  10% Alerte", "Trajectoire -40% d'ici 2030 (Loi ÉLAN / OPERAT ADEME)"],
+        ["Conformité Décret Tertiaire 2030", conformDecretSummary, "Trajectoire -40% d'ici 2030 (Loi ÉLAN / OPERAT ADEME)"],
         ["Standard Réglementaire BACS", "EN ISO 52120-1 Classe B (91 / 100 points)", "100% des sites télécommandés et télégérés en continu"],
         ["Bilan Carbone du Parc", `${totalCo2YearT} t CO2/an émises`, `Dont ${totalCo2AvoidedT} t CO2/an évitées grâce à l'automatisme centralisé`]
       ],
@@ -3279,12 +3477,18 @@ const ReportsView = ({
     doc.text("Plan d'Optimisation & Démarches Réglementaires du Parc", 18, currentY + 7);
 
     doc.setFontSize(7.8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(51, 65, 85);
-
-    const fleetDiag = "Synthèse d'exploitation : Le parc immobilier affiche une efficacité énergétique globale remarquable avec 80% des sites parfaitement alignés sur les exigences du Décret Tertiaire 2030. La supervision GTB Classe B permet d'éviter 21 000+ € de coûts énergétiques annuels.";
-    const fleetRec1 = "• Action prioritaire Bâtiment 2 (Alerte) : Traitement de la surconsommation (+28.4%) via diagnostic vanne 3 voies et gainables.";
-    const fleetRec2 = "• Action prioritaire Bâtiment 4 (Surveillance) : Contrôle physique du tore de comptage Linky pour valider la télérelève basse.";
+    const anomBuildings = buildingsList.filter(b => isBuildingInAnomaly(b));
+    const compliantPct = anomBuildings.length === 0 ? 100 : Math.round(((buildingsList.length - anomBuildings.length) / buildingsList.length) * 100);
+    const fleetDiag = `Synthèse d'exploitation : Le parc immobilier affiche une efficacité énergétique globale remarquable avec ${compliantPct}% des sites parfaitement alignés sur les exigences du Décret Tertiaire 2030. La supervision GTB Classe B permet d'éviter 21 000+ € de coûts énergétiques annuels.`;
+    
+    let fleetRec1 = "• Régulation thermique nominale : L'ensemble des 10 bâtiments fonctionne strictement dans les plages d'efficacité énergétique sans surconsommation.";
+    let fleetRec2 = "• GTB & Télérelève : Continuité de transmission 100% opérationnelle sur l'ensemble des compteurs et équipements supervisés.";
+    if (anomBuildings.length > 0) {
+      fleetRec1 = `• Action prioritaire ${anomBuildings[0].name} (${anomBuildings[0].status}) : Traitement de la dérive énergétique (${anomBuildings[0].consumption}/j, ${anomBuildings[0].trend}) via diagnostic CVC.`;
+      if (anomBuildings.length > 1) {
+        fleetRec2 = `• Surveillance ${anomBuildings[1].name} : Contrôle télérelève et équilibrage thermique.`;
+      }
+    }
     const fleetRec3 = "• Déclaration réglementaire OPERAT : Export consolidé prêt pour la télé-déclaration ADEME annuelle obligatoire.";
 
     doc.text(doc.splitTextToSize(fleetDiag, 174), 18, currentY + 14);
@@ -3950,8 +4154,8 @@ export default function App() {
       : `📅 Automated Daily Summary (${todayFormatted})`;
 
     const notificationBody = isFr
-      ? `Consommation consolidée du parc : ${totalKwh.toLocaleString()} kWh. ${anomBuilding ? `Alerte dérive : ${anomBuilding.name} surconsomme à 286 kWh/j (+28.4%). Bâtiment surligné en rouge.` : 'Tous les bâtiments fonctionnent en mode nominal.'}`
-      : `Fleet aggregate consumption: ${totalKwh.toLocaleString()} kWh. ${anomBuilding ? `Active drift alert: ${anomBuilding.name} at 286 kWh/d (+28.4%). Highlighted in red.` : 'All buildings operating nominally.'}`;
+      ? `Consommation consolidée du parc : ${totalKwh.toLocaleString()} kWh. ${anomBuilding ? `Alerte dérive : ${anomBuilding.name} surconsomme (${anomBuilding.consumption}/j, ${anomBuilding.trend}). Bâtiment surligné en rouge.` : 'Tous les bâtiments fonctionnent en mode nominal optimisé.'}`
+      : `Fleet aggregate consumption: ${totalKwh.toLocaleString()} kWh. ${anomBuilding ? `Active drift alert: ${anomBuilding.name} at ${anomBuilding.consumption}/d (${anomBuilding.trend}). Highlighted in red.` : 'All buildings operating nominally in optimized mode.'}`;
 
     // 1. Browser Native Web Notification
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -4142,6 +4346,7 @@ export default function App() {
       selected,
       topConsumer,
       anomaliesCount,
+      systemAnomalies,
       trend: isGlobal ? "-12%" : selected?.trend || "0%"
     };
   }, [memoizedBuildings, selectedBuilding, gtbEquipments, gtbHeatingSetpoint, gtbCoolingSetpoint, gtbGlobalMode]);
@@ -4473,23 +4678,37 @@ export default function App() {
 
   const triggerTestPushNotification = React.useCallback(() => {
     const isFr = settings.language === 'fr';
-    const anomBuilding = memoizedBuildings.find(b => isBuildingInAnomaly(b)) || memoizedBuildings[0];
-    const bName = anomBuilding?.name || 'Bâtiment 1';
-    const bId = anomBuilding?.id?.toString() || 'BAT-01';
-    const bConso = anomBuilding?.consumption || '196 kWh';
-    const bTrend = anomBuilding?.trend || '+0%';
+    const anomBuilding = memoizedBuildings.find(b => isBuildingInAnomaly(b));
+    
+    if (anomBuilding) {
+      const bName = anomBuilding?.name || 'Bâtiment 1';
+      const bId = anomBuilding?.id?.toString() || 'BAT-01';
+      const bConso = anomBuilding?.consumption || '196 kWh';
+      const bTrend = anomBuilding?.trend || '+0%';
 
-    const event = new CustomEvent('app-notification', {
-      detail: {
-        title: isFr ? `🚨 Alerte Dérive ${bName}` : `🚨 Drift Alert ${bName}`,
-        message: isFr 
-          ? `Consommation anormale relevée dans le Google Sheet : ${bConso}/j (${bTrend}). Bâtiment signalé en rouge.` 
-          : `Abnormal consumption reported in Google Sheet: ${bConso}/d (${bTrend}). Building flagged in red.`,
-        type: 'alert',
-        buildingId: bId
-      }
-    });
-    window.dispatchEvent(event);
+      const event = new CustomEvent('app-notification', {
+        detail: {
+          title: isFr ? `🚨 Alerte Dérive ${bName}` : `🚨 Drift Alert ${bName}`,
+          message: isFr 
+            ? `Consommation anormale relevée dans le Google Sheet : ${bConso}/j (${bTrend}). Bâtiment signalé en rouge.` 
+            : `Abnormal consumption reported in Google Sheet: ${bConso}/d (${bTrend}). Building flagged in red.`,
+          type: 'alert',
+          buildingId: bId
+        }
+      });
+      window.dispatchEvent(event);
+    } else {
+      const event = new CustomEvent('app-notification', {
+        detail: {
+          title: isFr ? '✅ Télémétrie Nominale' : '✅ Nominal Telemetry',
+          message: isFr 
+            ? 'Tous les bâtiments fonctionnent dans leurs seuils nominaux issus du Google Sheet (0 anomalie).' 
+            : 'All buildings are operating within nominal thresholds from Google Sheet (0 anomalies).',
+          type: 'info'
+        }
+      });
+      window.dispatchEvent(event);
+    }
   }, [settings.language, memoizedBuildings]);
 
   const onProfileChange = (field: string, value: string) => {
@@ -4698,6 +4917,38 @@ export default function App() {
             });
           }
         }
+      } else {
+        // Recherche d'une colonne de statuts GTB (ex: "Statut Supervision" ou liste de statuts dans la Section 2 du Google Sheet)
+        let statusHeaderIdx = -1;
+        let statColIdx = -1;
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (/statut\s*supervision|supervision/i.test(line)) {
+            statusHeaderIdx = i;
+            const cells = parseLine(line);
+            statColIdx = cells.findIndex(c => /statut\s*supervision|statut/i.test(c));
+            break;
+          }
+        }
+
+        if (statusHeaderIdx !== -1 && statColIdx !== -1) {
+          const statuses: string[] = [];
+          for (let i = statusHeaderIdx + 1; i < lines.length; i++) {
+            const cells = parseLine(lines[i]);
+            const val = (cells[statColIdx] || '').trim();
+            if (val) {
+              statuses.push(val);
+            }
+          }
+          if (statuses.length > 0) {
+            parsedEquipments.push(
+              ...GTB_INITIAL_EQUIPMENT.map((eq, idx) => ({
+                ...eq,
+                status: cleanGtbText(statuses[idx] || 'Actif')
+              }))
+            );
+          }
+        }
       }
 
       if (parsedBuildings.length > 0) {
@@ -4745,6 +4996,15 @@ export default function App() {
           isSyncing={isSyncingSheet}
           lastSyncTime={lastSyncTime}
           onForceSync={forceSyncGoogleSheets}
+          onNavigateView={setActiveView}
+          gtbEquipments={gtbEquipments}
+          gtbControls={{
+            heatingSetpoint: gtbHeatingSetpoint,
+            coolingSetpoint: gtbCoolingSetpoint,
+            globalMode: gtbGlobalMode
+          }}
+          onFixGtbSetpoint={handleFixGtbSetpoint}
+          onSimulateScenario={handleSimulateScenario}
         />
       );
       case 'buildings': return (

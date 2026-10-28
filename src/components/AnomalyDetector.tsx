@@ -17,8 +17,15 @@ import {
   Gauge, 
   AlertCircle,
   Wrench,
-  Radio
+  Radio,
+  X,
+  Building2,
+  Calendar,
+  SlidersHorizontal,
+  Eye,
+  Check
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
 export type AnomalyCategory = 'conso_high' | 'conso_low' | 'gtb_temperature' | 'gtb_equipment';
@@ -856,3 +863,432 @@ export const AutoAnomalyScannerCard: React.FC<AutoAnomalyScannerCardProps> = ({
     </div>
   );
 };
+
+export interface SystemAnomalyModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  language: string;
+  buildingsList: any[];
+  gtbEquipments?: any[];
+  gtbControls?: {
+    heatingSetpoint?: number;
+    coolingSetpoint?: number;
+    globalMode?: string;
+  };
+  onSelectBuilding?: (id: string) => void;
+  onNavigateView?: (view: any) => void;
+  onFixGtbSetpoint?: (heating: number, cooling: number) => void;
+  onSimulateScenario?: (scenario: 'high' | 'low' | 'gtb' | 'reset') => void;
+  onOptimize?: () => void;
+}
+
+export const SystemAnomalyModal: React.FC<SystemAnomalyModalProps> = ({
+  isOpen,
+  onClose,
+  language,
+  buildingsList,
+  gtbEquipments = [],
+  gtbControls,
+  onSelectBuilding,
+  onNavigateView,
+  onFixGtbSetpoint,
+  onSimulateScenario,
+  onOptimize
+}) => {
+  const isFr = language === 'fr';
+  const [activeFilter, setActiveFilter] = useState<'all' | 'conso_high' | 'conso_low' | 'gtb'>('all');
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
+
+  const anomalies = useMemo(() => {
+    return detectSystemAnomalies(buildingsList, gtbEquipments, gtbControls);
+  }, [buildingsList, gtbEquipments, gtbControls]);
+
+  const filtered = useMemo(() => {
+    if (activeFilter === 'conso_high') return anomalies.filter(a => a.category === 'conso_high');
+    if (activeFilter === 'conso_low') return anomalies.filter(a => a.category === 'conso_low');
+    if (activeFilter === 'gtb') return anomalies.filter(a => a.category === 'gtb_temperature' || a.category === 'gtb_equipment');
+    return anomalies;
+  }, [anomalies, activeFilter]);
+
+  const showNotice = (msg: string) => {
+    setSuccessNotice(msg);
+    setTimeout(() => setSuccessNotice(null), 3500);
+  };
+
+  const handleFixAllGtb = () => {
+    if (onFixGtbSetpoint) {
+      onFixGtbSetpoint(20.5, 25.0);
+      showNotice(isFr ? 'Consignes GTB réalignées à 20.5°C / 25.0°C (conflit résolu)' : 'BMS setpoints re-aligned to 20.5°C / 25.0°C');
+    }
+  };
+
+  const handleResetToSheet = () => {
+    if (onSimulateScenario) {
+      onSimulateScenario('reset');
+      showNotice(isFr ? 'Données réinitialisées : Parc 100% nominal (0 anomalie)' : 'Reset: Portfolio 100% nominal (0 anomaly)');
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          exit={{ opacity: 0 }} 
+          onClick={onClose} 
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm" 
+        />
+
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, y: 15 }} 
+          animate={{ opacity: 1, scale: 1, y: 0 }} 
+          exit={{ opacity: 0, scale: 0.95, y: 15 }} 
+          className="bg-white rounded-3xl p-5 sm:p-7 w-full max-w-3xl relative shadow-2xl border border-slate-200/90 z-10 my-auto max-h-[90vh] flex flex-col overflow-hidden"
+        >
+          {/* Header */}
+          <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-100 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "w-11 h-11 rounded-2xl flex items-center justify-center shadow-md",
+                anomalies.length > 0 
+                  ? "bg-rose-600 text-white shadow-rose-600/30 ring-4 ring-rose-500/20 animate-pulse" 
+                  : "bg-emerald-600 text-white shadow-emerald-600/30 ring-4 ring-emerald-500/20"
+              )}>
+                {anomalies.length > 0 ? <AlertTriangle className="w-6 h-6" /> : <CheckCircle2 className="w-6 h-6" />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg sm:text-xl font-bold font-display text-slate-900">
+                    {isFr ? "Diagnostic & Traitement des Anomalies" : "Anomaly Diagnostics & Treatment"}
+                  </h3>
+                  <span className={cn(
+                    "text-[10px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider",
+                    anomalies.length > 0 
+                      ? "bg-rose-100 text-rose-700 border border-rose-200" 
+                      : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                  )}>
+                    {anomalies.length > 0 
+                      ? `${anomalies.length} ${isFr ? `Alerte${anomalies.length > 1 ? 's' : ''}` : 'Alerts'}` 
+                      : (isFr ? "0 Alerte • 100% Nominal" : "0 Alert • 100% Nominal")}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  {isFr 
+                    ? "Supervision continue des dérives thermiques, surconsommations et régulations CVC." 
+                    : "Continuous monitoring of thermal drifts, overconsumption and HVAC controls."}
+                </p>
+              </div>
+            </div>
+
+            <button 
+              onClick={onClose} 
+              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+              title="Fermer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Toast Notification */}
+          {successNotice && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center justify-between gap-2 shrink-0"
+            >
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-600" />
+                <span>{successNotice}</span>
+              </div>
+              <button onClick={() => setSuccessNotice(null)} className="text-emerald-600 hover:text-emerald-900">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </motion.div>
+          )}
+
+          {/* Interactive Test / Simulator Toolbar */}
+          <div className="mt-3 p-3 bg-slate-50 border border-slate-200/80 rounded-2xl shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{isFr ? "Tester l'affichage d'une anomalie :" : "Test anomaly scenarios:"}</span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {onSimulateScenario && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSimulateScenario('high');
+                      showNotice(isFr ? "Scénario activé : Surconsommation Bâtiment 2 (+63%)" : "Scenario: High consumption on Building 2");
+                    }}
+                    className="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-[10px] font-bold transition shadow-2xs cursor-pointer flex items-center gap-1"
+                    title="Simule une surconsommation sur le Bâtiment 2"
+                  >
+                    <span>🔴 {isFr ? "Surconso Bât. 2" : "High Conso"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSimulateScenario('gtb');
+                      showNotice(isFr ? "Scénario activé : Conflit thermique GTB & Alarme Ventilation" : "Scenario: BMS thermal conflict & fan alarm");
+                    }}
+                    className="px-2.5 py-1 bg-white hover:bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-[10px] font-bold transition shadow-2xs cursor-pointer flex items-center gap-1"
+                    title="Simule un conflit GTB Chaud/Froid"
+                  >
+                    <span>🟡 {isFr ? "Conflit GTB" : "BMS Conflict"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetToSheet}
+                    className="px-2.5 py-1 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-[10px] font-bold transition shadow-2xs cursor-pointer flex items-center gap-1"
+                    title="Rétablir les données conformes du Google Sheet"
+                  >
+                    <span>🟢 {isFr ? "Rétablir Nominal (0 anomalie)" : "Reset to 0"}</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Filter Tabs if anomalies > 0 */}
+          {anomalies.length > 0 && (
+            <div className="flex items-center gap-1.5 pt-3 pb-1 border-b border-slate-100 overflow-x-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveFilter('all')}
+                className={cn(
+                  "px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0",
+                  activeFilter === 'all' 
+                    ? "bg-slate-900 text-white shadow-2xs" 
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                )}
+              >
+                <span>{isFr ? "Toutes" : "All"}</span>
+                <span className="px-1.5 py-0.2 bg-white/20 rounded-md text-[10px] font-black">
+                  {anomalies.length}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveFilter('conso_high')}
+                className={cn(
+                  "px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0",
+                  activeFilter === 'conso_high' 
+                    ? "bg-rose-600 text-white shadow-2xs" 
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                )}
+              >
+                <span>{isFr ? "Surconsommation" : "Overconsumption"}</span>
+                <span className="px-1.5 py-0.2 bg-white/20 rounded-md text-[10px] font-black">
+                  {anomalies.filter(a => a.category === 'conso_high').length}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveFilter('gtb')}
+                className={cn(
+                  "px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0",
+                  activeFilter === 'gtb' 
+                    ? "bg-indigo-600 text-white shadow-2xs" 
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                )}
+              >
+                <span>{isFr ? "Régulation GTB" : "BMS Controls"}</span>
+                <span className="px-1.5 py-0.2 bg-white/20 rounded-md text-[10px] font-black">
+                  {anomalies.filter(a => a.category === 'gtb_temperature' || a.category === 'gtb_equipment').length}
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* Modal Scrollable Body */}
+          <div className="flex-1 overflow-y-auto py-3 space-y-3.5 pr-1">
+            {anomalies.length === 0 ? (
+              <div className="py-8 px-4 flex flex-col items-center justify-center text-center bg-emerald-50/50 rounded-2xl border border-emerald-200/70">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mb-3 shadow-inner">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h4 className="text-base sm:text-lg font-bold text-slate-900 font-display">
+                  {isFr ? "Aucune Anomalie Détectée — Parc 100% Conforme" : "No Anomalies Detected — Portfolio 100% Nominal"}
+                </h4>
+                <p className="text-xs text-slate-600 max-w-md mt-1 leading-relaxed">
+                  {isFr 
+                    ? "Les 10 bâtiments de votre parc immobilier fonctionnent dans le respect strict des seuils nominaux issus de votre Google Sheet. Puissances thermiques, compteurs d'énergie et automates GTB sont optimisés."
+                    : "All 10 portfolio buildings operate strictly within nominal thresholds from your Google Sheet. Thermal demands, energy meters and BMS controllers are optimal."}
+                </p>
+                <div className="mt-4 flex items-center gap-2">
+                  <span className="px-3 py-1 bg-white text-emerald-800 rounded-xl text-xs font-bold border border-emerald-200 shadow-2xs">
+                    ✓ {isFr ? "Télémétrie Nominale (Google Sheet)" : "Nominal Telemetry"}
+                  </span>
+                  <span className="px-3 py-1 bg-white text-emerald-800 rounded-xl text-xs font-bold border border-emerald-200 shadow-2xs">
+                    ✓ {isFr ? "Boucles CVC Équilibrées" : "Balanced HVAC Loops"}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              filtered.map((item) => {
+                const isHigh = item.category === 'conso_high';
+                const isLow = item.category === 'conso_low';
+                const isGtb = item.category === 'gtb_temperature' || item.category === 'gtb_equipment';
+
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "rounded-2xl p-4 sm:p-4.5 border transition-all flex flex-col gap-3 relative overflow-hidden",
+                      isHigh
+                        ? "bg-rose-50/60 border-rose-300 ring-2 ring-rose-500/10 shadow-sm"
+                        : isLow
+                        ? "bg-amber-50/60 border-amber-300 ring-2 ring-amber-500/10 shadow-sm"
+                        : "bg-indigo-50/60 border-indigo-300 ring-2 ring-indigo-500/10 shadow-sm"
+                    )}
+                  >
+                    {/* Top alert header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={cn(
+                          "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-2xs",
+                          isHigh ? "bg-rose-600 text-white" : isLow ? "bg-amber-600 text-white" : "bg-indigo-600 text-white"
+                        )}>
+                          {isHigh ? <TrendingUp className="w-4 h-4" /> : isLow ? <TrendingDown className="w-4 h-4" /> : <Sliders className="w-4 h-4" />}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                            {isFr ? item.titleFr : item.titleEn}
+                          </h4>
+                          <p className="text-[11px] text-slate-600 font-semibold truncate">
+                            📍 {item.targetName}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+                        <span className={cn(
+                          "text-[9px] font-black uppercase px-2 py-0.5 rounded-full border",
+                          item.severity === 'critical'
+                            ? "bg-rose-600 text-white border-rose-700 shadow-2xs"
+                            : "bg-amber-500 text-white border-amber-600 shadow-2xs"
+                        )}>
+                          {item.severity === 'critical' ? (isFr ? 'CRITIQUE' : 'CRITICAL') : (isFr ? 'ATTENTION' : 'WARNING')}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                          {item.detectedAt}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Diagnostic Explanation */}
+                    <p className="text-xs text-slate-700 leading-relaxed font-medium bg-white/70 p-2.5 rounded-xl border border-slate-200/60">
+                      {isFr ? item.descriptionFr : item.descriptionEn}
+                    </p>
+
+                    {/* High contrast comparison bar */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-white rounded-xl border border-slate-200 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{isFr ? "Valeur Relevée :" : "Observed:"}</span>
+                        <span className={cn(
+                          "font-black font-mono text-xs px-2 py-0.5 rounded",
+                          isHigh ? "text-rose-700 bg-rose-50" : isLow ? "text-amber-700 bg-amber-50" : "text-indigo-700 bg-indigo-50"
+                        )}>
+                          {item.measuredValue}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{isFr ? "Référence Normale :" : "Nominal Target:"}</span>
+                        <span className="font-bold font-mono text-xs text-slate-700 px-2 py-0.5 rounded bg-slate-100">
+                          {item.thresholdValue}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Actionable recommendation and direct buttons */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-200/80">
+                      <div className="text-[11px] text-slate-600 font-medium flex items-center gap-1.5">
+                        <ShieldAlert className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        <span className="line-clamp-1">{isFr ? item.recommendationFr : item.recommendationEn}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto flex-wrap">
+                        {item.targetType === 'building' && onSelectBuilding && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onSelectBuilding(item.targetId);
+                              onClose();
+                            }}
+                            className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                          >
+                            <Building2 className="w-3 h-3 text-slate-600" />
+                            <span>{isFr ? "Voir bâtiment" : "Select site"}</span>
+                          </button>
+                        )}
+
+                        {item.category === 'gtb_temperature' && onFixGtbSetpoint && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onFixGtbSetpoint(20.5, 25.0);
+                              showNotice(isFr ? "Consignes GTB recalibrées sur 20.5°C / 25.0°C" : "BMS setpoint fixed");
+                            }}
+                            className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                          >
+                            <Wrench className="w-3 h-3" />
+                            <span>{isFr ? "Réguler GTB (20.5°C)" : "Fix setpoint"}</span>
+                          </button>
+                        )}
+
+                        {onNavigateView && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onNavigateView(item.targetType === 'building' ? 'buildings' : 'gtb');
+                              onClose();
+                            }}
+                            className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>{item.targetType === 'building' ? (isFr ? "Parc" : "Buildings") : "GTB"}</span>
+                          </button>
+                        )}
+
+                        {onOptimize && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onOptimize();
+                              showNotice(isFr ? "Optimisation et délestage appliqués" : "Optimization applied");
+                            }}
+                            className="px-2.5 py-1 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                            <span>{isFr ? "Délester" : "Optimize"}</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 shrink-0">
+            <span>
+              {isFr ? "Source : Télémétrie Google Sheets & Automates GTB" : "Source: Live Google Sheets & BMS Telemetry"}
+            </span>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold transition cursor-pointer"
+            >
+              {isFr ? "Fermer" : "Close"}
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};
+
