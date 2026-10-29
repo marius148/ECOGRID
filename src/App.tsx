@@ -61,6 +61,7 @@ import {
   ChevronRight,
   Trash2,
   Volume2,
+  VolumeX,
   Files,
   Cpu,
   Settings2,
@@ -137,6 +138,20 @@ import { doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, addDoc, d
 
 // --- Types ---
 type ViewType = 'dashboard' | 'buildings' | 'analytics' | 'reports' | 'gtb' | 'planning' | 'settings';
+
+export interface TelemetryNotification {
+  id: string;
+  title: string;
+  message: string;
+  category: 'alarm' | 'gtb' | 'intervention' | 'compliance' | 'digest' | 'system';
+  priority: 'P1' | 'P2' | 'P3' | 'INFO';
+  timestamp: string;
+  buildingId?: string;
+  buildingName?: string;
+  metric?: string;
+  targetView?: ViewType;
+  isRead?: boolean;
+}
 
 interface BuildingStats {
   id: string | number;
@@ -954,59 +969,16 @@ export const GlobalDistrictBackground = React.memo(({
 }: {
   skyTheme?: 'auto' | 'sunrise' | 'day' | 'sunset' | 'night';
 }) => {
-  // Real-time hour calculation that updates automatically
-  const [currentHour, setCurrentHour] = useState(() => new Date().getHours());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentHour(new Date().getHours());
-    }, 15000); // Check local time every 15s
-    return () => clearInterval(timer);
-  }, []);
-
-  const activeTheme = React.useMemo<'sunrise' | 'day' | 'sunset' | 'night'>(() => {
-    if (skyTheme && skyTheme !== 'auto') return skyTheme;
-    if (currentHour >= 6 && currentHour < 9) return 'sunrise';
-    if (currentHour >= 9 && currentHour < 18) return 'day';
-    if (currentHour >= 18 && currentHour < 22) return 'sunset';
-    return 'night';
-  }, [skyTheme, currentHour]);
-
   return (
     <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none">
-      {/* 1. Base Crisp Photorealistic Background Image - Static */}
+      {/* 1. Eco-District Architectural Background Image - 100% luminous, vibrant and clearly visible */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-95 scale-100"
         style={{ backgroundImage: `url(${ecoGridBgImg})` }}
       />
-
-      {/* 2. Real Day/Night Cycle Atmospheric Color Tint Overlays - Static */}
-      <div 
-        className={cn(
-          "absolute inset-0",
-          activeTheme === 'day' && "bg-gradient-to-b from-sky-400/20 via-sky-200/10 to-slate-900/40",
-          activeTheme === 'sunrise' && "bg-gradient-to-b from-slate-950/60 via-amber-500/25 to-rose-900/35",
-          activeTheme === 'sunset' && "bg-gradient-to-b from-indigo-950/60 via-rose-600/30 to-amber-600/35",
-          activeTheme === 'night' && "bg-gradient-to-b from-slate-950/80 via-indigo-950/70 to-slate-900/80"
-        )}
-      />
-
-      {/* 3. Celestial Objects (Stars field at Night only - Moon removed) */}
-      {activeTheme === 'night' && (
-        <div className="absolute inset-0 pointer-events-none opacity-85">
-          {[...Array(40)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-white rounded-full"
-              style={{
-                top: `${(i * 13) % 60}%`,
-                left: `${(i * 29) % 100}%`,
-                opacity: 0.35 + ((i % 6) * 0.12)
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {/* 2. Very subtle light veil for crystal-clear card contrast without darkening the background image */}
+      <div className="absolute inset-0 bg-slate-950/15 backdrop-blur-[0.5px]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/25" />
     </div>
   );
 });
@@ -1958,108 +1930,71 @@ const DashboardView = ({
             <Download className="w-3.5 h-3.5 text-emerald-700" />
             <span>{language === 'fr' ? 'Bilan PDF' : 'PDF Report'}</span>
           </button>
-          <div className="flex items-center gap-2 text-xs text-slate-600 font-semibold bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
-            <span className={cn("w-2 h-2 rounded-full", isSyncing ? "bg-amber-500 animate-spin" : "bg-emerald-600")} />
-            <span>{language === 'fr' ? 'Télémétrie en direct' : 'Live Telemetry'}</span>
-            {onForceSync && (
-              <button
-                type="button"
-                onClick={onForceSync}
-                disabled={isSyncing}
-                title={language === 'fr' ? 'Actualiser les données de télémétrie' : 'Sync telemetry'}
-                className="ml-1 p-0.5 hover:bg-slate-100 rounded text-slate-500 hover:text-emerald-700 transition disabled:opacity-50 cursor-pointer"
-              >
-                <RefreshCw className={cn("w-3.5 h-3.5", isSyncing && "animate-spin text-emerald-600")} />
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
-      {/* Bannière d'Alerte Haute Visibilité en cas d'Anomalie Réelle ou Simulée */}
+      {/* Bannière d'Alerte Haute Visibilité en cas d'Anomalie Réelle ou Simulée - Optimisée Mobile & Tablette */}
       {hasActiveAnomalies && !isBannerDismissed && (
         <motion.div
           initial={{ opacity: 0, y: -10, scale: 0.99 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -10, scale: 0.99 }}
-          className="bg-gradient-to-r from-rose-500/15 via-amber-500/10 to-rose-500/5 border-2 border-rose-500/40 rounded-2xl p-4 sm:p-4.5 mb-4 shadow-lg shadow-rose-950/5 relative overflow-hidden backdrop-blur-md"
+          className="bg-white/95 backdrop-blur-md border-l-4 border-rose-600 rounded-2xl p-3.5 sm:p-4 md:p-5 mb-4 shadow-lg border border-slate-200/90 relative"
         >
-          {/* Subtle top indicator bar */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-600 via-amber-500 to-rose-600 animate-pulse" />
-          
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5">
-            <div className="flex items-start sm:items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-rose-600/30 ring-4 ring-rose-500/20 animate-pulse">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-rose-600/30 ring-4 ring-rose-500/20 animate-pulse mt-0.5">
                 <AlertTriangle className="w-5 h-5 text-white" />
               </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-2xs">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-2xs shrink-0">
                     {language === 'fr' ? 'Alerte Dérive Active' : 'Active Drift Alert'}
                   </span>
-                  <span className="text-xs font-black text-rose-900 tracking-tight font-display">
+                  <span className="text-xs font-black text-rose-900 tracking-tight font-display shrink-0">
                     {activeAnomalies.length} {language === 'fr' ? `Anomalie${activeAnomalies.length > 1 ? 's' : ''} Détectée${activeAnomalies.length > 1 ? 's' : ''}` : `Detected Anomaly${activeAnomalies.length > 1 ? 'ies' : ''}`}
                   </span>
                   <span className="text-[11px] text-rose-700/80 font-medium hidden sm:inline">•</span>
-                  <span className="text-[11px] text-rose-800 font-semibold truncate max-w-md">
+                  <span className="text-xs font-bold text-rose-900 break-words">
                     {activeAnomalies[0].titleFr || activeAnomalies[0].titleEn} ({activeAnomalies[0].targetName})
                   </span>
                 </div>
-                <p className="text-xs text-rose-900/90 font-medium mt-1 line-clamp-2 leading-relaxed">
+                
+                <p className="text-xs sm:text-[13px] text-slate-800 font-medium leading-relaxed break-words">
                   {activeAnomalies[0].descriptionFr || activeAnomalies[0].descriptionEn}
                 </p>
+
                 {activeAnomalies[0].recommendationFr && (
-                  <p className="text-[11px] text-rose-800/80 mt-0.5 flex items-center gap-1 font-medium">
-                    <span className="font-bold text-rose-900">💡 Action conseillée :</span>
-                    <span className="truncate">{activeAnomalies[0].recommendationFr}</span>
-                  </p>
+                  <div className="mt-2.5 p-2 sm:p-2.5 rounded-xl bg-rose-50/90 border border-rose-200/80 text-xs text-rose-950 font-medium flex items-start gap-2 leading-relaxed">
+                    <span className="shrink-0 text-sm">💡</span>
+                    <div className="break-words">
+                      <span className="font-bold text-rose-900 mr-1">
+                        {language === 'fr' ? 'Action conseillée :' : 'Recommended action:'}
+                      </span>
+                      <span>{activeAnomalies[0].recommendationFr}</span>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0 self-end md:self-center flex-wrap">
+            <div className="flex items-center gap-2 shrink-0 self-stretch sm:self-auto justify-end pt-2 lg:pt-0 border-t border-slate-100 lg:border-t-0">
               <button
                 type="button"
                 onClick={() => setIsAnomalyModalOpen(true)}
-                className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="flex-1 sm:flex-initial px-4 py-2 sm:py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold transition shadow-sm flex items-center justify-center gap-2 cursor-pointer min-h-[40px]"
               >
-                <Eye className="w-3.5 h-3.5" />
+                <Eye className="w-4 h-4 shrink-0" />
                 <span>{language === 'fr' ? `Détails & Diagnostic (${activeAnomalies.length})` : `Diagnostic (${activeAnomalies.length})`}</span>
               </button>
-
-              {activeAnomalies[0].actionType === 'fix_gtb_setpoint' && onFixGtbSetpoint && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onFixGtbSetpoint(20.5, 25.0);
-                  }}
-                  className="px-3 py-2 bg-white hover:bg-rose-50 active:scale-95 text-rose-700 border border-rose-300 rounded-xl text-xs font-bold transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Wrench className="w-3.5 h-3.5 text-rose-600" />
-                  <span>{language === 'fr' ? 'Recalibrer GTB' : 'Recalibrate'}</span>
-                </button>
-              )}
-
-              {activeAnomalies[0].targetType === 'building' && onSelectBuilding && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSelectBuilding(activeAnomalies[0].targetId);
-                  }}
-                  className="px-3 py-2 bg-white hover:bg-rose-50 active:scale-95 text-slate-700 hover:text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Building2 className="w-3.5 h-3.5 text-rose-600" />
-                  <span>{language === 'fr' ? 'Voir le Site' : 'View Site'}</span>
-                </button>
-              )}
 
               <button
                 type="button"
                 onClick={() => setIsBannerDismissed(true)}
-                className="p-2 text-rose-400 hover:text-rose-700 hover:bg-rose-100/60 rounded-xl transition cursor-pointer"
-                title={language === 'fr' ? 'Masquer cette bannière' : 'Dismiss'}
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
+                title={language === 'fr' ? 'Masquer' : 'Dismiss'}
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -4182,7 +4117,13 @@ export default function App() {
       const event = new CustomEvent('app-notification', {
         detail: {
           title: notificationTitle,
-          message: notificationBody
+          message: notificationBody,
+          type: anomBuilding ? 'alert' : 'info',
+          priority: anomBuilding ? 'P1' : 'INFO',
+          metric: `${totalKwh.toLocaleString()} kWh/j`,
+          buildingId: anomBuilding?.id?.toString(),
+          buildingName: anomBuilding?.name,
+          targetView: anomBuilding ? 'buildings' : 'dashboard'
         }
       });
       window.dispatchEvent(event);
@@ -4200,15 +4141,36 @@ export default function App() {
     // Left intentionally silent to prevent unwanted repeated popups/alarms
   }, []);
 
-  // --- Real Smartphone Push Notifications & "Look & Clear" Engine ---
+  // --- In-App Floating Push Banner & Chime Notification (CII ENERGIE) ---
   const [activePushBanner, setActivePushBanner] = React.useState<{
     id: string;
     title: string;
     message: string;
-    type?: 'alert' | 'success' | 'info' | 'daily' | 'daily-alert';
+    type: 'alert' | 'info';
+    priority: string;
     buildingId?: string;
-    timestamp: string;
+    buildingName?: string;
+    metric?: string;
+    targetView?: ViewType;
+    timestamp?: string;
   } | null>(null);
+
+  const [soundEnabled, setSoundEnabled] = React.useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('cii_energie_sound_enabled') !== 'false';
+    }
+    return true;
+  });
+
+  const toggleSound = React.useCallback(() => {
+    setSoundEnabled(prev => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('cii_energie_sound_enabled', String(next));
+      }
+      return next;
+    });
+  }, []);
 
   const [hasViewedNotifications, setHasViewedNotifications] = React.useState(false);
   const [dismissedNotificationIds, setDismissedNotificationIds] = React.useState<string[]>(() => {
@@ -4223,67 +4185,59 @@ export default function App() {
     return [];
   });
 
-  // Realistic Smartphone Chime Synthesizer (dual harmonic tone)
+  // Industrial telemetry notification chime (gentle dual harmonic)
   const playPhoneChime = React.useCallback(() => {
-    if (typeof window === 'undefined') return;
+    if (!soundEnabled || typeof window === 'undefined') return;
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
       const now = ctx.currentTime;
       
-      // Tone 1: E5 (659Hz)
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(659.25, now);
+      osc1.frequency.setValueAtTime(587.33, now); // D5
       gain1.gain.setValueAtTime(0.08, now);
-      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
       osc1.connect(gain1);
       gain1.connect(ctx.destination);
       osc1.start(now);
-      osc1.stop(now + 0.22);
+      osc1.stop(now + 0.18);
 
-      // Tone 2: A5 (880Hz)
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(880, now + 0.08);
-      gain2.gain.setValueAtTime(0.1, now + 0.08);
-      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+      osc2.frequency.setValueAtTime(880, now + 0.12); // A5
+      gain2.gain.setValueAtTime(0.1, now + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
       osc2.connect(gain2);
       gain2.connect(ctx.destination);
-      osc2.start(now + 0.08);
-      osc2.stop(now + 0.42);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.45);
     } catch {
       // Audio autoplay policy guard
     }
-  }, []);
+  }, [soundEnabled]);
 
-  // "Une fois qu'on regarde tout disparaît" : Auto-dismiss banner after 4.5s like on iOS / Android
-  React.useEffect(() => {
-    if (activePushBanner) {
-      const timer = setTimeout(() => {
-        setActivePushBanner(null);
-      }, 4500);
-      return () => clearTimeout(timer);
-    }
-  }, [activePushBanner]);
-
-  // Listen to in-app notification events & trigger phone banner + audio chime
+  // Listen to in-app telemetry notification events & trigger top push banner
   React.useEffect(() => {
     const handleAppNotification = (e: any) => {
       const detail = e.detail;
       if (detail) {
-        const isAlert = detail.title?.includes('🚨') || detail.title?.includes('🔴') || detail.title?.includes('Alerte') || detail.type === 'alert';
+        const isAlert = detail.type === 'alert' || detail.priority === 'P1' || detail.title?.includes('🚨') || detail.title?.includes('🔴') || detail.title?.includes('Alerte');
         
         setActivePushBanner({
-          id: 'push-' + Date.now(),
-          title: detail.title || (settings.language === 'fr' ? 'Notification ÉcoGrid' : 'EcoGrid Notification'),
+          id: 'banner-' + Date.now(),
+          title: detail.title || (settings.language === 'fr' ? 'Alerte Télémétrique CII ENERGIE' : 'CII ENERGIE Telemetry Alert'),
           message: detail.message || '',
           type: detail.type || (isAlert ? 'alert' : 'info'),
+          priority: detail.priority || (isAlert ? 'P1' : 'INFO'),
           buildingId: detail.buildingId,
-          timestamp: settings.language === 'fr' ? 'MAINTENANT' : 'NOW'
+          buildingName: detail.buildingName,
+          metric: detail.metric,
+          targetView: detail.targetView || (detail.buildingId ? 'buildings' : 'dashboard'),
+          timestamp: settings.language === 'fr' ? 'À l’instant' : 'Just now'
         });
         setHasViewedNotifications(false);
         playPhoneChime();
@@ -4293,6 +4247,15 @@ export default function App() {
     window.addEventListener('app-notification', handleAppNotification);
     return () => window.removeEventListener('app-notification', handleAppNotification);
   }, [settings.language, playPhoneChime]);
+
+  // Auto-dismiss top push banner after 5.5s
+  React.useEffect(() => {
+    if (!activePushBanner) return;
+    const timer = setTimeout(() => {
+      setActivePushBanner(null);
+    }, 5500);
+    return () => clearTimeout(timer);
+  }, [activePushBanner]);
 
   const metrics = React.useMemo(() => {
     const totalConsumptionValue = memoizedBuildings.reduce((acc, b) => acc + parseEnergy(b.consumption), 0);
@@ -4487,174 +4450,158 @@ export default function App() {
 
   const currentTranslations = translations[settings.language as keyof typeof translations] || translations.fr;
 
-  const notifications = React.useMemo(() => {
-    const list: any[] = [];
+  const notifications = React.useMemo<TelemetryNotification[]>(() => {
+    const list: TelemetryNotification[] = [];
     const isFr = settings.language === 'fr';
-    const dayOfWeek = currentDate.getDay(); // 0: Sunday, 1: Monday, etc.
 
-    // 1. Generate Daily Automatic Announcement based on the Day of the Week
-    const dailyAnnonces = [
-      {
-        title: isFr ? "Consommation week-end optimisée" : "Optimized Weekend Consumption",
+    // 1. Critical Telemetry Anomaly on Drift Buildings (P1)
+    const anomBuilding = memoizedBuildings.find(b => isBuildingInAnomaly(b));
+    if (anomBuilding) {
+      list.push({
+        id: `drift-${anomBuilding.id}`,
+        title: isFr ? `Dérive de consommation active : ${anomBuilding.name}` : `Active Overconsumption Drift: ${anomBuilding.name}`,
         message: isFr 
-          ? "Tous les serveurs et ventilations fonctionnent en mode réduit de veille."
-          : "All servers and ventilation are operating in reduced standby/eco mode today.",
-        type: "success",
-        time: isFr ? "Ce matin" : "This morning"
-      },
-      {
-        title: isFr ? "Bilan Hebdomadaire Automatique" : "Automatic Weekly Summary",
-        message: isFr
-          ? "Vos gains cumulés s'élèvent à +18.4% par rapport au mois précédent."
-          : "Your cumulative savings are up +18.4% compared to last month.",
-        type: "success",
-        time: isFr ? "À 08:30" : "At 8:30 AM"
-      },
-      {
-        title: isFr ? "Bilan d'efficacité énergétique" : "Energy Efficiency Report",
-        message: isFr
-          ? "L'optimisation globale de régulation GTB a évité un surcoût de 12% sur l'ensemble du parc hier."
-          : "Global BMS regulation optimization avoided a 12% cost overrun across the fleet yesterday.",
-        type: "success",
-        time: isFr ? "Il y a 3h" : "3h ago"
-      },
-      {
-        title: isFr ? "Maintenance préventive CVC" : "HVAC Preventive Maintenance",
-        message: isFr
-          ? "Un nettoyage de filtre automatique a été déclenché sur la centrale de traitement d'air."
-          : "An automated filter clean was triggered on the air handling unit.",
-        type: "info",
-        time: isFr ? "Il y a 5h" : "5h ago"
-      },
-      {
-        title: isFr ? "Alerte de pointe de consommation" : "Peak Demand Alert",
-        message: isFr
-          ? "Une augmentation de la température extérieure pourrait provoquer un pic de refroidissement cet après-midi."
-          : "A rise in outdoor temperature could trigger a cooling demand surge this afternoon.",
-        type: "alert",
-        time: isFr ? "Détecté - GTB" : "Detected - BMS"
-      },
-      {
-        title: isFr ? "Mode Vacance automatique" : "Automatic Shutdown Mode",
-        message: isFr
-          ? "Le mode éco de fin de semaine s'activera automatiquement aujourd'hui à 19:00."
-          : "Weekend eco mode will automatically activate today at 7:00 PM.",
-        type: "info",
-        time: isFr ? "Prévu ce soir" : "Planned tonight"
-      },
-      {
-        title: isFr ? "Bilan carbone de la semaine" : "Weekly Carbon Footprint",
-        message: isFr
-          ? "Vos émissions de CO2 de ce mois sont inférieures de 8.5 tonnes à l'an dernier."
-          : "Your CO2 emissions for this month are 8.5 tons lower than last year.",
-        type: "success",
-        time: isFr ? "Hier" : "Yesterday"
-      }
-    ];
+          ? `Puissance appelée anormale relevée par les capteurs (${anomBuilding.consumption}/j, ${anomBuilding.trend || '+28.4%'}). Charge continue hors heures d'exploitation.`
+          : `Abnormal power draw recorded by telemetry (${anomBuilding.consumption}/d, ${anomBuilding.trend || '+28.4%'}). Unscheduled off-hours active load.`,
+        category: 'alarm',
+        priority: 'P1',
+        timestamp: isFr ? 'Il y a 6 min' : '6 min ago',
+        buildingId: anomBuilding.id.toString(),
+        buildingName: anomBuilding.name,
+        metric: `${anomBuilding.consumption}/j · ${anomBuilding.trend || '+28.4%'}`,
+        targetView: 'buildings'
+      });
+    }
 
-    const todayAnnonce = dailyAnnonces[dayOfWeek] || dailyAnnonces[1];
-    list.push({
-      id: "daily-annonce",
-      title: todayAnnonce.title,
-      message: todayAnnonce.message,
-      type: todayAnnonce.type,
-      time: todayAnnonce.time
-    });
-
-    // 2. Automatically Scan Buildings for Anomalies and Inject real time flags
-    let index = 1;
+    // 2. High Density Surface Anomalies (P1/P2)
     memoizedBuildings.forEach(b => {
       const kwh = parseEnergy(b.consumption);
       const surfaceStr = String(b.surface || '').replace(/[^0-9.]/g, '');
       const surface = parseFloat(surfaceStr) || 1000;
       const density = kwh / surface;
 
-      // Rule A: Overconsumption density > 20 kWh/m2
       if (density > 20) {
         list.push({
-          id: `anomaly-density-${b.id}-${index++}`,
-          title: isFr ? `Anomalie d'intensité : ${b.name}` : `Intensity Anomaly: ${b.name}`,
+          id: `anomaly-density-${b.id}`,
+          title: isFr ? `Intensité surfacique élevée : ${b.name}` : `High Surface Power Intensity: ${b.name}`,
           message: isFr 
-            ? `Le site consomme trop d'énergie par m² (${density.toFixed(1)} kWh/m²). Seuil maximal cible : 20.`
-            : `Building has excessive power rate (${density.toFixed(1)} kWh/m²). Target limit: 20.`,
-          type: "alert",
-          time: isFr ? "Supervision continue" : "Continuous Monitoring"
-        });
-      }
-
-      // Rule B: Extremely low occupancy with high consumption
-      const occupancyPrct = parseInt(String(b.occupancy).replace(/[^0-9]/g, '')) || 100;
-      if (occupancyPrct < 50 && kwh > 15000) {
-        list.push({
-          id: `anomaly-occupancy-${b.id}-${index++}`,
-          title: isFr ? `Anomalie d'inoccupation active` : `Unoccupied Active Use Anomaly`,
-          message: isFr
-            ? `${b.name} maintient une forte charge (${kwh.toLocaleString()} kWh) alors qu'il est quasiment inoccupé (${occupancyPrct}%).`
-            : `${b.name} maintains a high load (${kwh.toLocaleString()} kWh) while occupancy is empty (${occupancyPrct}%).`,
-          type: "alert",
-          time: isFr ? "Supervision continue" : "Continuous Monitoring"
+            ? `Le site consomme ${density.toFixed(1)} kWh/m², dépassant le seuil cible d'efficacité tertiaire fixé à 20 kWh/m².`
+            : `Building draws ${density.toFixed(1)} kWh/m², exceeding target tertiary threshold of 20 kWh/m².`,
+          category: 'alarm',
+          priority: density > 24 ? 'P1' : 'P2',
+          timestamp: isFr ? 'Il y a 18 min' : '18 min ago',
+          buildingId: b.id.toString(),
+          buildingName: b.name,
+          metric: `${density.toFixed(1)} kWh/m²`,
+          targetView: 'buildings'
         });
       }
     });
 
-    // 3. Inject GTB and Energy Drift System Anomalies
-    const detected = detectSystemAnomalies(
-      memoizedBuildings, 
-      gtbEquipments, 
-      { heatingSetpoint: gtbHeatingSetpoint, coolingSetpoint: gtbCoolingSetpoint, globalMode: gtbGlobalMode }
-    );
-    detected.forEach((item, idx) => {
-      list.unshift({
-        id: `sys-anomaly-${item.id}-${idx}`,
-        title: `${item.severity === 'critical' ? '🔴' : '🟠'} ${isFr ? item.titleFr : item.titleEn}`,
-        message: isFr ? item.descriptionFr : item.descriptionEn,
-        type: item.severity === 'critical' ? 'alert' : 'info',
-        time: isFr ? 'Temps réel' : 'Real-time'
+    // 3. BMS / GTB Equipment & Regulation Anomalies (GTB & CVC)
+    if (gtbHeatingSetpoint > 21.0) {
+      list.push({
+        id: 'gtb-setpoint-drift',
+        title: isFr ? `Consigne thermique GTB trop élevée (${gtbHeatingSetpoint}°C)` : `High BMS Heating Setpoint (${gtbHeatingSetpoint}°C)`,
+        message: isFr
+          ? `La régulation globale est configurée à ${gtbHeatingSetpoint}°C (recommandation Décret BACS : 19°C à 20°C). Risque de surcoût énergétique estimé à +12%.`
+          : `Global heating setpoint is configured at ${gtbHeatingSetpoint}°C (standard guideline: 19°C - 20°C). Estimated +12% cost penalty.`,
+        category: 'gtb',
+        priority: 'P2',
+        timestamp: isFr ? 'À 09:20' : 'At 9:20 AM',
+        metric: `Consigne ${gtbHeatingSetpoint}°C`,
+        targetView: 'gtb'
+      });
+    }
+
+    // Check faulted GTB equipment
+    const faultedEq = gtbEquipments.filter(e => e.status === 'Alarme' || e.status === 'Surveillance');
+    faultedEq.forEach(eq => {
+      list.push({
+        id: `gtb-eq-${eq.name}-${eq.location}`,
+        title: isFr ? `Alerte Automate GTB : ${eq.name}` : `BMS Controller Alert: ${eq.name}`,
+        message: isFr
+          ? `Défaut de fonctionnement sur l'équipement ${eq.brandModel} (${eq.protocol}) situé sur ${eq.location}. Signal pressostat / vanne modulante.`
+          : `Operating fault on ${eq.brandModel} (${eq.protocol}) at ${eq.location}. Differential sensor or actuator alert.`,
+        category: 'gtb',
+        priority: eq.status === 'Alarme' ? 'P1' : 'P2',
+        timestamp: isFr ? 'Il y a 32 min' : '32 min ago',
+        metric: `${eq.protocol} · ${eq.status}`,
+        targetView: 'gtb'
       });
     });
 
-    // 4. Inject Automated Daily Summary Digest
+    // 4. Interventions & Maintenance Planning
+    list.push({
+      id: 'intervention-preventive-cta',
+      title: isFr ? 'Intervention Planifiée : Contrôle CVC & Filtres CTA' : 'Scheduled Maintenance: AHU Filter & HVAC Audit',
+      message: isFr
+        ? 'Passage préventif du technicien programmé ce jeudi à 10:00. Nettoyage des filtres de centrales et étalonnage des sondes de gaine.'
+        : 'Preventive technician visit scheduled for this Thursday at 10:00 AM. Filter replacement and duct sensor calibration.',
+      category: 'intervention',
+      priority: 'P3',
+      timestamp: isFr ? 'Prévu jeudi' : 'Scheduled Thu',
+      metric: 'Technicien GTB',
+      targetView: 'planning'
+    });
+
+    list.push({
+      id: 'intervention-meters-check',
+      title: isFr ? 'Contrôle télérelève des compteurs d’énergie' : 'Smart Energy Meter Check',
+      message: isFr
+        ? 'Vérification de la passerelle Modbus RTU vers concentrateur IP pour 6 compteurs divisionnaires.'
+        : 'Audit of Modbus RTU gateway to IP data concentrator for 6 branch meters.',
+      category: 'intervention',
+      priority: 'INFO',
+      timestamp: isFr ? 'Hier' : 'Yesterday',
+      targetView: 'planning'
+    });
+
+    // 5. Décret Tertiaire & Daily Consolidated Digests
+    list.push({
+      id: 'decret-tertiaire-milestone',
+      title: isFr ? 'Conformité Décret Tertiaire : 80% (Cible 2030)' : 'Tertiary Decree Milestone: 80% (2030 Target)',
+      message: isFr
+        ? 'Le parc immobilier enregistre une réduction cumulée de -28.6% d’intensité carbone. Déclaration OPERAT prête pour validation.'
+        : 'Portfolio achieves cumulative -28.6% carbon reduction. OPERAT platform filing ready for review.',
+      category: 'compliance',
+      priority: 'INFO',
+      timestamp: isFr ? 'Ce matin' : 'This morning',
+      metric: 'BACS Classe B',
+      targetView: 'reports'
+    });
+
+    const totalParkCons = memoizedBuildings.reduce((acc, b) => acc + parseEnergy(b.consumption), 0);
     const todayFormatted = currentDate.toLocaleDateString(isFr ? 'fr-FR' : 'en-US', {
       weekday: 'long',
       day: 'numeric',
       month: 'long'
     });
-    const totalParkCons = memoizedBuildings.reduce((acc, b) => acc + parseEnergy(b.consumption), 0);
-    const anomBuilding = memoizedBuildings.find(b => isBuildingInAnomaly(b));
 
-    list.unshift({
-      id: "automated-daily-report",
-      title: isFr ? `📅 Bilan Journalier (${todayFormatted})` : `📅 Daily Telemetry Summary (${todayFormatted})`,
-      message: isFr 
-        ? `Consommation consolidée du parc : ${totalParkCons.toLocaleString()} kWh/j. ${anomBuilding ? `Alerte active : ${anomBuilding.name} surconsomme (${anomBuilding.consumption}/j, ${anomBuilding.trend || '+28%'}). Dérive thermique détectée.` : 'Tous les bâtiments fonctionnent en mode nominal optimisé.'}`
-        : `Fleet aggregate consumption: ${totalParkCons.toLocaleString()} kWh/d. ${anomBuilding ? `Active drift: ${anomBuilding.name} at ${anomBuilding.consumption}/d (${anomBuilding.trend || '+28%'}). Highlighted in red.` : 'All buildings operating nominally in optimized mode.'}`,
-      type: anomBuilding ? "daily-alert" : "daily",
-      time: isFr ? "Quotidien • Automatique" : "Daily • Automated",
-      isDaily: true
-    });
-
-    // Télémétrie et synchronisation
     list.push({
-      id: "sync-status-notification",
-      title: isFr ? "Supervision Continue" : "Continuous Monitoring",
-      message: isFr 
-        ? `Télémétrie active sur les ${memoizedBuildings.length} bâtiments du parc immobilier.` 
-        : `Active telemetry across ${memoizedBuildings.length} portfolio buildings.`,
-      type: "info",
-      time: isFr ? "En direct" : "Live"
+      id: 'automated-daily-report',
+      title: isFr ? `Bilan Télémétrique Journalier (${todayFormatted})` : `Daily Telemetry Summary (${todayFormatted})`,
+      message: isFr
+        ? `Consommation consolidée du parc : ${totalParkCons.toLocaleString()} kWh/j. ${anomBuilding ? `Alerte dérive : ${anomBuilding.name} surconsomme (${anomBuilding.consumption}/j).` : 'Fonctionnement nominal régulé sur l’ensemble des 10 bâtiments.'}`
+        : `Fleet aggregate consumption: ${totalParkCons.toLocaleString()} kWh/d. ${anomBuilding ? `Active drift: ${anomBuilding.name} (${anomBuilding.consumption}/d).` : 'Nominal regulated operation across all 10 buildings.'}`,
+      category: 'digest',
+      priority: 'INFO',
+      timestamp: isFr ? 'À 07:00' : 'At 7:00 AM',
+      metric: `${totalParkCons.toLocaleString()} kWh/j`,
+      targetView: 'dashboard'
     });
 
     return list;
-  }, [currentDate, memoizedBuildings, gtbEquipments, gtbHeatingSetpoint, gtbCoolingSetpoint, gtbGlobalMode, settings.language]);
+  }, [currentDate, memoizedBuildings, gtbEquipments, gtbHeatingSetpoint, settings.language]);
 
-  // Notifications filtered by user dismissal ("une fois qu'on regarde tout disparaît")
+  // Notifications filtered by user dismissal
   const visibleNotifications = React.useMemo(() => {
     return notifications.filter(n => !dismissedNotificationIds.includes(n.id));
   }, [notifications, dismissedNotificationIds]);
 
   const unreadAlertsCount = hasViewedNotifications 
     ? 0 
-    : visibleNotifications.filter(n => n.type === 'alert' || n.type === 'daily-alert').length || (hasViewedNotifications ? 0 : visibleNotifications.length);
+    : visibleNotifications.filter(n => n.priority === 'P1' || n.priority === 'P2' || n.category === 'alarm').length;
 
   const dismissSingleNotification = React.useCallback((id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -4678,37 +4625,28 @@ export default function App() {
 
   const triggerTestPushNotification = React.useCallback(() => {
     const isFr = settings.language === 'fr';
-    const anomBuilding = memoizedBuildings.find(b => isBuildingInAnomaly(b));
+    const anomBuilding = memoizedBuildings.find(b => isBuildingInAnomaly(b)) || memoizedBuildings[1] || memoizedBuildings[0];
     
-    if (anomBuilding) {
-      const bName = anomBuilding?.name || 'Bâtiment 1';
-      const bId = anomBuilding?.id?.toString() || 'BAT-01';
-      const bConso = anomBuilding?.consumption || '196 kWh';
-      const bTrend = anomBuilding?.trend || '+0%';
+    const bName = anomBuilding?.name || 'Bâtiment 2';
+    const bId = anomBuilding?.id?.toString() || 'BAT-02';
+    const bConso = anomBuilding?.consumption || '286 kWh';
+    const bTrend = anomBuilding?.trend || '+28.4%';
 
-      const event = new CustomEvent('app-notification', {
-        detail: {
-          title: isFr ? `🚨 Alerte Dérive ${bName}` : `🚨 Drift Alert ${bName}`,
-          message: isFr 
-            ? `Consommation anormale relevée par la télémétrie : ${bConso}/j (${bTrend}). Bâtiment signalé en rouge.` 
-            : `Abnormal consumption reported via telemetry: ${bConso}/d (${bTrend}). Building flagged in red.`,
-          type: 'alert',
-          buildingId: bId
-        }
-      });
-      window.dispatchEvent(event);
-    } else {
-      const event = new CustomEvent('app-notification', {
-        detail: {
-          title: isFr ? '✅ Télémétrie Nominale' : '✅ Nominal Telemetry',
-          message: isFr 
-            ? 'Tous les bâtiments fonctionnent dans leurs seuils nominaux de télémétrie (0 anomalie).' 
-            : 'All buildings are operating within nominal telemetry thresholds (0 anomalies).',
-          type: 'info'
-        }
-      });
-      window.dispatchEvent(event);
-    }
+    const event = new CustomEvent('app-notification', {
+      detail: {
+        title: isFr ? `Dérive de Puissance : ${bName}` : `Power Drift: ${bName}`,
+        message: isFr 
+          ? `Consommation anormale relevée par la télémétrie : ${bConso}/j (${bTrend}). Dépassement de la baseline nominale continue.` 
+          : `Abnormal power draw detected via telemetry: ${bConso}/d (${bTrend}). Continuous baseline exceedance.`,
+        type: 'alert',
+        priority: 'P1',
+        buildingId: bId,
+        buildingName: bName,
+        metric: `${bConso}/j · ${bTrend}`,
+        targetView: 'buildings'
+      }
+    });
+    window.dispatchEvent(event);
   }, [settings.language, memoizedBuildings]);
 
   const onProfileChange = (field: string, value: string) => {
@@ -5156,7 +5094,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-dvh bg-slate-900 font-sans text-slate-900 overflow-hidden relative">
+    <div className="flex h-dvh bg-slate-950/20 font-sans text-slate-900 overflow-hidden relative">
       {/* Full site eco-district architectural background layer with dynamic time-of-day cycle */}
       <GlobalDistrictBackground skyTheme="auto" />
       {/* Modals for Add/Edit */}
@@ -5599,105 +5537,100 @@ export default function App() {
         </button>
       </nav>
 
-      {/* Realistic Smartphone Push Notification Banner (Top Lockscreen / Dynamic Island Style) */}
+      {/* Floating In-App Top Notification Banner (iOS/macOS style) */}
       <AnimatePresence>
         {activePushBanner && (
           <motion.div
-            initial={{ y: -90, opacity: 0, scale: 0.95 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: -90, opacity: 0, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 450, damping: 30 }}
+            initial={{ opacity: 0, y: -50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -40, scale: 0.95 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
             drag="y"
-            dragConstraints={{ top: -120, bottom: 0 }}
-            dragElastic={0.2}
+            dragConstraints={{ top: 0, bottom: 0 }}
             onDragEnd={(_, info) => {
-              if (info.offset.y < -25 || info.velocity.y < -300) {
+              if (info.offset.y < -20) {
                 setActivePushBanner(null);
               }
             }}
             onClick={() => {
               if (activePushBanner.buildingId) {
                 setSelectedBuilding(activePushBanner.buildingId);
-                setActiveView('buildings');
-              } else {
-                setIsNotificationsOpen(true);
-                setHasViewedNotifications(true);
+              }
+              if (activePushBanner.targetView) {
+                setActiveView(activePushBanner.targetView);
               }
               setActivePushBanner(null);
             }}
-            className="fixed top-3 sm:top-5 left-1/2 -translate-x-1/2 z-[150] w-[94%] max-w-[430px] cursor-pointer select-none group"
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[150] w-[92vw] max-w-md select-none cursor-pointer"
           >
-            <div className="relative overflow-hidden bg-slate-950/94 backdrop-blur-2xl border border-white/20 text-white rounded-3xl p-4 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.65)] flex flex-col gap-2 ring-1 ring-white/10 active:scale-[0.98] transition-transform">
-              {/* Header inside phone banner */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-xl bg-emerald-500/90 flex items-center justify-center text-slate-950 font-black shadow-2xs">
-                    <Zap className="w-3.5 h-3.5 fill-current" />
-                  </div>
-                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-200">
-                    ÉCOGRID
-                  </span>
-                  <span className="text-slate-500 text-xs">•</span>
-                  <span className="text-[10px] font-semibold text-slate-400">
-                    {activePushBanner.timestamp}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActivePushBanner(null);
-                    }}
-                    className="p-1 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors cursor-pointer"
-                    title={settings.language === 'fr' ? 'Fermer' : 'Dismiss'}
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+            <div className={cn(
+              "p-4 rounded-2xl shadow-2xl border backdrop-blur-xl flex items-start gap-3 transition-all",
+              activePushBanner.type === 'alert'
+                ? "bg-slate-900/95 text-white border-rose-500/50 shadow-rose-950/40"
+                : "bg-slate-900/95 text-white border-emerald-500/50 shadow-emerald-950/40"
+            )}>
+              <div className={cn(
+                "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-md",
+                activePushBanner.type === 'alert' ? "bg-rose-600 text-white animate-pulse" : "bg-[#236b33] text-white"
+              )}>
+                {activePushBanner.type === 'alert' ? <AlertTriangle className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
               </div>
-
-              {/* Title & Message */}
-              <div className="pr-1">
-                <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 leading-snug">
-                  {activePushBanner.type === 'alert' || activePushBanner.type === 'daily-alert' ? (
-                    <span className="relative flex h-2.5 w-2.5 shrink-0">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+              <div className="flex-1 min-w-0 pr-1">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 font-mono">
+                      CII ENERGIE
                     </span>
-                  ) : (
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
-                  )}
-                  <span>{activePushBanner.title}</span>
+                    <span className="text-[10px] text-slate-400">•</span>
+                    <span className={cn(
+                      "text-[10px] font-bold uppercase tracking-wider truncate",
+                      activePushBanner.type === 'alert' ? "text-rose-400" : "text-emerald-400"
+                    )}>
+                      {activePushBanner.priority || 'INFO'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium shrink-0">
+                    {activePushBanner.timestamp || (settings.language === 'fr' ? 'À l’instant' : 'Just now')}
+                  </span>
+                </div>
+                <h4 className="text-xs font-bold text-white mt-0.5 truncate">
+                  {activePushBanner.title}
                 </h4>
-                <p className="text-[11px] text-slate-300 mt-1 line-clamp-2 leading-relaxed font-medium">
+                <p className="text-[11px] text-slate-300 mt-0.5 line-clamp-2 leading-relaxed">
                   {activePushBanner.message}
                 </p>
+                {activePushBanner.metric && (
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-white/10 text-white">
+                      {activePushBanner.metric}
+                    </span>
+                    <span className="text-[10px] text-emerald-400 flex items-center gap-0.5 font-semibold">
+                      <span>{settings.language === 'fr' ? 'Ouvrir' : 'Open'}</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </span>
+                  </div>
+                )}
               </div>
-
-              {/* Action hint & bottom swipe handle */}
-              <div className="flex items-center justify-between pt-1 border-t border-white/10 text-[10px] text-slate-400 font-medium">
-                <span className="text-emerald-400 font-bold flex items-center gap-1">
-                  <span>👉</span>
-                  <span>{settings.language === 'fr' ? 'Toucher pour ouvrir' : 'Tap to open'}</span>
-                </span>
-                <span className="text-slate-500 text-[9px]">
-                  {settings.language === 'fr' ? 'Glisser vers le haut pour effacer' : 'Swipe up to dismiss'}
-                </span>
-              </div>
-              <div className="flex justify-center -mb-1">
-                <div className="w-10 h-1 rounded-full bg-white/30" />
-              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActivePushBanner(null);
+                }}
+                className="p-1 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Notifications Drawer */}
+      {/* Notifications Drawer (Slide-over Right) */}
       <AnimatePresence>
         {isNotificationsOpen && (
           <>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -5705,206 +5638,216 @@ export default function App() {
                 setIsNotificationsOpen(false);
                 setHasViewedNotifications(true);
               }}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[60]"
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[70] cursor-pointer"
             />
-            <motion.div 
+            <motion.aside
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 right-0 w-full sm:w-96 bg-white z-[70] shadow-2xl flex flex-col"
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="fixed inset-y-0 right-0 w-full sm:w-[460px] bg-white z-[80] shadow-2xl flex flex-col border-l border-slate-200"
+              role="dialog"
+              aria-label={settings.language === 'fr' ? 'Centre de notifications' : 'Notifications center'}
             >
-              <div className="p-5 border-b border-slate-100 flex items-center justify-end bg-slate-50/50">
+              {/* Header */}
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-900 text-white shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                    <Bell className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-base text-white font-display">
+                        {settings.language === 'fr' ? 'Centre de Notifications' : 'Notification Center'}
+                      </h3>
+                      {visibleNotifications.length > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white">
+                          {visibleNotifications.length}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      {settings.language === 'fr' ? 'Supervision télémétrique & alertes GTB' : 'Telemetry monitoring & BMS alerts'}
+                    </p>
+                  </div>
+                </div>
                 <div className="flex items-center gap-1.5">
                   {visibleNotifications.length > 0 && (
                     <button
                       type="button"
                       onClick={clearAllNotifications}
-                      className="px-2 py-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                      title={settings.language === 'fr' ? 'Tout effacer comme sur un téléphone' : 'Clear all like on a phone'}
+                      className="px-2.5 py-1 text-slate-300 hover:text-rose-400 hover:bg-slate-800 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
+                      title={settings.language === 'fr' ? 'Tout effacer' : 'Clear all'}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>{settings.language === 'fr' ? 'Effacer tout' : 'Clear all'}</span>
+                      <span>{settings.language === 'fr' ? 'Tout effacer' : 'Clear all'}</span>
                     </button>
                   )}
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => {
                       setIsNotificationsOpen(false);
                       setHasViewedNotifications(true);
                     }}
-                    className="p-2 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
                   >
-                    <X className="w-5 h-5 text-slate-500" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
 
-              {/* Automated Daily Dispatch Status Banner */}
-              <div className="mx-4 mt-3.5 p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200 shadow-2xs">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
-                    </span>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-950">
-                      {settings.language === 'fr' ? 'Notifications journalières automatiques' : 'Automated daily notifications'}
-                    </span>
-                  </div>
-                  <span className="text-[9px] font-extrabold text-emerald-800 bg-emerald-200/80 px-2 py-0.5 rounded-full">
-                    {settings.language === 'fr' ? 'Actif 24/7' : 'Active 24/7'}
-                  </span>
-                </div>
-                <p className="text-[11px] text-emerald-800 font-medium leading-relaxed">
-                  {settings.language === 'fr'
-                    ? 'Chaque jour, un récapitulatif automatisé compile la consommation globale et alerte instantanément de toute dérive ou anomalie.'
-                    : 'Each day, an automated digest compiles aggregate power use and immediately alerts of any detected drift.'}
-                </p>
-                <div className="mt-2.5">
+              {/* Status Banner */}
+              <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs text-slate-600 shrink-0">
+                <span className="flex items-center gap-2 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>{settings.language === 'fr' ? '10 sites sous surveillance continue' : '10 sites monitored continuously'}</span>
+                </span>
+                <div className="flex items-center gap-2 text-[11px] text-slate-400">
                   <button
                     type="button"
-                    onClick={() => dispatchDailyNotification(true)}
-                    className="w-full py-1.5 px-3 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                    onClick={toggleSound}
+                    className="flex items-center gap-1 hover:text-slate-700 transition cursor-pointer"
+                    title={soundEnabled ? 'Désactiver les signaux audio' : 'Activer les signaux audio'}
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>{settings.language === 'fr' ? 'Déclencher le bilan du jour maintenant' : 'Trigger daily report now'}</span>
+                    {soundEnabled ? <Volume2 className="w-3.5 h-3.5 text-emerald-600" /> : <VolumeX className="w-3.5 h-3.5 text-slate-400" />}
+                    <span>{soundEnabled ? 'Son ON' : 'Son OFF'}</span>
                   </button>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {/* Notifications List */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
                 {visibleNotifications.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center mb-3 text-emerald-600 shadow-2xs">
-                      <CheckCircle2 className="w-7 h-7" />
+                  <div className="h-full flex flex-col items-center justify-center py-16 px-6 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center mb-3 text-[#236b33]">
+                      <CheckCircle2 className="w-6 h-6" />
                     </div>
-                    <h4 className="font-bold text-slate-800 text-sm mb-1">
+                    <h4 className="font-bold text-slate-800 text-sm mb-1 font-display">
                       {settings.language === 'fr' ? 'Toutes les alertes sont acquittées' : 'All alerts acknowledged'}
                     </h4>
                     <p className="text-xs text-slate-500 max-w-xs leading-relaxed font-medium">
-                      {settings.language === 'fr' 
-                        ? 'Le parc fonctionne en paramètres nominaux. Les notifications consultées sont automatiquement archivées.' 
-                        : 'Portfolio operating within nominal parameters. Viewed notifications are automatically archived.'}
+                      {settings.language === 'fr'
+                        ? 'Le parc immobilier fonctionne selon les consignes nominales. Aucun dépassement de puissance en cours.'
+                        : 'Real estate portfolio operating within nominal parameters. No ongoing power drift.'}
                     </p>
                     <button
                       type="button"
-                      onClick={() => {
-                        setDismissedNotificationIds([]);
-                        if (typeof window !== 'undefined') {
-                          localStorage.removeItem('cii_energie_dismissed_notifications');
-                        }
-                        triggerTestPushNotification();
-                      }}
-                      className="mt-5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-2xs cursor-pointer"
+                      onClick={triggerTestPushNotification}
+                      className="mt-4 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition flex items-center gap-2 cursor-pointer shadow-2xs"
                     >
-                      <Bell className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>{settings.language === 'fr' ? 'Tester une notification push' : 'Simulate push alert'}</span>
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{settings.language === 'fr' ? 'Tester une alerte en direct' : 'Simulate live alert'}</span>
                     </button>
                   </div>
                 ) : (
                   visibleNotifications.map((n) => {
-                    const isAnomAlert = n.type === 'alert' || n.type === 'daily-alert';
-                    const isDaily = n.isDaily;
+                    const isAlert = n.priority === 'P1' || n.category === 'alarm';
                     return (
-                      <div 
-                        key={n.id} 
+                      <div
+                        key={n.id}
                         onClick={() => {
-                          // Dismiss upon looking/inspecting
                           dismissSingleNotification(n.id);
-                          if (n.buildingId) {
-                            setSelectedBuilding(n.buildingId);
-                            setActiveView('buildings');
-                            setIsNotificationsOpen(false);
-                          } else if (isAnomAlert) {
-                            const anomB = memoizedBuildings.find(b => isBuildingInAnomaly(b));
-                            if (anomB) setSelectedBuilding(anomB.id.toString());
-                            setActiveView('buildings');
-                            setIsNotificationsOpen(false);
-                          }
+                          const target = n.targetView || (n.buildingId ? 'buildings' : 'dashboard');
+                          if (n.buildingId) setSelectedBuilding(n.buildingId);
+                          setActiveView(target as ViewType);
+                          setIsNotificationsOpen(false);
+                          setHasViewedNotifications(true);
                         }}
                         className={cn(
-                          "p-4 rounded-2xl border transition-all cursor-pointer group relative",
-                          isDaily 
-                            ? (isAnomAlert ? "bg-rose-50/80 border-rose-300 hover:border-rose-500 shadow-2xs" : "bg-emerald-50/70 border-emerald-200 hover:border-emerald-400")
-                            : isAnomAlert 
-                              ? "bg-rose-50/60 border-rose-200 hover:border-rose-400 hover:shadow-xs" 
-                              : "bg-slate-50 border-slate-100 hover:border-emerald-200"
+                          "p-3.5 rounded-xl border bg-white transition-all cursor-pointer group shadow-2xs relative hover:shadow-xs",
+                          isAlert
+                            ? "border-rose-200 hover:border-rose-400 bg-rose-50/20"
+                            : "border-slate-200/80 hover:border-emerald-300"
                         )}
                       >
-                        <div className="flex justify-between items-start mb-2">
-                           <span className={cn(
-                             "text-[9px] font-black uppercase tracking-[0.15em] px-2 py-0.5 rounded flex items-center gap-1",
-                             isDaily && isAnomAlert ? "bg-rose-700 text-white shadow-2xs" :
-                             n.type === 'alert' ? "bg-rose-600 text-white shadow-2xs" : 
-                             n.type === 'success' ? "bg-emerald-100 text-emerald-700" : 
-                             isDaily ? "bg-emerald-700 text-white" : "bg-blue-100 text-blue-700"
-                           )}>
-                             {isAnomAlert && <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />}
-                             {isDaily ? (settings.language === 'fr' ? 'JOURNALIER AUTOMATISÉ' : 'DAILY AUTOMATED') : n.type}
-                           </span>
-                           <div className="flex items-center gap-1.5">
-                             <span className="text-[9px] font-bold text-slate-400">{n.time}</span>
-                             <button
-                               type="button"
-                               onClick={(e) => dismissSingleNotification(n.id, e)}
-                               className="p-0.5 text-slate-300 hover:text-slate-700 hover:bg-slate-200/80 rounded-md transition-colors cursor-pointer"
-                               title={settings.language === 'fr' ? 'Acquitter et effacer' : 'Acknowledge & dismiss'}
-                             >
-                               <X className="w-3.5 h-3.5" />
-                             </button>
-                           </div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span
+                              className={cn(
+                                "w-2 h-2 rounded-full shrink-0",
+                                isAlert ? "bg-rose-500 animate-pulse" : "bg-emerald-500"
+                              )}
+                            />
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold uppercase tracking-wider",
+                                isAlert ? "text-rose-700" : "text-[#236b33]"
+                              )}
+                            >
+                              {n.priority === 'P1'
+                                ? (settings.language === 'fr' ? 'Alerte Dérive' : 'Drift Alert')
+                                : n.category === 'gtb'
+                                ? 'Supervision GTB'
+                                : n.category === 'intervention'
+                                ? (settings.language === 'fr' ? 'Intervention' : 'Intervention')
+                                : (settings.language === 'fr' ? 'Bilan Télémétrique' : 'Telemetry Digest')}
+                            </span>
+                            {n.buildingName && (
+                              <span className="text-[11px] font-bold text-slate-700">
+                                · {n.buildingName}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-slate-400 font-medium">{n.timestamp}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => dismissSingleNotification(n.id, e)}
+                              className="p-1 text-slate-300 hover:text-slate-600 rounded transition cursor-pointer"
+                              title={settings.language === 'fr' ? 'Acquitter' : 'Dismiss'}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
-                        <h4 className={cn(
-                          "font-bold text-sm mb-1 transition-colors",
-                          isAnomAlert ? "text-rose-950 group-hover:text-rose-700 font-extrabold" : "text-slate-800 group-hover:text-emerald-700"
-                        )}>
+
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-emerald-800 transition-colors leading-snug">
                           {n.title}
                         </h4>
-                        <p className="text-xs text-slate-500 leading-relaxed font-medium">{n.message}</p>
-                        {isAnomAlert && (
-                          <p className="text-[10px] font-bold text-rose-600 mt-2 flex items-center gap-1">
-                            <span>👉</span>
-                            <span>{settings.language === 'fr' ? 'Cliquer pour inspecter le bâtiment' : 'Click to inspect building'}</span>
-                          </p>
-                        )}
+                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                          {n.message}
+                        </p>
+
+                        <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-[#236b33] flex items-center gap-1 group-hover:underline">
+                            <span>{settings.language === 'fr' ? 'Inspecter le site' : 'Inspect site'}</span>
+                            <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                          </span>
+                          {n.metric && (
+                            <span className="font-mono text-[10px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                              {n.metric}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   })
                 )}
               </div>
 
-              <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-2">
+              {/* Footer */}
+              <div className="p-3.5 bg-white border-t border-slate-100 flex items-center gap-2 shrink-0">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (typeof window !== 'undefined' && 'Notification' in window) {
-                      Notification.requestPermission().then(p => {
-                        if (p === 'granted') {
-                          new Notification(
-                            settings.language === 'fr' ? '🚨 CII ENERGIE : Alerte Bâtiment 2' : '🚨 CII ENERGIE: Building 2 Alert',
-                            { body: settings.language === 'fr' ? 'Surconsommation anormale de 286 kWh/j détectée (+28.4%). Bâtiment marqué en rouge.' : 'Abnormal consumption of 286 kWh/d detected (+28.4%). Building highlighted in red.' }
-                          );
-                        }
-                      });
-                    }
-                    triggerTestPushNotification();
-                  }}
-                  className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                  onClick={triggerTestPushNotification}
+                  className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <Bell className="w-4 h-4 text-white" />
-                  <span>{settings.language === 'fr' ? 'Tester une alerte smartphone (avec sonnerie)' : 'Test phone alert (with chime)'}</span>
+                  <Sparkles className="w-3.5 h-3.5 text-[#236b33]" />
+                  <span>{settings.language === 'fr' ? 'Tester une alerte en direct' : 'Test live alert'}</span>
                 </button>
-                <button 
+                <button
+                  type="button"
                   onClick={() => {
                     setIsNotificationsOpen(false);
                     setHasViewedNotifications(true);
                   }}
-                  className="w-full py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                  className="py-2 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition cursor-pointer"
                 >
-                  {settings.language === 'fr' ? 'Fermer le centre' : 'Close center'}
+                  {settings.language === 'fr' ? 'Fermer' : 'Close'}
                 </button>
               </div>
-            </motion.div>
+            </motion.aside>
           </>
         )}
       </AnimatePresence>

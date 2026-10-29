@@ -266,68 +266,137 @@ export const DecretTertiaireModule: React.FC<DecretTertiaireModuleProps> = ({
 
       {/* Courbe Trajectoire & Correction DJU */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Graphique */}
-        <div className="lg:col-span-7 bg-white rounded-2xl p-5 md:p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        {/* Graphique Trajectoire Décret Tertiaire */}
+        <div className="lg:col-span-7 bg-white rounded-2xl p-4 sm:p-5 md:p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-3">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 font-display">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 font-display">
                   {isFr ? 'Trajectoire de Consommation Annuelle' : 'Annual Consumption Trajectory'}
                 </h3>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  {isFr ? 'MWh/an : Réel supervisé vs Objectifs réglementaires' : 'MWh/yr: Supervised actuals vs statutory targets'}
+                  {isFr ? 'MWh/an : Réel supervisé vs Objectifs réglementaires Décret Tertiaire' : 'MWh/yr: Supervised actuals vs statutory targets'}
                 </p>
               </div>
 
-              <div className="flex items-center gap-3 text-xs font-medium text-slate-600">
+              <div className="flex items-center gap-3 text-xs font-semibold text-slate-600 self-start sm:self-auto">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-1 rounded" style={{ backgroundColor: theme.primary }} />
-                  <span>{isFr ? 'Réel' : 'Actual'}</span>
+                  <span className="w-3.5 h-1.5 rounded-full" style={{ backgroundColor: theme.primary }} />
+                  <span>{isFr ? 'Réel supervisé' : 'Actual'}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-1 bg-amber-500 rounded" />
+                  <span className="w-3.5 h-1.5 bg-amber-500 rounded-full" />
                   <span>{isFr ? 'Cible légale' : 'Target'}</span>
                 </div>
               </div>
             </div>
 
-            <div className="h-60 w-full">
+            {/* Synthèse Chiffrée Claire pour Mobile et Tablette */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  {isFr ? `Réf. ${baselineYear}` : `Ref. ${baselineYear}`}
+                </span>
+                <span className="text-xs sm:text-sm md:text-base font-extrabold text-slate-900 font-display">
+                  {baselineConsumptionMwh.toLocaleString()} MWh
+                </span>
+              </div>
+              <div className="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200/80">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
+                    {isFr ? 'Actuel (Réel)' : 'Current (Actual)'}
+                  </span>
+                  <span className="text-[9px] font-black px-1 rounded bg-emerald-600 text-white">
+                    -{currentReductionPct}%
+                  </span>
+                </div>
+                <span className="text-xs sm:text-sm md:text-base font-extrabold text-[#236b33] font-display">
+                  {currentAnnualConsumptionMwh.toLocaleString()} MWh
+                </span>
+              </div>
+              <div className="bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/80">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
+                    {isFr ? 'Cible 2030' : '2030 Target'}
+                  </span>
+                  <span className="text-[9px] font-bold text-amber-700">-40%</span>
+                </div>
+                <span className="text-xs sm:text-sm md:text-base font-extrabold text-amber-900 font-display">
+                  {target2030Mwh.toLocaleString()} MWh
+                </span>
+              </div>
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    {isFr ? 'Cible 2050' : '2050 Target'}
+                  </span>
+                  <span className="text-[9px] font-bold text-slate-500">-60%</span>
+                </div>
+                <span className="text-xs sm:text-sm md:text-base font-extrabold text-slate-700 font-display">
+                  {target2050Mwh.toLocaleString()} MWh
+                </span>
+              </div>
+            </div>
+
+            <div className="h-64 sm:h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trajectoryData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={trajectoryData} margin={{ top: 15, right: 15, left: 15, bottom: 5 }}>
                   <defs>
                     <linearGradient id="reelGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={theme.primary} stopOpacity={0.2} />
+                      <stop offset="5%" stopColor={theme.primary} stopOpacity={0.25} />
                       <stop offset="95%" stopColor={theme.primary} stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="cibleGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.15} />
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.18} />
                       <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="year" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} unit=" MWh" />
+                  <XAxis dataKey="year" stroke="#475569" fontSize={11} fontWeight={600} tickLine={false} />
+                  <YAxis 
+                    stroke="#475569" 
+                    fontSize={11} 
+                    fontWeight={600} 
+                    tickLine={false} 
+                    width={56} 
+                    tickFormatter={(val) => `${val}`}
+                  />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                    contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
                     formatter={(val: any, name: any) => [
-                      val ? `${Number(val).toLocaleString()} MWh` : '--',
-                      name === 'reel' ? (isFr ? 'Consommation Réelle' : 'Actual') : (isFr ? 'Trajectoire Réglementaire' : 'Target')
+                      val ? `${Number(val).toLocaleString()} MWh/an` : '--',
+                      name === 'reel' ? (isFr ? 'Consommation Réelle Supervisée' : 'Actual Supervised') : (isFr ? 'Trajectoire Réglementaire Décret' : 'Statutory Target')
                     ]}
                   />
-                  <Area type="monotone" dataKey="cible" stroke="#f59e0b" strokeWidth={2} fill="url(#cibleGrad)" strokeDasharray="4 4" />
-                  <Area type="monotone" dataKey="reel" stroke={theme.primary} strokeWidth={2.5} fill="url(#reelGrad)" />
+                  <Area 
+                    type="monotone" 
+                    dataKey="cible" 
+                    stroke="#f59e0b" 
+                    strokeWidth={2} 
+                    fill="url(#cibleGrad)" 
+                    strokeDasharray="4 4" 
+                    dot={{ r: 3.5, fill: '#f59e0b', strokeWidth: 1.5, stroke: '#ffffff' }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="reel" 
+                    stroke={theme.primary} 
+                    strokeWidth={2.5} 
+                    fill="url(#reelGrad)" 
+                    dot={{ r: 4.5, fill: theme.primary, strokeWidth: 2, stroke: '#ffffff' }}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+          <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
             <span className="text-slate-500 font-medium">
-              {isFr ? 'Statut de trajectoire :' : 'Trajectory status:'}
+              {isFr ? 'Statut de conformité Décret :' : 'Compliance status:'}
             </span>
             <span className="font-semibold text-emerald-800 flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              {isFr ? 'En avance de 3 ans sur la cible 2030' : '3 years ahead of 2030 milestone'}
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{isFr ? 'Objectif 2030 en avance (-28.6% atteint sur -40% requis)' : '2030 target ahead (-28.6% reached of -40% required)'}</span>
             </span>
           </div>
         </div>
