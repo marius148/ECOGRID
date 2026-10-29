@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard Énergie - Synchronisation Google Sheets</title>
+  <title>Dashboard Énergie - Synchronisation En Direct</title>
 
   <!-- Tailwind CSS & Google Fonts -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -37,7 +37,7 @@
               Tableau de Bord Énergétique
             </h1>
             <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Connecté en temps réel à Google Sheets • Écoquartier Smart Microgrid
+              Connecté en temps réel à la télémétrie • Écoquartier Smart Microgrid
             </p>
           </div>
         </div>
@@ -100,7 +100,7 @@
           <span id="kpi-count" class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">0</span>
           <span class="text-sm font-semibold text-slate-500">sites</span>
         </div>
-        <p class="text-xs text-slate-400 mt-1">Lignes actives dans le Google Sheet</p>
+        <p class="text-xs text-slate-400 mt-1">Bâtiments du parc immobilier</p>
       </div>
 
       <!-- KPI 3 : Prochain rafraîchissement -->
@@ -123,10 +123,10 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
         <div>
           <h2 class="text-base font-bold text-slate-800">Consommation par Type de Bâtiment (kWh/j)</h2>
-          <p class="text-xs text-slate-400">Graphique interactif mis à jour dès modification de la feuille</p>
+          <p class="text-xs text-slate-400">Graphique interactif mis à jour dès actualisation</p>
         </div>
         <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-          Source : Google Sheets Public CSV
+          Source : Télémétrie Distante CSV
         </span>
       </div>
       <div class="relative h-64 sm:h-80 w-full">
@@ -160,7 +160,7 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  <span>Téléchargement des données Google Sheets...</span>
+                  <span>Téléchargement des données de télémétrie...</span>
                 </div>
               </td>
             </tr>
@@ -180,8 +180,8 @@
   </div>
 
   <script>
-    // URL publique d'export CSV de votre Google Sheets
-    const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzA9anmbi31SQYS9-Qzo1oFGEagoJ6GcDljSYd7kJe8OCLzyujYZnTmpYlM92ljA/pub?output=csv";
+    // URL publique d'export CSV
+    const DATA_FEED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSzA9anmbi31SQYS9-Qzo1oFGEagoJ6GcDljSYd7kJe8OCLzyujYZnTmpYlM92ljA/pub?output=csv";
 
     // Variables globales
     let chartInstance = null;
@@ -189,7 +189,7 @@
     let countdownInterval = null;
 
     /**
-     * Nettoie les valeurs numériques venant d'Excel/Google Sheets :
+     * Nettoie les valeurs numériques venant du CSV :
      * - Remplace la virgule décimale par un point
      * - Supprime les espaces standards et insécables (\u00A0, \u202F)
      */
@@ -205,7 +205,7 @@
     }
 
     /**
-     * Récupère le CSV depuis Google Sheets et traite les données
+     * Récupère le CSV depuis le flux distant et traite les données
      */
     async function fetchSheetData() {
       const statusBadge = document.getElementById("status-badge");
@@ -219,8 +219,8 @@
       statusText.innerText = "Synchronisation...";
 
       try {
-        // Paramètre anti-cache (_t) pour forcer la dernière version publiée par Google
-        const cacheBustingUrl = `${GOOGLE_SHEET_CSV_URL}&_t=${Date.now()}`;
+        // Paramètre anti-cache (_t) pour forcer la dernière version publiée
+        const cacheBustingUrl = `${DATA_FEED_CSV_URL}&_t=${Date.now()}`;
         const response = await fetch(cacheBustingUrl);
 
         if (!response.ok) {
@@ -251,9 +251,9 @@
         });
 
       } catch (err) {
-        console.error("Erreur de synchronisation Google Sheets :", err);
+        console.error("Erreur de synchronisation :", err);
         errorBox.classList.remove("hidden");
-        document.getElementById("error-message").innerText = `Impossible d'accéder au Google Sheet : ${err.message}`;
+        document.getElementById("error-message").innerText = `Impossible d'accéder au flux distant : ${err.message}`;
 
         statusBadge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200";
         statusDot.className = "w-2 h-2 rounded-full bg-rose-500";

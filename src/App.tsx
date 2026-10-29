@@ -2098,7 +2098,7 @@ const DashboardView = ({
             <div className="flex items-center justify-between w-full text-[10px] text-slate-600">
               <span className="text-slate-500 font-medium flex items-center gap-1">
                 <span>⚡</span>
-                <span>{language === 'fr' ? 'Conso journalière (Google Sheet) :' : 'Daily Conso (Google Sheet):'}</span>
+                <span>{language === 'fr' ? 'Conso journalière (Télémétrie) :' : 'Daily Conso (Telemetry):'}</span>
               </span>
               <span className="font-bold text-[#236b33] font-mono bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60 shadow-2xs">
                 {consumption}
@@ -2121,7 +2121,7 @@ const DashboardView = ({
           extraInfo={
             <div className="flex items-center justify-between w-full text-[10px]">
               <span className={cn("font-medium", hasActiveAnomalies ? "text-rose-600 font-bold" : "text-slate-500")}>
-                {hasActiveAnomalies ? (language === 'fr' ? 'Diagnostic requis' : 'Action needed') : (language === 'fr' ? 'Google Sheet conforme' : 'Google Sheet compliant')}
+                {hasActiveAnomalies ? (language === 'fr' ? 'Diagnostic requis' : 'Action needed') : (language === 'fr' ? 'Télémétrie conforme' : 'Telemetry compliant')}
               </span>
               <span className={cn(
                 "font-bold px-2 py-0.5 rounded-md text-[10px] flex items-center gap-1 transition-all",
@@ -4690,8 +4690,8 @@ export default function App() {
         detail: {
           title: isFr ? `🚨 Alerte Dérive ${bName}` : `🚨 Drift Alert ${bName}`,
           message: isFr 
-            ? `Consommation anormale relevée dans le Google Sheet : ${bConso}/j (${bTrend}). Bâtiment signalé en rouge.` 
-            : `Abnormal consumption reported in Google Sheet: ${bConso}/d (${bTrend}). Building flagged in red.`,
+            ? `Consommation anormale relevée par la télémétrie : ${bConso}/j (${bTrend}). Bâtiment signalé en rouge.` 
+            : `Abnormal consumption reported via telemetry: ${bConso}/d (${bTrend}). Building flagged in red.`,
           type: 'alert',
           buildingId: bId
         }
@@ -4702,8 +4702,8 @@ export default function App() {
         detail: {
           title: isFr ? '✅ Télémétrie Nominale' : '✅ Nominal Telemetry',
           message: isFr 
-            ? 'Tous les bâtiments fonctionnent dans leurs seuils nominaux issus du Google Sheet (0 anomalie).' 
-            : 'All buildings are operating within nominal thresholds from Google Sheet (0 anomalies).',
+            ? 'Tous les bâtiments fonctionnent dans leurs seuils nominaux de télémétrie (0 anomalie).' 
+            : 'All buildings are operating within nominal telemetry thresholds (0 anomalies).',
           type: 'info'
         }
       });
@@ -5420,7 +5420,7 @@ export default function App() {
                   onClick={forceSyncGoogleSheets}
                   disabled={isSyncingSheet}
                   className="p-0.5 text-slate-400 hover:text-emerald-700 rounded transition cursor-pointer"
-                  title={settings.language === 'fr' ? 'Actualiser les données Google Sheets' : 'Sync Google Sheets'}
+                  title={settings.language === 'fr' ? 'Actualiser les données en direct' : 'Sync live data'}
                 >
                   <RefreshCw className={cn("w-3 h-3", isSyncingSheet && "animate-spin text-emerald-600")} />
                 </button>

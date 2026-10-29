@@ -711,13 +711,13 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
         if (!silent) {
           if (result.events.length === 0) {
             showToast(isFr 
-              ? 'Synchronisation terminée : aucune intervention dans Google Sheets (planning actualisé).'
-              : 'Sync complete: no interventions in Google Sheets (schedule updated).'
+              ? 'Synchronisation terminée : aucune intervention dans le flux distant (planning actualisé).'
+              : 'Sync complete: no interventions in remote stream (schedule updated).'
             );
           } else {
             showToast(isFr 
-              ? `✓ ${result.events.length} intervention(s) synchronisée(s) depuis Google Sheets !` 
-              : `✓ ${result.events.length} intervention(s) synced from Google Sheets!`
+              ? `✓ ${result.events.length} intervention(s) synchronisée(s) depuis le flux distant !` 
+              : `✓ ${result.events.length} intervention(s) synced from data stream!`
             );
           }
         }
@@ -728,10 +728,10 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
         }
       }
     } catch (err: any) {
-      console.warn('Erreur synchro Google Sheets:', err);
+      console.warn('Erreur synchro flux distant:', err);
       setSheetSyncStatus({ count: 0, error: err.message || 'Erreur de connexion' });
       if (!silent) {
-        showToast(isFr ? `Erreur synchro Google Sheets: ${err.message}` : `Google Sheets sync error: ${err.message}`);
+        showToast(isFr ? `Erreur synchro flux distant: ${err.message}` : `Data stream sync error: ${err.message}`);
       }
     } finally {
       setIsSyncingSheet(false);
@@ -1322,7 +1322,7 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
                   {isFr ? 'Aucune intervention programmée' : 'No upcoming intervention'}
                 </p>
                 <p className="text-[10px] text-slate-400 leading-tight">
-                  {isFr ? 'Synchronisez Google Sheets ou cliquez sur + pour planifier.' : 'Sync Google Sheets or click + to add.'}
+                  {isFr ? 'Synchronisez le flux ou cliquez sur + pour planifier.' : 'Sync stream or click + to add.'}
                 </p>
               </div>
             )}
@@ -1545,15 +1545,15 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
                           setLocalBuildingFilter('all');
                           if (onSelectBuilding) onSelectBuilding('all');
                         }
-                        showToast(isFr ? `Positionné sur l’intervention Google Sheets (${sheetEv.date} à ${sheetEv.startTimeStr})` : `Jumped to Google Sheets intervention`);
+                        showToast(isFr ? `Positionné sur l’intervention (${sheetEv.date} à ${sheetEv.startTimeStr})` : `Jumped to intervention`);
                       }
                     }}
                     className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100/90 text-emerald-800 text-[11px] font-bold border border-emerald-300/80 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                    title={isFr ? 'Aller directement au créneau de l’intervention synchronisée depuis Google Sheets' : 'Go directly to Google Sheets intervention slot'}
+                    title={isFr ? 'Aller directement au créneau de l’intervention synchronisée' : 'Go directly to synchronized intervention slot'}
                   >
                     <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
                     <span>
-                      {isFr ? 'Voir intervention Google Sheets' : 'View Google Sheets event'}
+                      {isFr ? 'Voir intervention synchronisée' : 'View synchronized event'}
                     </span>
                   </button>
                 )}
@@ -1759,8 +1759,8 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
                     <CalendarIcon className="w-4 h-4 text-emerald-700 shrink-0" />
                     <span>
                       {isFr 
-                        ? 'Planning vierge : vos interventions s’ajouteront automatiquement dès que vous écrirez une ligne dans Google Sheets.' 
-                        : 'Clean schedule: interventions will appear here as soon as rows are added in Google Sheets.'}
+                        ? 'Planning vierge : vos interventions s’ajouteront automatiquement dès la synchronisation du flux distant.' 
+                        : 'Clean schedule: interventions will appear here as soon as synchronized with data stream.'}
                     </span>
                   </div>
                   <button
@@ -1768,7 +1768,7 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
                     onClick={() => handleSyncGoogleSheets(false)}
                     className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-800 rounded-lg text-[11px] font-bold border border-emerald-300 transition cursor-pointer shrink-0"
                   >
-                    {isFr ? 'Vérifier Google Sheets' : 'Check Google Sheets'}
+                    {isFr ? 'Vérifier le flux distant' : 'Check Data Stream'}
                   </button>
                 </div>
               )}
@@ -2773,15 +2773,15 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
                   </div>
                   <div>
                     <h3 className="font-bold text-base sm:text-lg text-slate-900 flex items-center gap-2">
-                      <span>{isFr ? 'Liaison & Synchronisation Google Sheets' : 'Google Sheets Synchronization'}</span>
+                      <span>{isFr ? 'Liaison & Synchronisation du Flux' : 'Data Stream Synchronization'}</span>
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-900">
                         {isFr ? 'Automatique 45s' : 'Auto 45s'}
                       </span>
                     </h3>
                     <p className="text-xs text-slate-500">
                       {isFr 
-                        ? 'Ajoutez vos maintenances dans Google Sheets pour les intégrer instantanément au planning' 
-                        : 'Add maintenances in Google Sheets to immediately integrate them into the schedule'}
+                        ? 'Ajoutez vos maintenances dans votre flux distant pour les intégrer instantanément au planning' 
+                        : 'Add maintenances in your remote stream to immediately integrate them into the schedule'}
                     </p>
                   </div>
                 </div>
@@ -2800,7 +2800,7 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
                   <div className={`w-3 h-3 rounded-full ${sheetSyncStatus?.count && sheetSyncStatus.count > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
                   <div>
                     <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                      <span>{interventions.filter(i => i.source === 'google_sheets').length} {isFr ? 'interventions Google Sheets actives' : 'active Google Sheets interventions'}</span>
+                      <span>{interventions.filter(i => i.source === 'google_sheets').length} {isFr ? 'interventions synchronisées actives' : 'active synchronized interventions'}</span>
                       {lastSheetSyncTime && (
                         <span className="text-[10px] text-slate-500 font-normal">
                           ({isFr ? 'Dernier scan à' : 'Last scan at'} {lastSheetSyncTime})
@@ -2830,7 +2830,7 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
               {/* URL Input */}
               <div className="space-y-1.5 mb-5">
                 <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-                  {isFr ? 'Lien CSV publié de votre Google Sheet' : 'Published Google Sheet CSV URL'}
+                  {isFr ? 'Lien CSV publié du flux distant' : 'Published Data Stream CSV URL'}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -2856,7 +2856,7 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
                       showToast(isFr ? 'URL par défaut rétablie' : 'Default URL restored');
                     }}
                     className="px-2.5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 transition cursor-pointer shrink-0"
-                    title={isFr ? 'Rétablir le lien Google Sheet du projet' : 'Reset to default project sheet'}
+                    title={isFr ? 'Rétablir le lien par défaut du projet' : 'Reset to default data stream'}
                   >
                     {isFr ? 'Défaut' : 'Default'}
                   </button>
@@ -2871,8 +2871,8 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
                 </h4>
                 <p className="text-xs text-slate-600 mb-3">
                   {isFr 
-                    ? 'Dans votre Google Sheet, ajoutez les colonnes ci-dessous (soit à la suite comme Section 3, soit sur un nouvel onglet) :'
-                    : 'In your Google Sheet, add the columns below (either at bottom of sheet or in a dedicated tab):'}
+                    ? 'Dans votre tableur ou flux distant, ajoutez les colonnes ci-dessous (soit à la suite comme Section 3, soit sur un nouvel onglet) :'
+                    : 'In your remote spreadsheet or stream, add the columns below (either at bottom of sheet or in a dedicated tab):'}
                 </p>
 
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3 text-xs">
@@ -2900,7 +2900,7 @@ export const InterventionsPlanningView: React.FC<InterventionsPlanningViewProps>
 
                 <div className="text-[11px] text-slate-600 bg-white/70 p-2.5 rounded-xl border border-emerald-100 flex items-center justify-between gap-2 flex-wrap">
                   <span>
-                    <strong>{isFr ? 'Suppression automatique :' : 'Automatic deletion:'}</strong> {isFr ? 'Lorsque vous effacez une ligne dans votre Google Sheet, elle disparaît immédiatement du planning.' : 'When you delete a row in Google Sheets, it is immediately removed from the schedule.'}
+                    <strong>{isFr ? 'Suppression automatique :' : 'Automatic deletion:'}</strong> {isFr ? 'Lorsque vous effacez une ligne dans votre tableur distant, elle disparaît immédiatement du planning.' : 'When you delete a row in your remote table, it is immediately removed from the schedule.'}
                   </span>
                   <button
                     type="button"

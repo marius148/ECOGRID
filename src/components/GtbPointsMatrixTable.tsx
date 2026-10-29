@@ -365,7 +365,7 @@ export const GtbPointsMatrixTable: React.FC<GtbPointsMatrixTableProps> = ({
       setLastSyncTime(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (err: any) {
       setIsError(true);
-      setErrorMessage(isFr ? "Erreur de synchronisation avec Google Sheets. Données de référence affichées." : "Failed to sync Google Sheet. Using baseline reference points.");
+      setErrorMessage(isFr ? "Erreur de synchronisation du flux. Données de référence affichées." : "Failed to sync remote data. Using baseline reference points.");
       setMatrixData(INITIAL_GTB_MATRIX_DATA);
     } finally {
       setIsLoading(false);
@@ -531,7 +531,7 @@ export const GtbPointsMatrixTable: React.FC<GtbPointsMatrixTableProps> = ({
             onClick={() => fetchGtbPointsData(configuredUrl)}
             disabled={isLoading}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-colors cursor-pointer disabled:opacity-50"
-            title={isFr ? "Actualiser depuis Google Sheets" : "Sync from Google Sheets"}
+            title={isFr ? "Actualiser les données en direct" : "Sync live data"}
           >
             <RefreshCw className={cn("w-3.5 h-3.5 text-[#236b33]", isLoading && "animate-spin")} />
             <span className="hidden sm:inline">{isLoading ? (isFr ? 'Chargement...' : 'Syncing...') : (isFr ? 'Actualiser' : 'Sync')}</span>
@@ -548,12 +548,12 @@ export const GtbPointsMatrixTable: React.FC<GtbPointsMatrixTableProps> = ({
             <span className="hidden sm:inline">CSV</span>
           </button>
 
-          {/* Configuration Google Sheets */}
+          {/* Configuration du flux distant */}
           <button
             type="button"
             onClick={() => setIsUrlModalOpen(true)}
             className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded-xl border border-slate-200 transition-colors cursor-pointer"
-            title={isFr ? "Configurer le lien Google Sheets" : "Configure Google Sheets URL"}
+            title={isFr ? "Configurer le lien de flux distant" : "Configure remote data stream"}
           >
             <Settings className="w-3.5 h-3.5" />
           </button>
@@ -893,7 +893,7 @@ export const GtbPointsMatrixTable: React.FC<GtbPointsMatrixTableProps> = ({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="inline-flex items-center gap-1 text-[#236b33] font-semibold">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            {isFr ? 'Source :' : 'Source:'} Google Sheets Téléconnecté
+            {isFr ? 'Source :' : 'Source:'} Télémétrie Téléconnectée
           </span>
           <span>•</span>
           <span className="text-slate-400">
@@ -908,7 +908,7 @@ export const GtbPointsMatrixTable: React.FC<GtbPointsMatrixTableProps> = ({
         )}
       </div>
 
-      {/* MODAL CONFIGURATION URL GOOGLE SHEETS */}
+      {/* MODAL CONFIGURATION URL FLUX DISTANT */}
       {isUrlModalOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-200">
@@ -916,7 +916,7 @@ export const GtbPointsMatrixTable: React.FC<GtbPointsMatrixTableProps> = ({
               <div className="flex items-center gap-2">
                 <Database className="w-5 h-5 text-[#236b33]" />
                 <h4 className="font-bold text-slate-900">
-                  {isFr ? 'Liaison Directe Google Sheets' : 'Google Sheets Direct Link'}
+                  {isFr ? 'Liaison Directe au Flux de Données' : 'Live Data Stream Link'}
                 </h4>
               </div>
               <button 
@@ -930,13 +930,13 @@ export const GtbPointsMatrixTable: React.FC<GtbPointsMatrixTableProps> = ({
             <div className="py-4 space-y-3 text-xs text-slate-600">
               <p>
                 {isFr 
-                  ? 'Pour relier votre propre fichier Google Sheets à ce tableau sans modifier le code, publiez votre classeur au format CSV et collez son URL ci-dessous :' 
-                  : 'To link your own Google Sheet without editing code, publish your spreadsheet as CSV and paste the URL below:'}
+                  ? 'Pour relier votre propre flux distant à ce tableau sans modifier le code, publiez votre tableur au format CSV et collez son URL ci-dessous :' 
+                  : 'To link your own data stream without editing code, publish your table as CSV and paste the URL below:'}
               </p>
 
               <div>
                 <label className="font-bold text-slate-700 block mb-1">
-                  {isFr ? 'URL de publication Google Sheets (format CSV) :' : 'Published Google Sheet URL (CSV format):'}
+                  {isFr ? 'URL de publication du flux (format CSV) :' : 'Published stream URL (CSV format):'}
                 </label>
                 <input
                   type="text"
@@ -948,11 +948,11 @@ export const GtbPointsMatrixTable: React.FC<GtbPointsMatrixTableProps> = ({
               </div>
 
               <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-[11px] text-emerald-900 space-y-1">
-                <p className="font-bold">Instructions Google Sheets :</p>
-                <p>1. Ouvrez votre tableau dans Google Sheets</p>
-                <p>2. Fichier → Partager → Publier sur le web</p>
-                <p>3. Sélectionnez format : <strong>Valeurs séparées par des virgules (.csv)</strong></p>
-                <p>4. Collez le lien et cliquez sur "Enregistrer et Synchroniser".</p>
+                <p className="font-bold">{isFr ? 'Instructions de publication :' : 'Publication Instructions:'}</p>
+                <p>{isFr ? '1. Ouvrez votre tableau distant' : '1. Open your remote spreadsheet'}</p>
+                <p>{isFr ? '2. Fichier → Partager → Publier sur le web' : '2. File → Share → Publish to the web'}</p>
+                <p>{isFr ? '3. Sélectionnez format : ' : '3. Select format: '}<strong>{isFr ? 'Valeurs séparées par des virgules (.csv)' : 'Comma-separated values (.csv)'}</strong></p>
+                <p>{isFr ? '4. Collez le lien et cliquez sur "Enregistrer et Synchroniser".' : '4. Paste the URL and click "Save & Sync".'}</p>
               </div>
             </div>
 

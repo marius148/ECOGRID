@@ -428,7 +428,7 @@ export async function fetchAndParseGoogleSheetsInterventions(
     }
   });
   if (!response.ok) {
-    throw new Error(`Erreur HTTP ${response.status} lors de l'accès au Google Sheets`);
+    throw new Error(`Erreur HTTP ${response.status} lors de l'accès au flux de données`);
   }
 
   let csvText = await response.text();
@@ -443,7 +443,7 @@ export async function fetchAndParseGoogleSheetsInterventions(
       events: [],
       newTechnicians: [],
       rawRowCount: 0,
-      message: 'Fichier Google Sheets vide',
+      message: 'Flux de données vide',
       sourceUrl: targetUrl,
       timestamp: new Date().toLocaleTimeString('fr-FR')
     };
@@ -669,7 +669,7 @@ export async function fetchAndParseGoogleSheetsInterventions(
     const status = detectStatus(rawStatus);
 
     const rawNotes = notesCol !== -1 && cells[notesCol] ? cells[notesCol].trim() : '';
-    const notes = rawNotes || (rawTech ? `Assigné à ${rawTech} via Google Sheets` : undefined);
+    const notes = rawNotes || (rawTech ? `Assigné à ${rawTech}` : undefined);
 
     const eventId = `gs-ev-${i}-${buildingId}-${dateStr}`;
 
@@ -698,7 +698,7 @@ export async function fetchAndParseGoogleSheetsInterventions(
     events: parsedEvents,
     newTechnicians: newlyCreatedTechs,
     rawRowCount: parsedEvents.length,
-    message: `${parsedEvents.length} intervention(s) synchronisée(s) avec succès depuis Google Sheets`,
+    message: `${parsedEvents.length} intervention(s) synchronisée(s) avec succès`,
     sourceUrl: targetUrl,
     timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   };

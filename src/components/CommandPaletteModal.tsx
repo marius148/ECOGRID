@@ -140,7 +140,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
     list.push({
       id: 'view-planning',
       title: language === 'fr' ? 'Planning des Interventions' : 'Intervention Schedule',
-      subtitle: language === 'fr' ? 'Synchronisation Google Sheets, calendrier des techniciens' : 'Google Sheets live sync, technician calendar',
+      subtitle: language === 'fr' ? 'Synchronisation télémétrique, calendrier des techniciens' : 'Live telemetry sync, technician calendar',
       category: 'views',
       icon: Calendar,
       badge: 'Planning',
@@ -166,7 +166,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
     list.push({
       id: 'view-settings',
       title: language === 'fr' ? 'Paramètres du Système' : 'System Settings',
-      subtitle: language === 'fr' ? 'Seuils d\'alerte, profil et intégrations Google Sheets' : 'Alert thresholds, profile and integrations',
+      subtitle: language === 'fr' ? 'Seuils d\'alerte, profil et intégrations du parc' : 'Alert thresholds, profile and integrations',
       category: 'views',
       icon: Settings,
       badge: 'Config',
@@ -180,7 +180,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
     if (onForceSync) {
       list.push({
         id: 'action-sync',
-        title: language === 'fr' ? 'Synchroniser les données Google Sheets' : 'Sync Google Sheets Data',
+        title: language === 'fr' ? 'Synchroniser les données en direct' : 'Sync Live Data',
         subtitle: language === 'fr' ? 'Rafraîchir immédiatement les puissances et interventions' : 'Instantly fetch latest thermal powers and interventions',
         category: 'actions',
         icon: RefreshCw,

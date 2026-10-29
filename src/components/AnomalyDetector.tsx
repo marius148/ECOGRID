@@ -1044,7 +1044,7 @@ export const SystemAnomalyModal: React.FC<SystemAnomalyModalProps> = ({
                     type="button"
                     onClick={handleResetToSheet}
                     className="px-2.5 py-1 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-[10px] font-bold transition shadow-2xs cursor-pointer flex items-center gap-1"
-                    title="Rétablir les données conformes du Google Sheet"
+                    title="Rétablir les données conformes du parc"
                   >
                     <span>🟢 {isFr ? "Rétablir Nominal (0 anomalie)" : "Reset to 0"}</span>
                   </button>
@@ -1116,12 +1116,12 @@ export const SystemAnomalyModal: React.FC<SystemAnomalyModalProps> = ({
                 </h4>
                 <p className="text-xs text-slate-600 max-w-md mt-1 leading-relaxed">
                   {isFr 
-                    ? "Les 10 bâtiments de votre parc immobilier fonctionnent dans le respect strict des seuils nominaux issus de votre Google Sheet. Puissances thermiques, compteurs d'énergie et automates GTB sont optimisés."
-                    : "All 10 portfolio buildings operate strictly within nominal thresholds from your Google Sheet. Thermal demands, energy meters and BMS controllers are optimal."}
+                    ? "Les 10 bâtiments de votre parc immobilier fonctionnent dans le respect strict des seuils nominaux de télémétrie. Puissances thermiques, compteurs d'énergie et automates GTB sont optimisés."
+                    : "All 10 portfolio buildings operate strictly within nominal telemetry thresholds. Thermal demands, energy meters and BMS controllers are optimal."}
                 </p>
                 <div className="mt-4 flex items-center gap-2">
                   <span className="px-3 py-1 bg-white text-emerald-800 rounded-xl text-xs font-bold border border-emerald-200 shadow-2xs">
-                    ✓ {isFr ? "Télémétrie Nominale (Google Sheet)" : "Nominal Telemetry"}
+                    ✓ {isFr ? "Télémétrie Nominale du Parc" : "Nominal Telemetry"}
                   </span>
                   <span className="px-3 py-1 bg-white text-emerald-800 rounded-xl text-xs font-bold border border-emerald-200 shadow-2xs">
                     ✓ {isFr ? "Boucles CVC Équilibrées" : "Balanced HVAC Loops"}
@@ -1277,7 +1277,7 @@ export const SystemAnomalyModal: React.FC<SystemAnomalyModalProps> = ({
           {/* Footer */}
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 shrink-0">
             <span>
-              {isFr ? "Source : Télémétrie Google Sheets & Automates GTB" : "Source: Live Google Sheets & BMS Telemetry"}
+              {isFr ? "Source : Télémétrie en temps réel & Automates GTB" : "Source: Live Telemetry & BMS Controllers"}
             </span>
             <button
               onClick={onClose}

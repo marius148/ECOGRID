@@ -210,13 +210,13 @@ export const GTBExecutiveView: React.FC<GTBExecutiveViewProps> = ({
           buildingId: b.id.toString(),
           building: `${b.name} (${b.id})`,
           title: isHigh
-            ? (isFr ? `Surconsommation Google Sheet (+${bCheck.deltaPrct}%)` : `Google Sheet Overconsumption (+${bCheck.deltaPrct}%)`)
-            : (isFr ? `Sous-consommation anormale Google Sheet (${bCheck.deltaPrct}%)` : `Abnormal low consumption (${bCheck.deltaPrct}%)`),
+            ? (isFr ? `Surconsommation détectée (+${bCheck.deltaPrct}%)` : `Overconsumption detected (+${bCheck.deltaPrct}%)`)
+            : (isFr ? `Sous-consommation anormale (${bCheck.deltaPrct}%)` : `Abnormal low consumption (${bCheck.deltaPrct}%)`),
           detail: isHigh
             ? (isFr ? `Consommation télérelevée à ${bKwh} kWh/j (Nominal: ${bCheck.nominalKwh} kWh/j). Puissance hiver : ${b.powerWinterKw ?? '--'} kW.` : `Telemetry: ${bKwh} kWh/d (Nominal: ${bCheck.nominalKwh} kWh/d). Power: ${b.powerWinterKw ?? '--'} kW.`)
             : (isFr ? `Consommation télérelevée à ${bKwh} kWh/j (Nominal: ${bCheck.nominalKwh} kWh/j). Décrochage compteur ou vanne fermée.` : `Telemetry only ${bKwh} kWh/d. Meter outage or valve closed.`),
           level: bCheck.isAnom ? 'P1' : 'P2',
-          source: isFr ? 'Télérelève Google Sheet' : 'Google Sheet Telemetry'
+          source: isFr ? 'Télérelève en direct' : 'Live Telemetry'
         });
       }
     });
